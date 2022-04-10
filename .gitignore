@@ -10,3 +10,4 @@ db/
 
 # Env
 .env
+client_secret.json
