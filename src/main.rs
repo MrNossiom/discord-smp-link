@@ -18,10 +18,14 @@ use std::env;
 async fn main() {
 	dotenv().ok();
 
+	let code = AuthLink::new().get_code();
+
+	dbg!(&code);
+
 	let database = database::establish_connection();
 	let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
-	Framework::build()
+	Framework::<_, anyhow::Error>::build()
 		.token(&token)
 		.client_settings(move |f| {
 			f.intents(
@@ -35,7 +39,7 @@ async fn main() {
 			Box::pin(async move {
 				Ok(Data {
 					database,
-					auth: AuthLink::new().await,
+					auth: AuthLink::new(),
 				})
 			})
 		})

@@ -1,70 +1,53 @@
-use async_google_apis_common::{
-	yup_oauth2::{
-		authenticator_delegate::{DeviceAuthResponse, DeviceFlowDelegate},
-		read_application_secret, DeviceFlowAuthenticator,
-	},
-	Authenticator,
+use oauth2::{
+	basic::BasicClient, url::Url, AuthUrl, ClientId, ClientSecret, CsrfToken, RedirectUrl,
+	RevocationUrl, Scope, TokenUrl,
 };
-use hyper::Client;
-use hyper_rustls::HttpsConnector;
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::env;
 
-use super::apis::people::{PeopleGetParams, PeopleService};
-
-pub struct DiscordFlowDelegate;
-
-impl DeviceFlowDelegate for DiscordFlowDelegate {
-	fn present_user_code<'a>(
-		&'a self,
-		device_auth_resp: &'a DeviceAuthResponse,
-	) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
-		println!(
-			"Please enter {} at {} and grant access to this application",
-			device_auth_resp.user_code, device_auth_resp.verification_uri
-		);
-		println!("Do not close this application until you either denied or granted access.");
-
-		Box::pin(async {})
-	}
-}
-
+#[derive(Debug)]
 pub struct AuthLink {
-	pub flow: Authenticator,
-	pub people_service: PeopleService,
+	oauth_client: BasicClient,
 }
 
 impl AuthLink {
-	pub async fn new() -> Self {
-		let client = {
-			let connection = HttpsConnector::with_native_roots();
+	pub fn new() -> Self {
+		let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
+			.expect("Invalid authorization endpoint URL");
+		let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into())
+			.expect("Invalid token endpoint URL");
 
-			Client::builder().build(connection)
-		};
+		let (github_client_id, github_client_secret) =
+			(ClientId::new("".into()), ClientSecret::new("".into()));
 
-		let flow = {
-			let app_secret = read_application_secret("client_secret.json").await.unwrap();
+		let oauth_client = BasicClient::new(
+			github_client_id,
+			Some(github_client_secret),
+			auth_url,
+			Some(token_url),
+		)
+		.set_redirect_uri(match env::var("DEBUG").unwrap().as_str() {
+			"true" => RedirectUrl::new("http://localhost:8080".into()).unwrap(),
+			_ => RedirectUrl::new("http://somedumbdomain.lol".into()).unwrap(),
+		})
+		.set_revocation_uri(
+			RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
+				.expect("Invalid revocation endpoint URL"),
+		);
 
-			DeviceFlowAuthenticator::builder(app_secret)
-				.flow_delegate(Box::new(DiscordFlowDelegate))
-				.build()
-				.await
-				.unwrap()
-		};
+		Self { oauth_client }
+	}
 
-		let people_service = PeopleService::new(client.to_owned(), Arc::new(flow.to_owned()));
+	pub fn get_code(&self) -> Url {
+		let (authorize_url, csrf_state) = self
+			.oauth_client
+			.authorize_url(CsrfToken::new_random)
+			.add_scopes([
+				Scope::new("https://www.googleapis.com/auth/userinfo.email".into()),
+				Scope::new("https://www.googleapis.com/auth/userinfo.profile".into()),
+				Scope::new("https://www.googleapis.com/auth/classroom.courses.readonly".into()),
+			])
+			.url();
 
-		people_service
-			.get(&PeopleGetParams {
-				resource_name: "me".into(),
-				person_fields: Some("names,emailAddresses".into()),
-				..Default::default()
-			})
-			.await
-			.unwrap();
-
-		Self {
-			flow,
-			people_service,
-		}
+		authorize_url
 	}
 }

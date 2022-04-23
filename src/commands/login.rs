@@ -1,17 +1,13 @@
-use crate::Context;
+use crate::{states::CommandResult, Context};
 use poise::{
 	command,
-	serenity_prelude::{ButtonStyle, CollectComponentInteraction, Error as SerenityError},
+	serenity_prelude::{ButtonStyle, CollectComponentInteraction},
 };
 use std::time::Duration;
 
-fn oauth2_url() -> String {
-	"".into()
-}
-
 /// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité.
 #[command(slash_command)]
-pub async fn login(ctx: Context<'_>) -> Result<(), SerenityError> {
+pub async fn login(ctx: Context<'_>) -> CommandResult {
 	let reply = ctx
 		.send(|reply| {
 			reply
@@ -23,7 +19,7 @@ pub async fn login(ctx: Context<'_>) -> Result<(), SerenityError> {
 							.create_button(|button| {
 								button
 									.label("Connect to Google")
-									.url(oauth2_url())
+									.url(ctx.data().auth.get_code())
 									.style(ButtonStyle::Link)
 							})
 					})

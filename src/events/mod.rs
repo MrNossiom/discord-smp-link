@@ -1,12 +1,12 @@
-use crate::states::Data;
-use poise::{serenity_prelude::*, Event, Framework};
+use crate::states::{CommandResult, Data, Framework};
+use poise::{serenity_prelude::Context, Event};
 
 pub async fn event_listener(
 	_ctx: &Context,
 	event: &Event<'_>,
-	_framework: &Framework<Data, Error>,
+	_framework: &Framework,
 	_data: &Data,
-) -> Result<()> {
+) -> CommandResult {
 	match event {
 		Event::Ready { data_about_bot } => {
 			// register_application_commands(ctx, true);
