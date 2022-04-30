@@ -8,6 +8,5 @@ target/
 # Database
 db/
 
-# Env
-.env
-client_secret.json
+# Config
+Config.ron

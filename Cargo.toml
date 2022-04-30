@@ -3,18 +3,22 @@ name = "discord-smp-link"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+anyhow = "1.0.57"
+diesel = { version = "1.4.8", default-features = false, features = [
+	"postgres",
+] }
+futures = "0.3.21"
+handlebars = "4.2.2"
 hyper = "0.14.18"
-dotenv = "0.15.0"
+hyper-rustls = { version = "~0.22.0", features = ["rustls-native-certs"] }
+label-logger = { git = "https://github.com/MrNossiom/label-logger", branch = "main" }
 poise = { git = "https://github.com/kangalioo/poise", features = [
 	"collector",
 ], branch = "master" }
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-diesel = { version = "1.4.8", features = ["postgres"] }
-tokio-diesel = "0.3.0"
-serde = "1.0.136"
-hyper-rustls = { version = "~0.22.0", features = ["rustls-native-certs"] }
 oauth2 = "4.1.0"
-anyhow = "1.0.57"
+ron = "0.7"
+rouille = "3.5.0"
+serde = "1.0.136"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio-diesel = "0.3.0"

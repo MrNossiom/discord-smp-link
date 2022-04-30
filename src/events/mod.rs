@@ -1,22 +1,21 @@
-use crate::states::{CommandResult, Data, Framework};
-use poise::{serenity_prelude::Context, Event};
+use label_logger::info;
+use poise::{
+	async_trait,
+	serenity_prelude::{
+		Context as SerenityContext, EventHandler as SerenityEventHandler, GuildId, Ready,
+	},
+};
 
-pub async fn event_listener(
-	_ctx: &Context,
-	event: &Event<'_>,
-	_framework: &Framework,
-	_data: &Data,
-) -> CommandResult {
-	match event {
-		Event::Ready { data_about_bot } => {
-			// register_application_commands(ctx, true);
-			println!("{} is ready!", data_about_bot.user.name);
-		}
-		Event::CacheReady { guilds } => {
-			println!("{} guilds cached!", guilds.len());
-		}
-		_ => {}
+pub struct EventHandler;
+
+#[async_trait]
+impl SerenityEventHandler for EventHandler {
+	async fn ready(&self, _ctx: SerenityContext, bot: Ready) {
+		// register_application_commands(ctx, true);
+		info!("{} is ready!", bot.user.name);
 	}
 
-	Ok(())
+	async fn cache_ready(&self, _ctx: SerenityContext, guilds: Vec<GuildId>) {
+		info!("{} guilds cached!", guilds.len());
+	}
 }

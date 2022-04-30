@@ -7,58 +7,66 @@ mod states;
 #[macro_use]
 extern crate diesel;
 
-use dotenv::dotenv;
-use events::event_listener;
-use handlers::auth::AuthLink;
-use poise::{serenity_prelude::*, Framework, PrefixFrameworkOptions};
-use states::{Context, Data};
-use std::env;
+use events::EventHandler;
+use handlers::server::launch_server;
+use label_logger::info;
+use poise::{
+	serenity_prelude::{GatewayIntents, UserId},
+	PrefixFrameworkOptions,
+};
+use states::{Context, Data, Framework};
+use std::{collections::HashSet, sync::Arc};
 
 #[tokio::main]
 async fn main() {
-	dotenv().ok();
+	let state = Arc::new(Data::default());
+	launch_server(state.config.port, Arc::clone(&state));
 
-	let code = AuthLink::new().get_code();
-
-	dbg!(&code);
-
-	let database = database::establish_connection();
-	let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-
-	Framework::<_, anyhow::Error>::build()
-		.token(&token)
-		.client_settings(move |f| {
-			f.intents(
-				GatewayIntents::GUILDS
-					| GatewayIntents::GUILD_VOICE_STATES
-					| GatewayIntents::DIRECT_MESSAGES
-					| GatewayIntents::GUILD_MESSAGES,
-			)
-		})
+	Framework::build()
+		.token(&state.config.discord_token)
+		.client_settings(move |fw| fw.event_handler(EventHandler))
+		.intents(
+			GatewayIntents::GUILDS
+				| GatewayIntents::GUILD_VOICE_STATES
+				| GatewayIntents::DIRECT_MESSAGES
+				| GatewayIntents::GUILD_MESSAGES
+				| GatewayIntents::MESSAGE_CONTENT,
+		)
 		.user_data_setup(move |_ctx, _ready, _framework| {
-			Box::pin(async move {
-				Ok(Data {
-					database,
-					auth: AuthLink::new(),
-				})
-			})
+			Box::pin(async move { Ok(Data::default()) })
 		})
 		.options(poise::FrameworkOptions {
 			pre_command: |ctx| {
 				Box::pin(async move {
-					println!(
-						"{} invoked {}",
+					info!(
+						label: "Command",
+						"{} invoked by {}",
+						ctx.invoked_command_name(),
 						ctx.author().name,
-						ctx.invoked_command_name()
 					);
 				})
 			},
 			prefix_options: PrefixFrameworkOptions {
 				mention_as_prefix: true,
+				prefix: Some(".".into()),
 				..Default::default()
 			},
-			listener: |ctx, event, fw, ud| Box::pin(event_listener(ctx, event, fw, ud)),
-			commands: vec![commands::register(), commands::login()],
+			owners: {
+				let mut hs = HashSet::new();
+				hs.insert(UserId(414017710091927552));
+				hs
+			},
+			commands: {
+				use commands::*;
+
+				vec![
+					helpers::register(),
+					helpers::reset_global(),
+					login::login(),
+					login::logout(),
+					test::db(),
+				]
+			},
 			..Default::default()
 		})
 		.run()
