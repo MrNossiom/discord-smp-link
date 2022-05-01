@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.57"
+askama = "0.11.1"
 diesel = { version = "1.4.8", default-features = false, features = [
 	"postgres",
 ] }
 futures = "0.3.21"
-handlebars = "4.2.2"
 hyper = "0.14.18"
 hyper-rustls = { version = "~0.22.0", features = ["rustls-native-certs"] }
 label-logger = { git = "https://github.com/MrNossiom/label-logger", branch = "main" }

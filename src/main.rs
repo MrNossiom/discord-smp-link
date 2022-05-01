@@ -10,21 +10,24 @@ extern crate diesel;
 use events::EventHandler;
 use handlers::server::launch_server;
 use label_logger::info;
-use poise::{
-	serenity_prelude::{GatewayIntents, UserId},
-	PrefixFrameworkOptions,
-};
+use poise::{serenity_prelude::GatewayIntents, PrefixFrameworkOptions};
 use states::{Context, Data, Framework};
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-	let state = Arc::new(Data::default());
+	let state = Arc::new(Data::new().await);
 	launch_server(state.config.port, Arc::clone(&state));
 
-	Framework::build()
+	let event_handler_state = Arc::clone(&state);
+
+	let mut client = Framework::build()
 		.token(&state.config.discord_token)
-		.client_settings(move |fw| fw.event_handler(EventHandler))
+		.client_settings(move |fw| {
+			fw.event_handler(EventHandler {
+				state: event_handler_state,
+			})
+		})
 		.intents(
 			GatewayIntents::GUILDS
 				| GatewayIntents::GUILD_VOICE_STATES
@@ -33,7 +36,7 @@ async fn main() {
 				| GatewayIntents::MESSAGE_CONTENT,
 		)
 		.user_data_setup(move |_ctx, _ready, _framework| {
-			Box::pin(async move { Ok(Data::default()) })
+			Box::pin(async move { Ok(Arc::clone(&state)) })
 		})
 		.options(poise::FrameworkOptions {
 			pre_command: |ctx| {
@@ -44,17 +47,23 @@ async fn main() {
 						ctx.invoked_command_name(),
 						ctx.author().name,
 					);
+
+					ctx.data()
+						.log(|wh| {
+							wh.content(format!(
+								"Command `{}` invoked by `{}`",
+								ctx.invoked_command_name(),
+								ctx.author().name,
+							))
+						})
+						.await
+						.unwrap();
 				})
 			},
 			prefix_options: PrefixFrameworkOptions {
 				mention_as_prefix: true,
 				prefix: Some(".".into()),
 				..Default::default()
-			},
-			owners: {
-				let mut hs = HashSet::new();
-				hs.insert(UserId(414017710091927552));
-				hs
 			},
 			commands: {
 				use commands::*;
@@ -68,8 +77,9 @@ async fn main() {
 				]
 			},
 			..Default::default()
-		})
-		.run()
-		.await
-		.unwrap();
+		});
+
+	client.initialize_owners(true);
+
+	client.run().await.unwrap();
 }

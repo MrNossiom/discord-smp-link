@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Queryable, Debug)]
 pub struct SMPUser {
 	pub id: i32,

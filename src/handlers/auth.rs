@@ -40,7 +40,7 @@ impl AuthLink {
 
 		Self {
 			client: oauth_client,
-			queue: Arc::new(RwLock::new(HashMap::new())),
+			queue: Default::default(),
 		}
 	}
 
@@ -54,13 +54,6 @@ impl AuthLink {
 				// Scope::new("https://www.googleapis.com/auth/classroom.courses.readonly".into()),
 			])
 			.url();
-
-		self.queue
-			.write()
-			.unwrap()
-			.insert(csrf_state.secret().to_owned(), None);
-
-		dbg!(&self.queue);
 
 		(
 			authorize_url,
@@ -85,6 +78,10 @@ impl AuthProcess {
 		queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
 		csrf_state: String,
 	) -> Self {
+		let queue2 = queue.clone();
+		let mut map = queue2.write().unwrap();
+		map.insert(csrf_state.to_owned(), None);
+
 		Self {
 			wait_until: Instant::now() + wait,
 			queue,
@@ -97,9 +94,13 @@ impl Future for AuthProcess {
 	type Output = Option<RefreshToken>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+		let mut queue = self.queue.write().unwrap();
+
 		if Instant::now() > self.wait_until {
 			Poll::Ready(None)
-		} else if let Some(Some(value)) = self.queue.write().unwrap().remove(&self.csrf_state) {
+		} else if queue.get(&self.csrf_state).unwrap().is_some() {
+			let value = queue.remove(&self.csrf_state).unwrap().unwrap();
+
 			Poll::Ready(Some(value))
 		} else {
 			cx.waker().clone().wake();

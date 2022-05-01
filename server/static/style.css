@@ -1,3 +1,9 @@
-.hi {
-	font-size: 100px;
+body {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+
+	font-family: "JetBrains Mono", sans-serif;
 }
