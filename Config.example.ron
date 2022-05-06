@@ -6,6 +6,5 @@ Config (
 	logs_webhook: "discord webhook url",
 
 	port: 3000,
-	production: false,
-	log_level: "info",
+	production: false
 )

@@ -1,3 +1,5 @@
+//! Handles all the states of the bot and initial configuration
+
 use crate::handlers::auth::AuthLink;
 use anyhow::{Error, Result};
 use diesel::{
@@ -12,24 +14,43 @@ use poise::{
 	Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{fs::read_to_string, sync::Arc};
 
+/// The initial config of the bot
 #[derive(Deserialize)]
 pub struct Config {
+	/// The token needed to access the discord api
 	pub discord_token: String,
-	pub database_url: String,
+	/// The postgres connection uri
+	pub database_uri: String,
+	/// The google auth client id and secret pair
 	pub google_client: (ClientId, ClientSecret),
 
+	/// The discord channel webhook to send logs to
 	pub logs_webhook: String,
 
+	/// The port to run the server on
 	pub port: usize,
+	/// Whether or not to use production defaults
 	pub production: bool,
-	pub log_level: String,
 }
 
+impl Config {
+	/// Parse config from `Config.ron`
+	fn from_config_file() -> Self {
+		let data = read_to_string("./Config.ron").expect("Config.ron doesn't exist");
+
+		ron::from_str(data.as_str()).expect("Config.ron is invalid")
+	}
+}
+
+/// The data that is passed to the framework
 pub struct Data {
+	/// An access to the database
 	pub database: Pool<ConnectionManager<PgConnection>>,
+	/// A instance of the auth provider
 	pub auth: AuthLink,
+	/// An instance of the parsed initial config
 	pub config: Config,
 	pub logs_webhook: Webhook,
 	http: SerenityHttp,
@@ -37,10 +58,9 @@ pub struct Data {
 
 impl Data {
 	pub async fn new() -> Self {
-		let config: Config =
-			ron::from_str(include_str!("../Config.ron")).expect("Config.ron is invalid");
+		let config = Config::from_config_file();
 
-		let manager = ConnectionManager::<PgConnection>::new(&config.database_url);
+		let manager = ConnectionManager::<PgConnection>::new(&config.database_uri);
 		let database = Pool::builder()
 			.build(manager)
 			.expect("failed to create database pool");
@@ -50,9 +70,9 @@ impl Data {
 		let logs_webhook = http
 			.get_webhook_from_url(&config.logs_webhook)
 			.await
-			.unwrap();
+			.expect("webhook in config file is invalid");
 
-		Data {
+		Self {
 			database,
 			auth: AuthLink::new(&config),
 			config,
@@ -69,11 +89,11 @@ impl Data {
 	}
 }
 
-pub type State = Arc<Data>;
-
-// Discord framework structs
-pub type CommandError = Error;
+/// Common command result
 pub type CommandResult<E = Error> = Result<(), E>;
+/// The context provided to each command
 pub type Context<'a> = PoiseContext<'a, Arc<Data>, Error>;
-pub type _Command = PoiseCommand<Data, CommandError>;
-pub type Framework = PoiseFramework<Arc<Data>, CommandError>;
+/// The command type alias
+pub type _Command = PoiseCommand<Data, Error>;
+/// The framework type alias
+pub type Framework = PoiseFramework<Arc<Data>, Error>;

@@ -1,28 +1,34 @@
-use crate::states::State;
+//! Handle the server for OAuth2 and presentation page
+
+use crate::states::Data;
 use askama::Template;
 use oauth2::{reqwest::http_client, AuthorizationCode, TokenResponse};
 use rouille::{Response, Server};
-use std::{io::stdout, thread};
+use std::{io::stdout, sync::Arc, thread};
 
+/// A template for the index page
 #[derive(Template)]
 #[template(path = "index.jinja")]
 struct IndexTemplate {}
 
-#[allow(dead_code)]
+/// A template for the oauth2 success page
 #[derive(Template)]
 #[template(path = "auth/success.jinja")]
 struct AuthSuccessTemplate<'a> {
+	/// The token response from google
 	token: &'a str,
 }
 
-#[allow(dead_code)]
+/// A template for the oauth2 error page
 #[derive(Template)]
 #[template(path = "auth/error.jinja")]
 struct AuthErrorTemplate<'a> {
+	/// The error message to show on the page
 	error_message: &'a str,
 }
 
-pub fn launch_server(port: usize, data: State) {
+/// Launch a local server to handle `OAuth2` response from Google
+pub fn launch_server(port: usize, data: Arc<Data>) {
 	thread::spawn(move || {
 		Server::new(format!("localhost:{port}"), move |request| {
 			rouille::log(request, stdout(), || {
@@ -33,7 +39,11 @@ pub fn launch_server(port: usize, data: State) {
 				};
 
 				match (request.method(), request_url) {
-					("GET", "/") => Response::html(IndexTemplate {}.render().unwrap()),
+					("GET", "/") => Response::html(
+						IndexTemplate {}
+							.render()
+							.expect("could not render template properly"),
+					),
 					("GET", "/oauth2") => {
 						let code = match request.get_param("code") {
 							Some(code) => code,
@@ -43,7 +53,7 @@ pub fn launch_server(port: usize, data: State) {
 										error_message: "You need to provide a 'code' param in url",
 									}
 									.render()
-									.unwrap(),
+									.expect("could not render template properly"),
 								);
 							}
 						};
@@ -56,7 +66,7 @@ pub fn launch_server(port: usize, data: State) {
 										error_message: "You need to provide a 'state' param in url",
 									}
 									.render()
-									.unwrap(),
+									.expect("could not render template properly"),
 								);
 							}
 						};
@@ -69,7 +79,7 @@ pub fn launch_server(port: usize, data: State) {
 									error_message: "The given 'state' wasn't queued anymore",
 								}
 								.render()
-								.unwrap(),
+								.expect("could not render template properly"),
 							);
 						};
 
@@ -87,28 +97,25 @@ pub fn launch_server(port: usize, data: State) {
 										error_message: &error.to_string(),
 									}
 									.render()
-									.unwrap(),
+									.expect("could not render template properly"),
 								);
 							}
 						};
 
-						queue.insert(
-							state,
-							Some(refresh_token.refresh_token().unwrap().to_owned()),
-						);
+						queue.insert(state, Some(refresh_token.refresh_token().unwrap().clone()));
 
 						Response::html(
 							AuthSuccessTemplate {
 								token: refresh_token
 									.refresh_token()
 									.unwrap()
-									.to_owned()
+									.clone()
 									.secret()
 									.to_string()
 									.as_str(),
 							}
 							.render()
-							.unwrap(),
+							.expect("could not render template properly"),
 						)
 					}
 					_ => {
@@ -123,7 +130,7 @@ pub fn launch_server(port: usize, data: State) {
 				}
 			})
 		})
-		.unwrap()
+		.expect("could not create socket")
 		.pool_size(4)
 		.run();
 

@@ -1,3 +1,5 @@
+//! The schemas to interact with the database
+
 table! {
 	users (id) {
 		id -> Int4,

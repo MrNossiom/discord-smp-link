@@ -1,3 +1,5 @@
+//! Commands to link Discord and Google accounts together
+
 use crate::{states::CommandResult, Context};
 use poise::{
 	command,
@@ -24,7 +26,25 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 	})
 	.await?;
 
-	dbg!(&future.await.unwrap().secret());
+	match future.await {
+		Some(token) => {
+			ctx.send(|reply| {
+				reply.ephemeral(true).content(format!(
+					"Google gave me this little secret : {}",
+					token.secret()
+				))
+			})
+			.await?;
+		}
+		None => {
+			ctx.send(|reply| {
+				reply
+					.ephemeral(true)
+					.content("You didn't finish the authentication process in 5 minutes.")
+			})
+			.await?;
+		}
+	};
 
 	Ok(())
 }
@@ -32,6 +52,7 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 /// Dissocie ton compte Google SMP de ton compte Discord
 #[command(slash_command)]
 pub async fn logout(ctx: Context<'_>) -> CommandResult {
+	/// The component id to retrieve the interaction
 	const LOGOUT_COMPONENT_ID: &str = "logout";
 
 	let reply = ctx
@@ -54,7 +75,7 @@ pub async fn logout(ctx: Context<'_>) -> CommandResult {
 		.await?;
 
 	if let Some(interaction) = CollectComponentInteraction::new(ctx.discord())
-		.message_id(reply.message().await.unwrap().id)
+		.message_id(reply.message().await?.id)
 		// Use maximum duration from oauth response, 60 is tmp
 		.timeout(Duration::from_secs(60))
 		.await

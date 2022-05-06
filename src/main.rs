@@ -1,3 +1,28 @@
+#![warn(
+	clippy::unwrap_used,
+	clippy::str_to_string,
+	clippy::suspicious_operation_groupings,
+	clippy::todo,
+	clippy::too_many_lines,
+	clippy::unicode_not_nfc,
+	clippy::unused_async,
+	clippy::use_self,
+	clippy::dbg_macro,
+	clippy::doc_markdown,
+	clippy::else_if_without_else,
+	clippy::future_not_send,
+	clippy::implicit_clone,
+	clippy::match_bool,
+	clippy::missing_panics_doc,
+	clippy::redundant_closure_for_method_calls,
+	clippy::redundant_else,
+	clippy::must_use_candidate,
+	clippy::return_self_not_must_use,
+	clippy::missing_docs_in_private_items
+)]
+
+//! Discord SMP Bot
+
 mod commands;
 mod database;
 mod events;
@@ -81,5 +106,5 @@ async fn main() {
 
 	client.initialize_owners(true);
 
-	client.run().await.unwrap();
+	client.run().await.expect("client crashed");
 }

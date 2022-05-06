@@ -1,4 +1,4 @@
-use std::sync::Arc;
+//! All the discord events handlers
 
 use crate::states::Data;
 use label_logger::info;
@@ -8,6 +8,7 @@ use poise::{
 		Context as SerenityContext, EventHandler as SerenityEventHandler, GuildId, Ready,
 	},
 };
+use std::sync::Arc;
 
 pub struct EventHandler {
 	pub state: Arc<Data>,
@@ -20,7 +21,7 @@ impl SerenityEventHandler for EventHandler {
 		info!("{} is ready!", bot.user.name);
 
 		self.state
-			.log(|b| b.content("**SMP Bot** is ready to go!"))
+			.log(|b| b.content("**SMP Bot** is ready to go in production mode!"))
 			.await
 			.unwrap();
 	}

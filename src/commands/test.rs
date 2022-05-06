@@ -1,3 +1,5 @@
+//! Commands to debug or test a certain functionality
+
 use crate::{
 	database::{models::SMPUser, schema::users::dsl::*},
 	states::CommandResult,
@@ -6,15 +8,15 @@ use crate::{
 use poise::command;
 use tokio_diesel::AsyncRunQueryDsl;
 
-/// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité.
+#[allow(clippy::missing_docs_in_private_items)]
 #[command(prefix_command, owners_only)]
 pub async fn db(ctx: Context<'_>) -> CommandResult {
 	let results = users
 		.load_async::<SMPUser>(&ctx.data().database)
 		.await
-		.expect("Error loading posts");
+		.unwrap();
 
-	println!("Displaying {} posts", results.len());
+	println!("Displaying {} users", results.len());
 
 	for post in results {
 		dbg!(post);
