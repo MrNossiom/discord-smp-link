@@ -1,4 +1,4 @@
-//! Handle the server for OAuth2 and presentation page
+//! Handle the server for `OAuth2` and presentation page
 
 use crate::states::Data;
 use askama::Template;
@@ -11,7 +11,7 @@ use std::{io::stdout, sync::Arc, thread};
 #[template(path = "index.jinja")]
 struct IndexTemplate {}
 
-/// A template for the oauth2 success page
+/// A template for the `OAuth2` success page
 #[derive(Template)]
 #[template(path = "auth/success.jinja")]
 struct AuthSuccessTemplate<'a> {
@@ -19,7 +19,7 @@ struct AuthSuccessTemplate<'a> {
 	token: &'a str,
 }
 
-/// A template for the oauth2 error page
+/// A template for the `OAuth2` error page
 #[derive(Template)]
 #[template(path = "auth/error.jinja")]
 struct AuthErrorTemplate<'a> {

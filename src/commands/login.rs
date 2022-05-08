@@ -1,6 +1,11 @@
 //! Commands to link Discord and Google accounts together
 
-use crate::{states::CommandResult, Context};
+use crate::{
+	database::{models::NewUser, schema::users},
+	states::CommandResult,
+	Context,
+};
+use diesel::RunQueryDsl;
 use poise::{
 	command,
 	serenity_prelude::{ButtonStyle, CollectComponentInteraction},
@@ -10,7 +15,7 @@ use std::time::Duration;
 /// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité.
 #[command(slash_command)]
 pub async fn login(ctx: Context<'_>) -> CommandResult {
-	let (url, future) = ctx.data().auth.get_url_and_future();
+	let (url, future) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
 
 	ctx.send(|reply| {
 		reply
@@ -26,15 +31,15 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 	})
 	.await?;
 
-	match future.await {
+	let _refresh_token = match future.await {
 		Some(token) => {
 			ctx.send(|reply| {
-				reply.ephemeral(true).content(format!(
-					"Google gave me this little secret : {}",
-					token.secret()
-				))
+				reply
+					.ephemeral(true)
+					.content("You successfully authenticated with Google!")
 			})
 			.await?;
+			token
 		}
 		None => {
 			ctx.send(|reply| {
@@ -43,8 +48,21 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 					.content("You didn't finish the authentication process in 5 minutes.")
 			})
 			.await?;
+
+			return Ok(());
 		}
 	};
+
+	let new_user = NewUser {
+		discord_id: &ctx.author().id.0.to_string(),
+		mail: "",
+		refresh_token: "",
+	};
+
+	diesel::insert_into(users::table)
+		.values(&new_user)
+		.on_conflict_do_nothing()
+		.execute(&ctx.data().database.get()?)?;
 
 	Ok(())
 }

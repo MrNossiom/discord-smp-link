@@ -1,4 +1,4 @@
-//! Handle oauth2 flow with users
+//! Handle `OAuth2` flow with users
 
 use crate::states::Config;
 use futures::Future;
@@ -14,13 +14,16 @@ use std::{
 	time::{Duration, Instant},
 };
 
-#[derive(Debug)]
+/// A manager to get redirect urls and tokens
 pub struct AuthLink {
+	/// The inner client used to manage the flow
 	pub client: BasicClient,
+	/// A queue to wait for the user to finish the flow
 	pub queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
 }
 
 impl AuthLink {
+	/// Create a new auth link
 	#[must_use]
 	pub fn new(config: &Config) -> Self {
 		let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
@@ -53,7 +56,7 @@ impl AuthLink {
 	}
 
 	#[must_use]
-	pub fn get_url_and_future(&self) -> (Url, AuthProcess) {
+	pub fn process_oauth2(&self, max_duration: Duration) -> (Url, AuthProcess) {
 		let (authorize_url, csrf_state) = self
 			.client
 			.authorize_url(CsrfToken::new_random)
@@ -66,31 +69,37 @@ impl AuthLink {
 
 		(
 			authorize_url,
-			AuthProcess::new(
-				Duration::from_secs(60 * 5),
-				Arc::clone(&self.queue),
-				csrf_state.secret().clone(),
-			),
+			AuthProcess::new(max_duration, Arc::clone(&self.queue), csrf_state),
 		)
 	}
 }
 
+/// Returned by `AuthLink` for a new authentification process
+/// Implement `Future` to make code more readable
 pub struct AuthProcess {
+	/// Abort the future if we passed the delay
 	wait_until: Instant,
+	/// The OAuth2 queue to handle
 	queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
-	csrf_state: String,
+	/// The code to recognize the request
+	csrf_state: CsrfToken,
 }
 
 impl AuthProcess {
 	#[must_use]
+	/// Create a new auth process
 	fn new(
 		wait: Duration,
 		queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
-		csrf_state: String,
+		csrf_state: CsrfToken,
 	) -> Self {
-		let queue2 = queue.clone();
-		let mut map = queue2.write().unwrap();
-		map.insert(csrf_state.clone(), None);
+		// Queue the newly created `csrf` state
+		{
+			let queue = queue.clone();
+			let mut map = queue.write().expect("the OAuth2 RwLock is poisoned");
+
+			map.insert(csrf_state.secret().clone(), None);
+		}
 
 		Self {
 			wait_until: Instant::now() + wait,
@@ -104,12 +113,19 @@ impl Future for AuthProcess {
 	type Output = Option<RefreshToken>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-		let mut queue = self.queue.write().unwrap();
+		let mut queue = self.queue.write().expect("the OAuth2 RwLock is poisoned");
 
 		if Instant::now() > self.wait_until {
 			Poll::Ready(None)
-		} else if queue.get(&self.csrf_state).unwrap().is_some() {
-			let value = queue.remove(&self.csrf_state).unwrap().unwrap();
+		} else if queue
+			.get(&self.csrf_state.secret().to_owned())
+			.unwrap()
+			.is_some()
+		{
+			let value = queue
+				.remove(&self.csrf_state.secret().to_owned())
+				.unwrap()
+				.unwrap();
 
 			Poll::Ready(Some(value))
 		} else {

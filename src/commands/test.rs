@@ -1,7 +1,7 @@
 //! Commands to debug or test a certain functionality
 
 use crate::{
-	database::{models::SMPUser, schema::users::dsl::*},
+	database::{models::User, schema::users::dsl::*},
 	states::CommandResult,
 	Context,
 };
@@ -12,7 +12,7 @@ use tokio_diesel::AsyncRunQueryDsl;
 #[command(prefix_command, owners_only)]
 pub async fn db(ctx: Context<'_>) -> CommandResult {
 	let results = users
-		.load_async::<SMPUser>(&ctx.data().database)
+		.load_async::<User>(&ctx.data().database)
 		.await
 		.unwrap();
 

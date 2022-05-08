@@ -45,6 +45,7 @@ async fn main() {
 	launch_server(state.config.port, Arc::clone(&state));
 
 	let event_handler_state = Arc::clone(&state);
+	let user_data_setup_state = Arc::clone(&state);
 
 	let mut client = Framework::build()
 		.token(&state.config.discord_token)
@@ -61,7 +62,7 @@ async fn main() {
 				| GatewayIntents::MESSAGE_CONTENT,
 		)
 		.user_data_setup(move |_ctx, _ready, _framework| {
-			Box::pin(async move { Ok(Arc::clone(&state)) })
+			Box::pin(async move { Ok(user_data_setup_state) })
 		})
 		.options(poise::FrameworkOptions {
 			pre_command: |ctx| {
@@ -73,20 +74,21 @@ async fn main() {
 						ctx.author().name,
 					);
 
-					ctx.data()
-						.log(|wh| {
-							wh.content(format!(
-								"Command `{}` invoked by `{}`",
-								ctx.invoked_command_name(),
-								ctx.author().name,
-							))
-						})
-						.await
-						.unwrap();
+					if ctx.data().config.production {
+						ctx.data()
+							.log(|wh| {
+								wh.content(format!(
+									"Command `{}` invoked by `{}`",
+									ctx.invoked_command_name(),
+									ctx.author().name,
+								))
+							})
+							.await
+							.unwrap();
+					}
 				})
 			},
 			prefix_options: PrefixFrameworkOptions {
-				mention_as_prefix: true,
 				prefix: Some(".".into()),
 				..Default::default()
 			},
