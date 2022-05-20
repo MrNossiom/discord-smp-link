@@ -3,10 +3,11 @@ target/
 
 # Misc
 .DS_Store
-.vscode
+.vscode/
+logs/
 
 # Database
 db/
 
-# Config
-Config.ron
+# Env
+.env

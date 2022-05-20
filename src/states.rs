@@ -1,20 +1,25 @@
 //! Handles all the states of the bot and initial configuration
 
-use crate::handlers::auth::AuthLink;
+use crate::{database::DatabasePool, handlers::auth::AuthLink};
 use anyhow::{Error, Result};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
 	PgConnection,
 };
 use dotenv::dotenv;
+use futures::executor::block_on;
+use lazy_static::lazy_static;
+use log::error;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
-	serenity_prelude::{
-		ExecuteWebhook, Http as SerenityHttp, Message, Result as SerenityResult, Webhook,
-	},
+	serenity_prelude::{ExecuteWebhook, Http as SerenityHttp, Webhook},
 	Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework,
 };
-use std::{env, sync::Arc};
+use std::env;
+
+lazy_static! {
+	pub static ref STATE: Data = Data::new();
+}
 
 /// The initial config of the bot
 pub struct Config {
@@ -65,7 +70,7 @@ impl Config {
 /// The data that is passed to the framework
 pub struct Data {
 	/// An access to the database
-	pub database: Pool<ConnectionManager<PgConnection>>,
+	pub database: DatabasePool,
 	/// A instance of the auth provider
 	pub auth: AuthLink,
 	/// An instance of the parsed initial config
@@ -75,12 +80,12 @@ pub struct Data {
 	pub logs_webhook: Webhook,
 
 	/// A http client to make discord requests
-	http: SerenityHttp,
+	pub http: SerenityHttp,
 }
 
 impl Data {
 	/// Parse the bot data from
-	pub async fn new() -> Self {
+	pub fn new() -> Self {
 		let config = Config::from_dotenv();
 
 		let manager = ConnectionManager::<PgConnection>::new(&config.database_url);
@@ -91,9 +96,7 @@ impl Data {
 		let http = SerenityHttp::new(&config.discord_token);
 
 		let logs_webhook_url = env::var("LOGS_WEBHOOK").expect("LOGS_WEBHOOK is not set in .env");
-		let logs_webhook = http
-			.get_webhook_from_url(&logs_webhook_url)
-			.await
+		let logs_webhook = block_on(http.get_webhook_from_url(&logs_webhook_url))
 			.expect("webhook in config file is invalid");
 
 		Self {
@@ -106,19 +109,22 @@ impl Data {
 	}
 
 	/// Sends a message to the discord log webhook
-	pub async fn log<'a, F>(&self, func: F) -> SerenityResult<Option<Message>>
+	// TODO: implement a custom logger for discord logs with a queue
+	pub fn log<'a, F>(&self, func: F)
 	where
 		for<'b> F: FnOnce(&'b mut ExecuteWebhook<'a>) -> &'b mut ExecuteWebhook<'a>,
 	{
-		self.logs_webhook.execute(&self.http, false, func).await
+		if let Err(error) = block_on(self.logs_webhook.execute(&self.http, false, func)) {
+			error!("{}", error)
+		}
 	}
 }
 
 /// Common command result
 pub type CommandResult<E = Error> = Result<(), E>;
 /// The context provided to each command
-pub type Context<'a> = PoiseContext<'a, Arc<Data>, Error>;
+pub type Context<'a> = PoiseContext<'a, &'static Data, Error>;
 /// The command type alias
 pub type _Command = PoiseCommand<Data, Error>;
 /// The framework type alias
-pub type Framework = PoiseFramework<Arc<Data>, Error>;
+pub type Framework = PoiseFramework<&'static Data, Error>;

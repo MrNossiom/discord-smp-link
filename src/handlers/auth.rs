@@ -3,8 +3,10 @@
 use crate::states::Config;
 use futures::Future;
 use oauth2::{
-	basic::BasicClient, url::Url, AuthUrl, CsrfToken, RedirectUrl, RefreshToken, RevocationUrl,
-	Scope, TokenUrl,
+	basic::{BasicClient, BasicTokenType},
+	url::Url,
+	AuthUrl, CsrfToken, EmptyExtraTokenFields, RedirectUrl, RevocationUrl, Scope,
+	StandardTokenResponse, TokenUrl,
 };
 use std::{
 	collections::HashMap,
@@ -14,12 +16,18 @@ use std::{
 	time::{Duration, Instant},
 };
 
+/// The type of the `OAuth2` response
+pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
+
+/// The type of the auth queue
+pub type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
+
 /// A manager to get redirect urls and tokens
 pub struct AuthLink {
 	/// The inner client used to manage the flow
 	pub client: BasicClient,
 	/// A queue to wait for the user to finish the flow
-	pub queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
+	pub queue: Arc<RwLock<AuthQueue>>,
 }
 
 impl AuthLink {
@@ -55,6 +63,7 @@ impl AuthLink {
 		}
 	}
 
+	/// Gets a url and a future to make to user auth
 	#[must_use]
 	pub fn process_oauth2(&self, max_duration: Duration) -> (Url, AuthProcess) {
 		let (authorize_url, csrf_state) = self
@@ -80,7 +89,7 @@ pub struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
 	/// The OAuth2 queue to handle
-	queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
+	queue: Arc<RwLock<AuthQueue>>,
 	/// The code to recognize the request
 	csrf_state: CsrfToken,
 }
@@ -88,11 +97,7 @@ pub struct AuthProcess {
 impl AuthProcess {
 	#[must_use]
 	/// Create a new auth process
-	fn new(
-		wait: Duration,
-		queue: Arc<RwLock<HashMap<String, Option<RefreshToken>>>>,
-		csrf_state: CsrfToken,
-	) -> Self {
+	fn new(wait: Duration, queue: Arc<RwLock<AuthQueue>>, csrf_state: CsrfToken) -> Self {
 		// Queue the newly created `csrf` state
 		{
 			let queue = queue.clone();
@@ -110,7 +115,7 @@ impl AuthProcess {
 }
 
 impl Future for AuthProcess {
-	type Output = Option<RefreshToken>;
+	type Output = Option<BasicTokenResponse>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
 		let mut queue = self.queue.write().expect("the OAuth2 RwLock is poisoned");
@@ -118,12 +123,12 @@ impl Future for AuthProcess {
 		if Instant::now() > self.wait_until {
 			Poll::Ready(None)
 		} else if queue
-			.get(&self.csrf_state.secret().to_owned())
+			.get(&self.csrf_state.secret().clone())
 			.unwrap()
 			.is_some()
 		{
 			let value = queue
-				.remove(&self.csrf_state.secret().to_owned())
+				.remove(&self.csrf_state.secret().clone())
 				.unwrap()
 				.unwrap();
 

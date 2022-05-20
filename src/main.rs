@@ -27,33 +27,24 @@ mod commands;
 mod database;
 mod events;
 mod handlers;
+mod logging;
 mod states;
 
 #[macro_use]
 extern crate diesel;
 
 use events::EventHandler;
-use handlers::server::launch_server;
-use label_logger::info;
-use poise::{serenity_prelude::GatewayIntents, PrefixFrameworkOptions};
-use states::{Context, Data, Framework};
-use std::sync::Arc;
+use handlers::server::spawn_server;
+use log::{info, Record};
+use logging::setup_logging;
+use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
+use states::{Context, Data, Framework, STATE};
 
-#[tokio::main]
-async fn main() {
-	let state = Arc::new(Data::new().await);
-	launch_server(state.config.port, Arc::clone(&state));
-
-	let event_handler_state = Arc::clone(&state);
-	let user_data_setup_state = Arc::clone(&state);
-
+/// ?
+fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 	let mut client = Framework::build()
-		.token(&state.config.discord_token)
-		.client_settings(move |fw| {
-			fw.event_handler(EventHandler {
-				state: event_handler_state,
-			})
-		})
+		.token(&STATE.config.discord_token)
+		.client_settings(move |fw| fw.event_handler(EventHandler {}))
 		.intents(
 			GatewayIntents::GUILDS
 				| GatewayIntents::GUILD_VOICE_STATES
@@ -61,30 +52,25 @@ async fn main() {
 				| GatewayIntents::GUILD_MESSAGES
 				| GatewayIntents::MESSAGE_CONTENT,
 		)
-		.user_data_setup(move |_ctx, _ready, _framework| {
-			Box::pin(async move { Ok(user_data_setup_state) })
-		})
+		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(&*STATE) }))
 		.options(poise::FrameworkOptions {
 			pre_command: |ctx| {
 				Box::pin(async move {
 					info!(
-						label: "Command",
+						target: "COMMAND",
 						"{} invoked by {}",
 						ctx.invoked_command_name(),
 						ctx.author().name,
 					);
 
 					if ctx.data().config.production {
-						ctx.data()
-							.log(|wh| {
-								wh.content(format!(
-									"Command `{}` invoked by `{}`",
-									ctx.invoked_command_name(),
-									ctx.author().name,
-								))
-							})
-							.await
-							.unwrap();
+						ctx.data().log(|wh| {
+							wh.content(format!(
+								"Command `{}` invoked by `{}`",
+								ctx.invoked_command_name(),
+								ctx.author().name,
+							))
+						});
 					}
 				})
 			},
@@ -108,5 +94,19 @@ async fn main() {
 
 	client.initialize_owners(true);
 
-	client.run().await.expect("client crashed");
+	client
+}
+
+#[tokio::main]
+async fn main() {
+	// Initialize state
+	let _ = *STATE;
+
+	setup_logging();
+
+	spawn_server(STATE.config.port);
+
+	log::logger().log(&Record::builder().build());
+
+	run_client().run().await.expect("client crashed");
 }
