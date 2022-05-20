@@ -11,7 +11,7 @@ pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> CommandResult {
 	match register_application_commands(ctx, global).await {
 		Ok(_) => {}
 		Err(error) => {
-			dbg!(&error);
+			log::error!("{}", &error);
 			ctx.say(format!("Something went wrong: {}!", error)).await?;
 		}
 	};

@@ -3,32 +3,32 @@
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::{fs::File, io::Write, sync::Mutex, time::SystemTime};
 
-trait LogAdaptor: Send + Sync {
-	fn level(&self) -> LevelFilter;
-	fn log(&self, record: &Record);
-	fn flush(&self);
-}
-
 struct TermLogger {
-	min_level: LevelFilter,
+	/// Min and Max log levels
+	levels: (LevelFilter, LevelFilter),
 }
 
 impl TermLogger {
-	fn boxed(level: Level) -> Box<Self> {
+	fn boxed(levels: (Level, Level)) -> Box<Self> {
 		Box::new(Self {
-			min_level: level.to_level_filter(),
+			levels: (levels.0.to_level_filter(), levels.1.to_level_filter()),
 		})
 	}
 }
 
-impl LogAdaptor for TermLogger {
-	fn level(&self) -> LevelFilter {
-		self.min_level
+impl Log for TermLogger {
+	fn enabled(&self, metadata: &Metadata) -> bool {
+		self.levels.0 >= metadata.level() && self.levels.1 <= metadata.level()
 	}
 
 	fn log(&self, record: &Record) {
-		// TODO: log something
-		todo!("log something")
+		// TODO
+		println!(
+			"{} - {} - {}",
+			record.target(),
+			record.module_path().unwrap_or_default(),
+			record.args()
+		);
 	}
 
 	fn flush(&self) {
@@ -39,33 +39,34 @@ impl LogAdaptor for TermLogger {
 
 struct WriteLogger<W: Write + Send + 'static> {
 	writable: Mutex<W>,
-	min_level: LevelFilter,
+	/// Min and Max log levels
+	levels: (LevelFilter, LevelFilter),
 }
 
 impl<W: Write + Send + 'static> WriteLogger<W> {
-	fn boxed(writable: W, level: Level) -> Box<Self> {
+	fn boxed(writable: W, levels: (Level, Level)) -> Box<Self> {
 		Box::new(Self {
 			writable: Mutex::new(writable),
-			min_level: level.to_level_filter(),
+			levels: (levels.0.to_level_filter(), levels.1.to_level_filter()),
 		})
 	}
 }
 
-impl<W: Write + Send + 'static> LogAdaptor for WriteLogger<W> {
-	fn level(&self) -> LevelFilter {
-		self.min_level
+impl<W: Write + Send + 'static> Log for WriteLogger<W> {
+	fn enabled(&self, metadata: &Metadata) -> bool {
+		self.levels.0 >= metadata.level() && self.levels.1 <= metadata.level()
 	}
-
 	fn log(&self, record: &Record) {
 		// TODO: change output
 
-		self.writable
-			.lock()
-			.unwrap()
-			.write_fmt(format_args!("{}", record.args()))
-			.unwrap();
-
-		todo!()
+		writeln!(
+			self.writable.lock().unwrap(),
+			"{} - {} - {}",
+			record.target(),
+			record.module_path().unwrap_or_default(),
+			record.args()
+		)
+		.unwrap();
 	}
 
 	fn flush(&self) {
@@ -74,63 +75,66 @@ impl<W: Write + Send + 'static> LogAdaptor for WriteLogger<W> {
 }
 
 struct DiscordLogger {
-	min_level: LevelFilter,
+	/// Min and Max log levels
+	levels: (LevelFilter, LevelFilter),
 }
 
 impl DiscordLogger {
-	fn boxed(level: Level) -> Box<Self> {
+	fn boxed(levels: (Level, Level)) -> Box<Self> {
 		Box::new(Self {
-			min_level: level.to_level_filter(),
+			levels: (levels.0.to_level_filter(), levels.1.to_level_filter()),
 		})
 	}
 }
 
-impl LogAdaptor for DiscordLogger {
-	fn level(&self) -> LevelFilter {
-		self.min_level
+impl Log for DiscordLogger {
+	fn enabled(&self, metadata: &Metadata) -> bool {
+		self.levels.0 >= metadata.level() && self.levels.1 <= metadata.level()
 	}
 
 	fn log(&self, record: &Record) {
 		// TODO: send something
-		todo!("send something")
+		// todo!("send something");
 	}
 
 	fn flush(&self) {}
 }
 
+#[derive(Default)]
 struct GlueLoggerConfig {
 	crate_log_only: bool,
 }
 
-impl Default for GlueLoggerConfig {
-	fn default() -> Self {
-		Self {
-			crate_log_only: false,
-		}
-	}
-}
-
 struct GlueLogger {
-	adaptors: Vec<Box<dyn LogAdaptor>>,
+	adaptors: Vec<Box<dyn Log>>,
 	config: GlueLoggerConfig,
+	crate_name: &'static str,
 }
 
 impl GlueLogger {
-	fn new(adaptors: Vec<Box<dyn LogAdaptor>>, config: GlueLoggerConfig) -> Box<Self> {
-		// env!("CARGO_PKG_NAME");
+	fn boxed(adaptors: Vec<Box<dyn Log>>, config: GlueLoggerConfig) -> Box<Self> {
+		let crate_name = env!("CARGO_PKG_NAME");
 
-		Box::new(Self { adaptors, config })
+		Box::new(Self {
+			adaptors,
+			config,
+			crate_name,
+		})
 	}
 }
 
 impl Log for GlueLogger {
 	fn enabled(&self, meta: &Metadata) -> bool {
-		self.adaptors
-			.iter()
-			.any(|adaptor| adaptor.level() >= meta.level())
+		self.adaptors.iter().any(|adaptor| adaptor.enabled(meta))
 	}
 
 	fn log(&self, record: &Record) {
+		if let Some(path) = record.module_path() {
+			if !path.starts_with(self.crate_name) {
+				return;
+			}
+		}
+
 		for adaptor in &self.adaptors {
 			adaptor.log(record);
 		}
@@ -144,9 +148,9 @@ impl Log for GlueLogger {
 }
 
 pub fn setup_logging() {
-	let logger = GlueLogger::new(
+	let logger = GlueLogger::boxed(
 		vec![
-			TermLogger::boxed(Level::Warn),
+			TermLogger::boxed((Level::Info, Level::Error)),
 			WriteLogger::boxed(
 				File::create(format!(
 					"logs/{}.log",
@@ -156,15 +160,15 @@ pub fn setup_logging() {
 						.as_millis()
 				))
 				.expect("failed to create log file"),
-				Level::Info,
+				(Level::Info, Level::Error),
 			),
-			DiscordLogger::boxed(Level::Warn),
+			DiscordLogger::boxed((Level::Warn, Level::Error)),
 		],
 		GlueLoggerConfig {
 			crate_log_only: true,
 		},
 	);
 
-	log::set_max_level(LevelFilter::Info);
+	log::set_max_level(LevelFilter::Trace);
 	log::set_boxed_logger(logger).expect("failed to set logger");
 }

@@ -1,7 +1,7 @@
 use super::{models::NewUser, schema::users};
 use crate::{handlers::auth::BasicTokenResponse, states::STATE};
 use anyhow::Result;
-use diesel::RunQueryDsl;
+use diesel::{ExpressionMethods, RunQueryDsl};
 use oauth2::TokenResponse;
 use poise::serenity_prelude::User;
 use std::time::SystemTime;
@@ -28,4 +28,12 @@ pub fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
 
 fn query_google_user_metadata(_res: &BasicTokenResponse) -> (String, String) {
 	("".into(), "".into())
+}
+
+pub fn delete_user(user: &User) -> Result<()> {
+	diesel::delete(users::table)
+		.filter(users::discord_id.eq(&user.id.to_string()))
+		.execute(&STATE.database.get()?)?;
+
+	Ok(())
 }

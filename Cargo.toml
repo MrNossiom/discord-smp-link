@@ -1,5 +1,5 @@
 [package]
-name = "discord-smp-link"
+name = "discord_smp_link"
 version = "0.1.0"
 edition = "2021"
 

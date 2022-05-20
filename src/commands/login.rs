@@ -93,7 +93,7 @@ pub async fn logout(ctx: Context<'_>) -> CommandResult {
 			})
 			.await?;
 
-			todo!("logout command");
+			triggers::delete_user(ctx.author())?;
 		}
 	}
 

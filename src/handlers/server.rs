@@ -29,9 +29,9 @@ struct AuthErrorTemplate<'a> {
 }
 
 /// Spawn the server and setup logs
-pub fn spawn_server(port: usize) {
+pub fn spawn_server() {
 	thread::spawn(move || {
-		Server::new(format!("localhost:{}", port), move |request| {
+		Server::new(format!("localhost:{}", STATE.config.port), move |request| {
 			log_custom(
 				request,
 				|req, res, elapsed| {

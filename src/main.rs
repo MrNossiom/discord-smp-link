@@ -35,7 +35,6 @@ extern crate diesel;
 
 use events::EventHandler;
 use handlers::server::spawn_server;
-use log::{info, Record};
 use logging::setup_logging;
 use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
 use states::{Context, Data, Framework, STATE};
@@ -56,8 +55,8 @@ fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 		.options(poise::FrameworkOptions {
 			pre_command: |ctx| {
 				Box::pin(async move {
-					info!(
-						target: "COMMAND",
+					log::info!(
+						target: "command",
 						"{} invoked by {}",
 						ctx.invoked_command_name(),
 						ctx.author().name,
@@ -86,7 +85,6 @@ fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 					helpers::reset_global(),
 					login::login(),
 					login::logout(),
-					test::db(),
 				]
 			},
 			..Default::default()
@@ -99,14 +97,7 @@ fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 
 #[tokio::main]
 async fn main() {
-	// Initialize state
-	let _ = *STATE;
-
 	setup_logging();
-
-	spawn_server(STATE.config.port);
-
-	log::logger().log(&Record::builder().build());
-
+	spawn_server();
 	run_client().run().await.expect("client crashed");
 }
