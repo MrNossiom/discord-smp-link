@@ -18,7 +18,8 @@
 	clippy::redundant_else,
 	clippy::must_use_candidate,
 	clippy::return_self_not_must_use,
-	clippy::missing_docs_in_private_items
+	clippy::missing_docs_in_private_items,
+	rustdoc::broken_intra_doc_links
 )]
 
 //! Discord SMP Bot
@@ -39,8 +40,8 @@ use logging::setup_logging;
 use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
 use states::{Context, Data, Framework, STATE};
 
-/// ?
-fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
+/// Build the `poise` [framework](poise::Framework)
+fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 	let mut client = Framework::build()
 		.token(&STATE.config.discord_token)
 		.client_settings(move |fw| fw.event_handler(EventHandler {}))
@@ -99,5 +100,8 @@ fn run_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 async fn main() {
 	setup_logging();
 	spawn_server();
-	run_client().run().await.expect("client crashed");
+
+	if let Err(error) = build_client().run().await {
+		log::error!("Client exited with error: {}", error)
+	}
 }

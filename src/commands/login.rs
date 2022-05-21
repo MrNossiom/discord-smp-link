@@ -1,4 +1,5 @@
-//! Commands to link Discord and Google accounts together
+//! Auth flow commands
+//! links Discord and Google accounts together
 
 use crate::{database::triggers, states::CommandResult, Context};
 use poise::{
@@ -7,7 +8,7 @@ use poise::{
 };
 use std::time::Duration;
 
-/// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité.
+/// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité
 #[command(slash_command)]
 pub async fn login(ctx: Context<'_>) -> CommandResult {
 	// TODO: rename future

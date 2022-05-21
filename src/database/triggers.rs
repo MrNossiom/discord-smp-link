@@ -1,3 +1,5 @@
+//! Triggers that query servers and manipulate the database
+
 use super::{models::NewUser, schema::users};
 use crate::{handlers::auth::BasicTokenResponse, states::STATE};
 use anyhow::Result;
@@ -6,8 +8,10 @@ use oauth2::TokenResponse;
 use poise::serenity_prelude::User;
 use std::time::SystemTime;
 
+/// Insert a new user into the database
+/// Query google for the user's email and full name
 pub fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
-	let (mail, full_name) = query_google_user_metadata(&res);
+	let (mail, full_name) = query_google_user_metadata(res);
 
 	let new_user = NewUser {
 		discord_id: &user.id.to_string(),
@@ -26,14 +30,18 @@ pub fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
 	Ok(())
 }
 
-fn query_google_user_metadata(_res: &BasicTokenResponse) -> (String, String) {
-	("".into(), "".into())
-}
-
+/// Remove a user from the database
 pub fn delete_user(user: &User) -> Result<()> {
 	diesel::delete(users::table)
 		.filter(users::discord_id.eq(&user.id.to_string()))
 		.execute(&STATE.database.get()?)?;
 
 	Ok(())
+}
+
+// TODO: move elsewhere
+/// Query google for the user's email and full name
+fn query_google_user_metadata(_res: &BasicTokenResponse) -> (String, String) {
+	log::error!("Google calls is not implemented yet, line: {}", line!());
+	("".into(), "".into())
 }

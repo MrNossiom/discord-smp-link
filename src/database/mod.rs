@@ -1,4 +1,4 @@
-//! All the structs related to diesel ORM to communicate with the database
+//! Models and triggers related to database management
 
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
@@ -8,7 +8,8 @@ use diesel::{
 pub mod models;
 pub mod triggers;
 
-/// The automatically generated schema by diesel.rs
+/// The automatically generated schema by `Diesel`
 pub mod schema;
 
+/// The type alias for a Postgres connection pool
 pub type DatabasePool = Pool<ConnectionManager<PgConnection>>;

@@ -1,4 +1,4 @@
-//! Handle `OAuth2` flow with users
+//! `OAuth2` flow with users
 
 use crate::states::Config;
 use futures::Future;
@@ -31,7 +31,7 @@ pub struct AuthLink {
 }
 
 impl AuthLink {
-	/// Create a new auth link
+	/// Create a new [`AuthLink`]
 	#[must_use]
 	pub fn new(config: &Config) -> Self {
 		let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
@@ -83,8 +83,8 @@ impl AuthLink {
 	}
 }
 
-/// Returned by `AuthLink` for a new authentification process
-/// Implement `Future` to make code more readable
+/// Returned by [`AuthLink`] for a new authentification process
+/// Implement [`Future`] to make code more readable
 pub struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
@@ -96,12 +96,12 @@ pub struct AuthProcess {
 
 impl AuthProcess {
 	#[must_use]
-	/// Create a new auth process
+	/// Create a new [`AuthProcess`]
 	fn new(wait: Duration, queue: Arc<RwLock<AuthQueue>>, csrf_state: CsrfToken) -> Self {
 		// Queue the newly created `csrf` state
 		{
 			let queue = queue.clone();
-			let mut map = queue.write().expect("the OAuth2 RwLock is poisoned");
+			let mut map = queue.write().expect("RwLock is poisoned");
 
 			map.insert(csrf_state.secret().clone(), None);
 		}
@@ -118,7 +118,7 @@ impl Future for AuthProcess {
 	type Output = Option<BasicTokenResponse>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-		let mut queue = self.queue.write().expect("the OAuth2 RwLock is poisoned");
+		let mut queue = self.queue.write().expect("RwLock is poisoned");
 
 		if Instant::now() > self.wait_until {
 			Poll::Ready(None)

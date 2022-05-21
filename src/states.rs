@@ -9,19 +9,25 @@ use diesel::{
 use dotenv::dotenv;
 use futures::executor::block_on;
 use lazy_static::lazy_static;
-use log::error;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
 	serenity_prelude::{ExecuteWebhook, Http as SerenityHttp, Webhook},
 	Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework,
 };
-use std::env;
+use std::{
+	env,
+	sync::atomic::{AtomicBool, Ordering},
+};
+
+/// Store `true` if [`Data`] has been initialized
+static DATA_CALLED: AtomicBool = AtomicBool::new(false);
 
 lazy_static! {
+	/// The globally available Data
 	pub static ref STATE: Data = Data::new();
 }
 
-/// The initial config of the bot
+/// App global configuration
 pub struct Config {
 	/// The token needed to access the discord api
 	pub discord_token: String,
@@ -67,7 +73,7 @@ impl Config {
 	}
 }
 
-/// The data that is passed to the framework
+/// App global data
 pub struct Data {
 	/// An access to the database
 	pub database: DatabasePool,
@@ -78,7 +84,6 @@ pub struct Data {
 
 	/// The discord channel webhook to send logs to
 	pub logs_webhook: Webhook,
-
 	/// A http client to make discord requests
 	pub http: SerenityHttp,
 }
@@ -86,6 +91,10 @@ pub struct Data {
 impl Data {
 	/// Parse the bot data from
 	pub fn new() -> Self {
+		if DATA_CALLED.swap(true, Ordering::Relaxed) {
+			panic!("Data can only be initialized once");
+		}
+
 		let config = Config::from_dotenv();
 
 		let manager = ConnectionManager::<PgConnection>::new(&config.database_url);
@@ -115,7 +124,7 @@ impl Data {
 		for<'b> F: FnOnce(&'b mut ExecuteWebhook<'a>) -> &'b mut ExecuteWebhook<'a>,
 	{
 		if let Err(error) = block_on(self.logs_webhook.execute(&self.http, false, func)) {
-			error!("{}", error)
+			log::error!("{}", error)
 		}
 	}
 }

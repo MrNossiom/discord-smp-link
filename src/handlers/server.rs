@@ -1,8 +1,7 @@
-//! Handle the server for `OAuth2` and presentation page
+//! Http Server to answer `OAuth2` redirects and show a presentation page
 
 use crate::states::STATE;
 use askama::Template;
-use log::{error, info};
 use oauth2::{reqwest::http_client, AuthorizationCode, TokenResponse};
 use rouille::{log_custom, Request, Response, Server};
 use std::thread;
@@ -28,20 +27,20 @@ struct AuthErrorTemplate<'a> {
 	error_message: &'a str,
 }
 
-/// Spawn the server and setup logs
+/// Spawn the server in a separate thread
 pub fn spawn_server() {
 	thread::spawn(move || {
 		Server::new(format!("localhost:{}", STATE.config.port), move |request| {
 			log_custom(
 				request,
 				|req, res, elapsed| {
-					info!(
-						target: "SERVER",
-						"{} {} - {}s - {}", req.raw_url(), req.method(), elapsed.as_secs(), res.status_code
+					log::info!(
+						target: "server",
+						"{} {} - {}s - {}",  req.method(),req.raw_url(), elapsed.as_secs(), res.status_code
 					);
 				},
 				|req, elapsed| {
-					let _ = error!(
+					let _ = log::error!(
 						"{} {} - {}s - PANIC!",
 						req.method(),
 						req.raw_url(),
@@ -55,12 +54,12 @@ pub fn spawn_server() {
 		.pool_size(4)
 		.run();
 
-		panic!("Server crashed");
+		log::error!(target: "server", "server closed");
 	});
 }
 
+// TODO: move each handle in a separate function
 /// Handles server requests
-// TODO : to `OAuth2` response from Google
 fn handle_request(request: &Request) -> Response {
 	let request_url = {
 		let url = request.raw_url();

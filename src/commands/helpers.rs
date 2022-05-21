@@ -1,11 +1,11 @@
-//! Commands to act on bot data
+//! Act on discord client metadata
 
 use crate::states::{CommandResult, Context};
 use poise::{
 	builtins::register_application_commands, command, serenity_prelude::ApplicationCommand,
 };
 
-/// Register all slash commands to discord
+/// Register all slash commands to `Discord`
 #[command(prefix_command, owners_only, hide_in_help)]
 pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> CommandResult {
 	match register_application_commands(ctx, global).await {
@@ -19,7 +19,7 @@ pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> CommandResult {
 	Ok(())
 }
 
-/// Unregister all slash commands from discord
+/// Unregister all slash commands from `Discord`
 #[command(prefix_command, owners_only, hide_in_help)]
 pub async fn reset_global(ctx: Context<'_>) -> CommandResult {
 	ApplicationCommand::set_global_application_commands(ctx.discord(), |b| b).await?;
