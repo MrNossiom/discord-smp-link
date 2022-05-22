@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+    db:
+        image: postgres
+        environment:
+            POSTGRES_USER: server
+            POSTGRES_PASSWORD: server
+        ports:
+            - 5432:5432
+    client:
+        build: .
+        volumes:
+            # FIXME: bind doesn't work
+            - ./env:./env
+        depends_on: [database]
+        network_mode: "host"
