@@ -19,8 +19,10 @@ oauth2 = "4.1.0"
 rouille = "3.5.0"
 serde = "1.0.136"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-tokio-diesel = "0.3.0"
+tokio-diesel = { git = "https://github.com/mehcode/tokio-diesel", rev = "f4af425" }
 dotenv = "0.15.0"
 log = "0.4.17"
 env_logger = "0.9.0"
 lazy_static = "1.4.0"
+console = "0.15.0"
+chrono = "0.4.19"

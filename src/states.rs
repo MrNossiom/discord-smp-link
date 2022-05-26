@@ -7,13 +7,9 @@ use diesel::{
 	PgConnection,
 };
 use dotenv::dotenv;
-use futures::executor::block_on;
 use lazy_static::lazy_static;
 use oauth2::{ClientId, ClientSecret};
-use poise::{
-	serenity_prelude::{ExecuteWebhook, Http as SerenityHttp, Webhook},
-	Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework,
-};
+use poise::{Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework};
 use std::{
 	env,
 	sync::atomic::{AtomicBool, Ordering},
@@ -23,13 +19,13 @@ use std::{
 static DATA_CALLED: AtomicBool = AtomicBool::new(false);
 
 lazy_static! {
-	/// The globally available Data
+	/// The globally available [`Data`]
 	pub static ref STATE: Data = Data::new();
 }
 
 /// App global configuration
 pub struct Config {
-	/// The token needed to access the discord api
+	/// The token needed to access the `Discord` Api
 	pub discord_token: String,
 	/// The postgresql connection uri
 	pub database_url: String,
@@ -81,11 +77,8 @@ pub struct Data {
 	pub auth: AuthLink,
 	/// An instance of the parsed initial config
 	pub config: Config,
-
-	/// The discord channel webhook to send logs to
-	pub logs_webhook: Webhook,
-	/// A http client to make discord requests
-	pub http: SerenityHttp,
+	// The discord channel webhook to send logs to
+	// pub webhook: WebhookLogs<'static>,
 }
 
 impl Data {
@@ -102,29 +95,21 @@ impl Data {
 			.build(manager)
 			.expect("failed to create database pool");
 
-		let http = SerenityHttp::new(&config.discord_token);
+		// let http = SerenityHttp::new(&config.discord_token);
 
-		let logs_webhook_url = env::var("LOGS_WEBHOOK").expect("LOGS_WEBHOOK is not set in .env");
-		let logs_webhook = block_on(http.get_webhook_from_url(&logs_webhook_url))
-			.expect("webhook in config file is invalid");
+		// let logs_webhook_url = env::var("LOGS_WEBHOOK").expect("LOGS_WEBHOOK is not set in .env");
+		// let logs_webhook = block_on(http.get_webhook_from_url(&logs_webhook_url))
+		// 	.expect("webhook in config file is invalid");
+
+		// let webhook = WebhookLogs::new(http, logs_webhook);
+
+		// Looper::start(Arc::new(webhook));
 
 		Self {
 			database,
 			auth: AuthLink::new(&config),
 			config,
-			logs_webhook,
-			http,
-		}
-	}
-
-	/// Sends a message to the discord log webhook
-	// TODO: implement a custom logger for discord logs with a queue
-	pub fn log<'a, F>(&self, func: F)
-	where
-		for<'b> F: FnOnce(&'b mut ExecuteWebhook<'a>) -> &'b mut ExecuteWebhook<'a>,
-	{
-		if let Err(error) = block_on(self.logs_webhook.execute(&self.http, false, func)) {
-			log::error!("{}", error)
+			// webhook,
 		}
 	}
 }

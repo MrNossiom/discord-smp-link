@@ -35,8 +35,11 @@ pub fn spawn_server() {
 				request,
 				|req, res, elapsed| {
 					log::info!(
-						target: "server",
-						"{} {} - {}s - {}",  req.method(),req.raw_url(), elapsed.as_secs(), res.status_code
+						"{} {} - {}s - {}",
+						req.method(),
+						req.raw_url(),
+						elapsed.as_secs(),
+						res.status_code
 					);
 				},
 				|req, elapsed| {
@@ -54,7 +57,7 @@ pub fn spawn_server() {
 		.pool_size(4)
 		.run();
 
-		log::error!(target: "server", "server closed");
+		log::error!("server closed");
 	});
 }
 

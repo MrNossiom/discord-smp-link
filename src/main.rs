@@ -34,6 +34,9 @@ mod states;
 #[macro_use]
 extern crate diesel;
 
+use std::process::ExitCode;
+
+use commands::pre_command;
 use events::EventHandler;
 use handlers::server::spawn_server;
 use logging::setup_logging;
@@ -54,26 +57,7 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 		)
 		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(&*STATE) }))
 		.options(poise::FrameworkOptions {
-			pre_command: |ctx| {
-				Box::pin(async move {
-					log::info!(
-						target: "command",
-						"{} invoked by {}",
-						ctx.invoked_command_name(),
-						ctx.author().name,
-					);
-
-					if ctx.data().config.production {
-						ctx.data().log(|wh| {
-							wh.content(format!(
-								"Command `{}` invoked by `{}`",
-								ctx.invoked_command_name(),
-								ctx.author().name,
-							))
-						});
-					}
-				})
-			},
+			pre_command,
 			prefix_options: PrefixFrameworkOptions {
 				prefix: Some(".".into()),
 				..Default::default()
@@ -97,11 +81,15 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
 	setup_logging();
 	spawn_server();
 
 	if let Err(error) = build_client().run().await {
-		log::error!("Client exited with error: {}", error)
+		log::error!("Client exited with error: {}", error);
+
+		return ExitCode::FAILURE;
 	}
+
+	ExitCode::SUCCESS
 }
