@@ -42,6 +42,7 @@ pub fn delete_user(user: &User) -> Result<()> {
 // TODO: move elsewhere
 /// Query google for the user's email and full name
 fn query_google_user_metadata(_res: &BasicTokenResponse) -> (String, String) {
-	log::error!("Google calls is not implemented yet");
+	log::error!("Google calls are not implemented yet");
+
 	("".into(), "".into())
 }

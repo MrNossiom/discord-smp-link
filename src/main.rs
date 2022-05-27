@@ -36,7 +36,7 @@ extern crate diesel;
 
 use std::process::ExitCode;
 
-use commands::pre_command;
+use commands::{command_on_error, post_command, pre_command};
 use events::EventHandler;
 use handlers::server::spawn_server;
 use logging::setup_logging;
@@ -58,6 +58,8 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(&*STATE) }))
 		.options(poise::FrameworkOptions {
 			pre_command,
+			on_error: command_on_error,
+			post_command,
 			prefix_options: PrefixFrameworkOptions {
 				prefix: Some(".".into()),
 				..Default::default()

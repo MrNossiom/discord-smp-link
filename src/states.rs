@@ -9,7 +9,6 @@ use diesel::{
 use dotenv::dotenv;
 use lazy_static::lazy_static;
 use oauth2::{ClientId, ClientSecret};
-use poise::{Command as PoiseCommand, Context as PoiseContext, Framework as PoiseFramework};
 use std::{
 	env,
 	sync::atomic::{AtomicBool, Ordering},
@@ -114,11 +113,13 @@ impl Data {
 	}
 }
 
-/// Common command result
+/// Common command return type
 pub type CommandResult<E = Error> = Result<(), E>;
-/// The context provided to each command
-pub type Context<'a> = PoiseContext<'a, &'static Data, Error>;
-/// The command type alias
-pub type _Command = PoiseCommand<Data, Error>;
-/// The framework type alias
-pub type Framework = PoiseFramework<&'static Data, Error>;
+/// The poise [`poise::Context`] provided to each command
+pub type Context<'a> = poise::Context<'a, &'static Data, Error>;
+/// The [`poise::Command`] type alias
+pub type _Command = poise::Command<Data, Error>;
+/// The [`poise::Framework`] type alias
+pub type Framework = poise::Framework<&'static Data, Error>;
+/// The [`poise::FrameworkError`] type alias
+pub type FrameworkError<'a> = poise::FrameworkError<'a, &'static Data, Error>;

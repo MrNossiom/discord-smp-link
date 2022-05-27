@@ -121,7 +121,7 @@ impl<'a> ToPrettyRecord for Record<'a> {
 			self.level(),
 			self.target()
 				.strip_prefix("discord_smp_link::")
-				.unwrap_or_default(),
+				.unwrap_or_else(|| self.target()),
 			self.args()
 		)
 	}
@@ -134,7 +134,7 @@ impl<'a> ToPrettyRecord for Record<'a> {
 			style(
 				self.target()
 					.strip_prefix("discord_smp_link::")
-					.unwrap_or_default()
+					.unwrap_or_else(|| self.target())
 			)
 			.green(),
 			self.args()

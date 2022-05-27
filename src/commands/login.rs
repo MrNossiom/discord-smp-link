@@ -9,14 +9,13 @@ use poise::{
 use std::time::Duration;
 
 /// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité
-#[command(slash_command)]
+#[command(slash_command, guild_only, member_cooldown = 10, ephemeral)]
 pub async fn login(ctx: Context<'_>) -> CommandResult {
 	// TODO: rename future
 	let (url, future) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
 
 	ctx.send(|reply| {
 		reply
-			.ephemeral(true)
 			.content("Use your SMP account to connect yourself")
 			.components(|components| {
 				components.create_action_row(|action_row| {
@@ -31,12 +30,8 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 	let res = match future.await {
 		Some(res) => res,
 		None => {
-			ctx.send(|reply| {
-				reply
-					.ephemeral(true)
-					.content("You didn't finish the authentication process in 5 minutes.")
-			})
-			.await?;
+			ctx.say("You didn't finish the authentication process in 5 minutes.")
+				.await?;
 
 			return Ok(());
 		}
@@ -44,18 +39,14 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 
 	triggers::new_user(ctx.author(), &res)?;
 
-	ctx.send(|reply| {
-		reply
-			.ephemeral(true)
-			.content("You successfully authenticated with Google!")
-	})
-	.await?;
+	ctx.say("You successfully authenticated with Google!")
+		.await?;
 
 	Ok(())
 }
 
 /// Dissocie ton compte Google SMP de ton compte Discord
-#[command(slash_command)]
+#[command(slash_command, guild_only, member_cooldown = 10, ephemeral)]
 pub async fn logout(ctx: Context<'_>) -> CommandResult {
 	/// The component id to retrieve the interaction
 	const LOGOUT_COMPONENT_ID: &str = "logout";
@@ -63,7 +54,6 @@ pub async fn logout(ctx: Context<'_>) -> CommandResult {
 	let reply = ctx
 		.send(|reply| {
 			reply
-				.ephemeral(true)
 				.content("After you disconnected your accounts, you will have to use the /login command again" )
 				.components(|components| {
 					components.create_action_row(|action_row| {
@@ -88,11 +78,8 @@ pub async fn logout(ctx: Context<'_>) -> CommandResult {
 		interaction.defer(&ctx.discord().http).await?;
 
 		if interaction.data.custom_id == LOGOUT_COMPONENT_ID {
-			ctx.send(|msg| {
-				msg.ephemeral(true)
-					.content("You will be logout once this is implemented")
-			})
-			.await?;
+			ctx.say("You will be logout once this is implemented")
+				.await?;
 
 			triggers::delete_user(ctx.author())?;
 		}

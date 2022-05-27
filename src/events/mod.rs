@@ -12,6 +12,6 @@ pub struct EventHandler {}
 impl SerenityEventHandler for EventHandler {
 	async fn ready(&self, _ctx: SerenityContext, bot: Ready) {
 		// register_application_commands(ctx, true);
-		log::info!( "{} is ready!", bot.user.name);
+		log::info!("{} is ready!", bot.user.name);
 	}
 }
