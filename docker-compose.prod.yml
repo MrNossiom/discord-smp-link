@@ -11,7 +11,7 @@ services:
     client:
         build: .
         volumes:
-            # FIXME: bind doesn't work
-            - ./env:./env
+            - .env.docker:/tmp/discord_smp_link/.env
+            - ./logs/:/tmp/discord_smp_link/logs
         depends_on: [database]
         network_mode: "host"
