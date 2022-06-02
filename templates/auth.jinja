@@ -1,0 +1,20 @@
+{% extends "_base.jinja" %}
+
+{% block title %}
+{% if is_success %}Wow!{% else %}Oups!{% endif %}
+{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+	{% include "_logos.jinja" %}
+
+	{% if is_success %}
+		<h1>Hi {{ username }}!</h1>
+		<p>You are logged in!</p>
+		<p>You can return to discord</p>
+	{% else %}
+		<h1>Hi {{ username }}!</h1>
+		<p>There was en error : <code>{{ error_message }}</code></p>
+	{% endif %}
+{% endblock %}

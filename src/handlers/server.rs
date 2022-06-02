@@ -6,31 +6,43 @@ use oauth2::{reqwest::http_client, AuthorizationCode, TokenResponse};
 use rouille::{log_custom, Request, Response, Server};
 use std::thread;
 
+/// A template for the 404 page
+#[derive(Template, Default)]
+#[template(path = "404.jinja")]
+struct Code404Template<'a> {
+	/// The error message of 404 page
+	ressource_path: &'a str,
+}
+
+/// A template for the 500 page
+#[derive(Template, Default)]
+#[template(path = "500.jinja")]
+struct Code500Template<'a> {
+	/// The error message of 500 page
+	error_message: &'a str,
+}
+
 /// A template for the index page
-#[derive(Template)]
+#[derive(Template, Default)]
 #[template(path = "index.jinja")]
 struct IndexTemplate {}
 
-/// A template for the `OAuth2` success page
-#[derive(Template)]
-#[template(path = "auth/success.jinja")]
-struct AuthSuccessTemplate<'a> {
+/// A template for the `OAuth2` success or error page
+#[derive(Template, Default)]
+#[template(path = "auth.jinja")]
+struct AuthTemplate<'a> {
 	/// The token response from google
-	token: &'a str,
-}
-
-/// A template for the `OAuth2` error page
-#[derive(Template)]
-#[template(path = "auth/error.jinja")]
-struct AuthErrorTemplate<'a> {
-	/// The error message to show on the page
+	is_success: bool,
+	/// The person discord username
+	username: &'a str,
+	/// The message in case of error
 	error_message: &'a str,
 }
 
 /// Spawn the server in a separate thread
 pub fn spawn_server() {
 	thread::spawn(move || {
-		Server::new(format!("localhost:{}", STATE.config.port), move |request| {
+		Server::new(&STATE.config.server_url, move |request| {
 			log_custom(
 				request,
 				|req, res, elapsed| {
@@ -76,8 +88,10 @@ fn handle_request(request: &Request) -> Response {
 			let code = match request.get_param("code") {
 				Some(code) => code,
 				None => {
-					return Response::template(AuthErrorTemplate {
+					return Response::template(AuthTemplate {
+						is_success: false,
 						error_message: "You need to provide a 'code' param in url",
+						..Default::default()
 					});
 				}
 			};
@@ -85,8 +99,10 @@ fn handle_request(request: &Request) -> Response {
 			let state = match request.get_param("state") {
 				Some(state) => state,
 				None => {
-					return Response::template(AuthErrorTemplate {
+					return Response::template(AuthTemplate {
+						is_success: false,
 						error_message: "You need to provide a 'state' param in url",
+						..Default::default()
 					});
 				}
 			};
@@ -94,8 +110,10 @@ fn handle_request(request: &Request) -> Response {
 			let mut queue = STATE.auth.queue.write().expect("RwLock poisoned");
 
 			if queue.get(&state).is_none() {
-				return Response::template(AuthErrorTemplate {
+				return Response::template(AuthTemplate {
+					is_success: false,
 					error_message: "The given 'state' wasn't queued anymore",
+					..Default::default()
 				});
 			};
 
@@ -108,31 +126,37 @@ fn handle_request(request: &Request) -> Response {
 			let token_response = match oauth2_response {
 				Ok(token_res) => token_res,
 				Err(error) => {
-					return Response::template(AuthErrorTemplate {
+					return Response::template(AuthTemplate {
+						is_success: false,
 						error_message: &error.to_string(),
+						..Default::default()
 					});
 				}
 			};
 
 			queue.insert(state, Some(token_response.clone()));
 
-			let refresh_token = token_response
+			let _refresh_token = token_response
 				.refresh_token()
 				.expect("google response didn't contain a token")
 				.secret()
 				.as_str();
 
-			Response::template(AuthSuccessTemplate {
-				token: refresh_token,
+			Response::template(AuthTemplate {
+				is_success: true,
+				username: "",
+				..Default::default()
 			})
 		}
 		_ => {
-			let response = rouille::match_assets(request, "./server/static");
+			let response = rouille::match_assets(request, "./public");
 
 			if response.is_success() {
 				response
 			} else {
-				Response::empty_404()
+				Response::template(Code404Template {
+					ressource_path: request_url,
+				})
 			}
 		}
 	}
@@ -150,7 +174,7 @@ trait TemplateResponse {
 			Err(error) => {
 				println!("{}", error);
 				Response::html(
-					AuthErrorTemplate {
+					Code500Template {
 						error_message: "Could not render template",
 					}
 					.render()

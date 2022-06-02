@@ -45,13 +45,10 @@ impl AuthLink {
 			auth_url,
 			Some(token_url),
 		)
-		.set_redirect_uri(if config.production {
-			RedirectUrl::new("http://somedumbdomain.lol/oauth2".into())
-				.expect("invalid redirect url")
-		} else {
-			RedirectUrl::new(format!("http://localhost:{}/oauth2", config.port))
-				.expect("invalid redirect url")
-		})
+		.set_redirect_uri(
+			RedirectUrl::new(format!("http://{}/oauth2", config.server_url))
+				.expect("invalid redirect url"),
+		)
 		.set_revocation_uri(
 			RevocationUrl::new("https://oauth2.googleapis.com/revoke".into())
 				.expect("invalid revoke url"),

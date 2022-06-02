@@ -37,7 +37,7 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 		}
 	};
 
-	triggers::new_user(ctx.author(), &res)?;
+	triggers::new_user(ctx.author(), &res).await?;
 
 	ctx.say("You successfully authenticated with Google!")
 		.await?;

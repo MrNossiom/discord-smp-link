@@ -32,7 +32,7 @@ pub struct Config {
 	pub google_client: (ClientId, ClientSecret),
 
 	/// The port to run the server on
-	pub port: usize,
+	pub server_url: String,
 	/// Whether or not to use production defaults
 	pub production: bool,
 }
@@ -40,11 +40,8 @@ pub struct Config {
 impl Config {
 	/// Parse the config from `.env` file
 	fn from_dotenv() -> Self {
-		match dotenv() {
-			Ok(_) => (),
-			Err(_) => {
-				panic!("Couldn't find .env file, please create one");
-			}
+		if dotenv().is_err() {
+			panic!("Couldn't find `.env` file, please create one");
 		}
 
 		Self {
@@ -56,10 +53,7 @@ impl Config {
 					env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_ID is not set"),
 				),
 			),
-			port: env::var("PORT")
-				.unwrap_or_else(|_| "8080".into())
-				.parse::<usize>()
-				.expect("PORT is not a number"),
+			server_url: env::var("SERVER_URL").expect("SERVER_URL is not set"),
 			production: env::var("PRODUCTION")
 				.unwrap_or_else(|_| "false".into())
 				.parse::<bool>()
