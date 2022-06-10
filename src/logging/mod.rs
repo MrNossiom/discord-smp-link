@@ -61,11 +61,10 @@ impl Log for GlueLogger {
 	}
 
 	fn log(&self, record: &Record) {
-		if let Some(crate_name) = self.config.filter_crate_name {
-			if let Some(path) = record.module_path() {
-				if !path.starts_with(crate_name) {
-					return;
-				}
+		// Remove weird serenity logs
+		if let Some(path) = record.module_path() {
+			if path.starts_with("serenity") {
+				return;
 			}
 		}
 

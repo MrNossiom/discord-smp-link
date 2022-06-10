@@ -13,3 +13,11 @@ code {
 	background-color: rgb(240, 240, 240);
 	border-radius: 5px;
 }
+
+.logo {
+	aspect-ratio: 1;
+}
+
+.emoji-logo {
+	font-size: xx-large;
+}

@@ -7,7 +7,11 @@
 {% block head %}{% endblock %}
 
 {% block content %}
-	{% include "_logos.jinja" %}
+	<div style="display: flex; align-items: center; justify-content: space-around;">
+		<img src="/images/discord-smp-link-logo.png" style="width: 200px;" />
+		<span style="font-size: 40px; margin: 0 5%;">+</span>
+		<img src="/images/smp-logo.png" style="width: 200px;" />
+	</div>
 
 	{% if is_success %}
 		<h1>Hi {{ username }}!</h1>

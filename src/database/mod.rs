@@ -2,7 +2,7 @@
 
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
-	PgConnection,
+	MysqlConnection,
 };
 
 pub mod models;
@@ -12,4 +12,4 @@ pub mod triggers;
 pub mod schema;
 
 /// The type alias for a Postgres connection pool
-pub type DatabasePool = Pool<ConnectionManager<PgConnection>>;
+pub type DatabasePool = Pool<ConnectionManager<MysqlConnection>>;

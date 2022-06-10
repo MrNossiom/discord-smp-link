@@ -4,6 +4,7 @@ target/
 # Misc
 .DS_Store
 .vscode/
+.idea/
 logs/
 
 # Database

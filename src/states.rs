@@ -4,7 +4,7 @@ use crate::{database::DatabasePool, handlers::auth::AuthLink};
 use anyhow::{Error, Result};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
-	PgConnection,
+	MysqlConnection,
 };
 use dotenv::dotenv;
 use lazy_static::lazy_static;
@@ -31,8 +31,10 @@ pub struct Config {
 	/// The google auth client id and secret pair
 	pub google_client: (ClientId, ClientSecret),
 
-	/// The port to run the server on
+	/// The url of the oauth2 callback
 	pub server_url: String,
+	/// The port to run the server on
+	pub port: String,
 	/// Whether or not to use production defaults
 	pub production: bool,
 }
@@ -54,6 +56,7 @@ impl Config {
 				),
 			),
 			server_url: env::var("SERVER_URL").expect("SERVER_URL is not set"),
+			port: env::var("PORT").expect("PORT is not set"),
 			production: env::var("PRODUCTION")
 				.unwrap_or_else(|_| "false".into())
 				.parse::<bool>()
@@ -83,7 +86,7 @@ impl Data {
 
 		let config = Config::from_dotenv();
 
-		let manager = ConnectionManager::<PgConnection>::new(&config.database_url);
+		let manager = ConnectionManager::<MysqlConnection>::new(&config.database_url);
 		let database = Pool::builder()
 			.build(manager)
 			.expect("failed to create database pool");
@@ -108,7 +111,7 @@ impl Data {
 }
 
 /// Common command return type
-pub type CommandResult<E = Error> = Result<(), E>;
+pub type InteractionResult<E = Error> = Result<(), E>;
 /// The poise [`poise::Context`] provided to each command
 pub type Context<'a> = poise::Context<'a, &'static Data, Error>;
 /// The [`poise::Command`] type alias

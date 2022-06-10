@@ -2,9 +2,11 @@ version: '3.7'
 
 services:
     db:
-        image: postgres
+        image: mariadb
         environment:
-            POSTGRES_USER: server
-            POSTGRES_PASSWORD: server
+            MARIADB_DATABASE: server
+            MARIADB_USER: server
+            MARIADB_PASSWORD: server
+            MARIADB_RANDOM_ROOT_PASSWORD: true
         ports:
-            - 5432:5432
+            - 3306:3306

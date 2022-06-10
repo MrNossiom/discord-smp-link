@@ -2,9 +2,9 @@
 
 use crate::states::STATE;
 use askama::Template;
-use oauth2::{reqwest::http_client, AuthorizationCode, TokenResponse};
+use oauth2::{reqwest::http_client, AuthorizationCode};
 use rouille::{log_custom, Request, Response, Server};
-use std::thread;
+use std::{process, thread};
 
 /// A template for the 404 page
 #[derive(Template, Default)]
@@ -42,7 +42,8 @@ struct AuthTemplate<'a> {
 /// Spawn the server in a separate thread
 pub fn spawn_server() {
 	thread::spawn(move || {
-		Server::new(&STATE.config.server_url, move |request| {
+		// Listen on external interfaces `0.0.0.0`
+		Server::new(format!("0.0.0.0:{}", STATE.config.port), move |request| {
 			log_custom(
 				request,
 				|req, res, elapsed| {
@@ -65,11 +66,13 @@ pub fn spawn_server() {
 				|| handle_request(request),
 			)
 		})
-		.expect("could not create socket")
+		.unwrap_or_else(|err| {
+			log::error!("Could not create socket : {}", err);
+
+			process::exit(1);
+		})
 		.pool_size(4)
 		.run();
-
-		log::error!("server closed");
 	});
 }
 
@@ -134,13 +137,7 @@ fn handle_request(request: &Request) -> Response {
 				}
 			};
 
-			queue.insert(state, Some(token_response.clone()));
-
-			let _refresh_token = token_response
-				.refresh_token()
-				.expect("google response didn't contain a token")
-				.secret()
-				.as_str();
+			queue.insert(state, Some(token_response));
 
 			Response::template(AuthTemplate {
 				is_success: true,
