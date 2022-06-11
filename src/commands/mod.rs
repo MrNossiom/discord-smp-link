@@ -6,6 +6,9 @@ use console::style;
 use poise::BoxFuture;
 use uuid::Uuid;
 
+mod setup;
+
+pub use setup::setup;
 pub mod helpers;
 pub mod login;
 

@@ -1,7 +1,7 @@
 //! Auth flow commands
 //! links Discord and Google accounts together
 
-use crate::{database::triggers, states::CommandResult, Context};
+use crate::{database::triggers, states::InteractionResult, Context};
 use poise::{
 	command,
 	serenity_prelude::{ButtonStyle, CollectComponentInteraction},
@@ -9,26 +9,36 @@ use poise::{
 use std::time::Duration;
 
 /// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité
-#[command(slash_command, guild_only, member_cooldown = 10, ephemeral)]
-pub async fn login(ctx: Context<'_>) -> CommandResult {
-	// TODO: rename future
-	let (url, future) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
+#[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
+pub async fn login(ctx: Context<'_>) -> InteractionResult {
+	_login(ctx).await
+}
+
+/// Starts the auth process
+///
+/// Function used in the login and the setup command
+pub async fn _login(ctx: Context<'_>) -> InteractionResult {
+	let (oauth2_url, token_response) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
 
 	ctx.send(|reply| {
 		reply
+			.ephemeral(true)
 			.content("Use your SMP account to connect yourself")
 			.components(|components| {
 				components.create_action_row(|action_row| {
 					action_row.create_button(|button| {
-						button.label("Continue").url(url).style(ButtonStyle::Link)
+						button
+							.label("Continue")
+							.url(oauth2_url)
+							.style(ButtonStyle::Link)
 					})
 				})
 			})
 	})
 	.await?;
 
-	let res = match future.await {
-		Some(res) => res,
+	let token_response = match token_response.await {
+		Some(response) => response,
 		None => {
 			ctx.say("You didn't finish the authentication process in 5 minutes.")
 				.await?;
@@ -37,7 +47,7 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 		}
 	};
 
-	triggers::new_user(ctx.author(), &res).await?;
+	triggers::new_user(ctx.author(), &token_response).await?;
 
 	ctx.say("You successfully authenticated with Google!")
 		.await?;
@@ -46,26 +56,31 @@ pub async fn login(ctx: Context<'_>) -> CommandResult {
 }
 
 /// Dissocie ton compte Google SMP de ton compte Discord
-#[command(slash_command, guild_only, member_cooldown = 10, ephemeral)]
-pub async fn logout(ctx: Context<'_>) -> CommandResult {
-	/// The component id to retrieve the interaction
-	const LOGOUT_COMPONENT_ID: &str = "logout";
+#[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
+pub async fn logout(ctx: Context<'_>) -> InteractionResult {
+	_logout(ctx).await
+}
 
+/// Starts the dissociate accounts process
+///
+/// Function used in the login and the setup command
+pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
 	let reply = ctx
 		.send(|reply| {
 			reply
-				.content("After you disconnected your accounts, you will have to use the /login command again" )
-				.components(|components| {
-					components.create_action_row(|action_row| {
-						action_row
-							.create_button(|button| {
-								button
-									.label("Disconnect your account")
-									.custom_id(LOGOUT_COMPONENT_ID)
-									.style(ButtonStyle::Danger)
-							})
-					})
+			.ephemeral(true)
+			.content("After you disconnected your accounts, you will have to use the /login command again" )
+			.components(|components| {
+				components.create_action_row(|action_row| {
+					action_row
+						.create_button(|button| {
+							button
+								.label("Disconnect your account")
+								.custom_id("login.logout.disconnect")
+								.style(ButtonStyle::Danger)
+						})
 				})
+			})
 		})
 		.await?;
 
@@ -77,10 +92,7 @@ pub async fn logout(ctx: Context<'_>) -> CommandResult {
 	{
 		interaction.defer(&ctx.discord().http).await?;
 
-		if interaction.data.custom_id == LOGOUT_COMPONENT_ID {
-			ctx.say("You will be logout once this is implemented")
-				.await?;
-
+		if interaction.data.custom_id == "login.logout.disconnect" {
 			triggers::delete_user(ctx.author())?;
 		}
 	}

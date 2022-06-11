@@ -94,7 +94,7 @@ pub fn setup_logging() {
 					.as_millis()
 			))
 			.expect("failed to create log file"),
-			Level::Info,
+			Level::Debug,
 		));
 	}
 

@@ -1,80 +1,99 @@
 //! `Diesel` models that represent database objects
 
 use super::schema::*;
-use crate::states::STATE;
-use anyhow::{anyhow, Result};
-use diesel::{ExpressionMethods, QueryDsl, Queryable, RunQueryDsl};
-use oauth2::{reqwest::http_client, AccessToken, RefreshToken, TokenResponse};
-use std::time::SystemTime;
+use diesel::Queryable;
 
 /// Represent a user with `Discord` and `Google` metadata
-#[derive(Queryable, Debug)]
-pub struct User {
+#[derive(Queryable, Identifiable, Debug, PartialEq)]
+pub struct Guild {
 	/// Primary key
-	pub id: i32,
-	/// Discord ID
-	pub discord_id: String,
-	/// Full name
-	pub full_name: String,
-	/// Account mail
-	pub mail: String,
-	/// OAuth2 refresh token
-	pub refresh_token: String,
-	/// Latest OAuth2 access token
-	pub access_token: String,
-	/// OAuth2 access token expiration
-	pub expires_at: SystemTime,
+	pub id: u64,
+
+	/// Guild name
+	pub name: String,
+	/// Guild Owner ID
+	pub owner_id: u64,
+
+	/// The id of interaction setup message
+	pub setup_message_id: Option<u64>,
 }
 
-impl User {
-	/// Get the user's access token or fetch a new one
-	fn get_token(&mut self) -> Result<AccessToken> {
-		if self.expires_at.elapsed()?.as_secs() > 0 {
-			// TODO: refetch access token
+/// Use to create a new [`Guild`]
+#[derive(Insertable)]
+#[table_name = "guilds"]
+pub struct NewGuild<'a> {
+	/// Primary key
+	pub id: u64,
 
-			let res = match STATE
-				.auth
-				.client
-				.exchange_refresh_token(&RefreshToken::new(self.refresh_token.clone()))
-				.request(http_client)
-			{
-				Ok(res) => res,
-				Err(e) => {
-					log::error!("Failed to refresh token: {}", e);
-					// TODO: handle this more properly
-					return Err(anyhow!("Failed to refresh token"));
-				}
-			};
+	/// Guild name
+	pub name: &'a str,
+	/// Guild Owner ID
+	pub owner_id: u64,
 
-			self.access_token = res.access_token().secret().clone();
-			self.expires_at = SystemTime::now() + res.expires_in().unwrap();
-		}
+	/// The id of interaction setup message
+	pub setup_message_id: Option<u64>,
+}
 
-		diesel::update(users::table.filter(users::id.eq(self.id)))
-			.set((
-				users::access_token.eq(&self.access_token),
-				users::expires_at.eq(&self.expires_at),
-			))
-			.execute(&STATE.database.get()?)?;
+/// Represent a user with `Discord` and `Google` metadata
+#[derive(Queryable, Identifiable, Debug, PartialEq)]
+#[diesel(belongs_to(Guild))]
+pub struct Member {
+	/// Primary key
+	pub id: i32,
 
-		Ok(AccessToken::new(self.access_token.clone()))
-	}
+	/// `Discord` ID
+	pub discord_id: u64,
+	/// Foreign Key to [`Guild`]
+	pub guild_id: u64,
+	/// `Discord` username
+	pub username: String,
+
+	/// XP for messages
+	pub message_xp: i32,
+	/// XP for vocal
+	pub vocal_xp: i32,
 }
 
 /// Use to create a new [`User`]
 #[derive(Insertable)]
-#[table_name = "users"]
-pub struct NewUser<'a> {
-	/// Discord ID
-	pub discord_id: &'a str,
-	/// Full name
-	pub full_name: &'a String,
+#[table_name = "members"]
+pub struct NewMember<'a> {
+	/// `Discord` ID
+	pub discord_id: u64,
+	/// Foreign Key to [`Guild`]
+	pub guild_id: u64,
+	/// `Discord` username
+	pub username: &'a str,
+}
+
+/// Represent a user with `Discord` and `Google` metadata
+#[derive(Queryable, Debug)]
+#[diesel(belongs_to(User))]
+pub struct VerifiedMember {
+	/// Primary key
+	pub id: i32,
+	/// Foreign Key to [`User`]
+	pub user_id: i32,
+
+	/// First name
+	pub first_name: String,
+	/// Last name
+	pub last_name: String,
+	/// Account mail
+	pub mail: String,
+}
+
+/// Use to create a new [`VerifiedMember`]
+#[derive(Insertable)]
+#[table_name = "verified_members"]
+pub struct NewVerifiedMember<'a> {
+	/// User ID
+	pub user_id: i32,
+
+	/// First name
+	pub first_name: &'a str,
+	/// Last name
+	pub last_name: &'a str,
 	/// Account mail
 	pub mail: &'a str,
-	/// Google OAuth2 refresh token
-	pub refresh_token: &'a str,
-	/// Latest OAuth2 access token
-	pub access_token: &'a str,
-	/// OAuth2 access token expiration
-	pub expires_at: &'a SystemTime,
 }

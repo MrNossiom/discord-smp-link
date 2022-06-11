@@ -34,20 +34,18 @@ mod states;
 #[macro_use]
 extern crate diesel;
 
-use std::process::ExitCode;
-
 use commands::{command_on_error, post_command, pre_command};
-use events::EventHandler;
+use events::event_handler;
 use handlers::server::spawn_server;
 use logging::setup_logging;
 use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
 use states::{Context, Data, Framework, STATE};
+use std::process::ExitCode;
 
 /// Build the `poise` [framework](poise::Framework)
 fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 	let mut client = Framework::build()
 		.token(&STATE.config.discord_token)
-		.client_settings(move |fw| fw.event_handler(EventHandler {}))
 		.intents(
 			GatewayIntents::GUILDS
 				| GatewayIntents::GUILD_VOICE_STATES
@@ -60,6 +58,9 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 			pre_command,
 			on_error: command_on_error,
 			post_command,
+			listener: |ctx, event, fw, data| {
+				Box::pin(async move { event_handler(ctx, event, fw, *data) })
+			},
 			prefix_options: PrefixFrameworkOptions {
 				prefix: Some(".".into()),
 				..Default::default()
@@ -68,10 +69,12 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 				use commands::*;
 
 				vec![
+					helpers::help(),
 					helpers::register(),
 					helpers::reset_global(),
 					login::login(),
 					login::logout(),
+					setup(),
 				]
 			},
 			..Default::default()
@@ -84,8 +87,11 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+	log::trace!("Program started");
 	setup_logging();
+	log::trace!("Logging setup");
 	spawn_server();
+	log::trace!("Server has spawned");
 
 	if let Err(error) = build_client().run().await {
 		log::error!("Client exited with error: {}", error);

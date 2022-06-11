@@ -1,28 +1,40 @@
 //! Act on discord client metadata
 
-use crate::states::{CommandResult, Context};
+use crate::states::{Context, InteractionResult};
 use poise::{
-	builtins::register_application_commands, command, serenity_prelude::ApplicationCommand,
+	builtins::{self, register_application_commands, HelpConfiguration},
+	command,
+	serenity_prelude::ApplicationCommand,
 };
 
-/// Register all slash commands to `Discord`
-#[command(prefix_command, owners_only, hide_in_help)]
-pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> CommandResult {
-	match register_application_commands(ctx, global).await {
-		Ok(_) => {}
-		Err(error) => {
-			log::error!("{}", &error);
-			ctx.say(format!("Something went wrong: {}!", error)).await?;
-		}
-	};
+/// Register all slash commands to `Discord` either globally or in a specific guild
+#[command(prefix_command, owners_only)]
+pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> InteractionResult {
+	register_application_commands(ctx, global).await?;
 
 	Ok(())
 }
 
-/// Unregister all slash commands from `Discord`
-#[command(prefix_command, owners_only, hide_in_help)]
-pub async fn reset_global(ctx: Context<'_>) -> CommandResult {
+/// Unregister all global slash commands from `Discord`
+#[command(prefix_command, owners_only)]
+pub async fn reset_global(ctx: Context<'_>) -> InteractionResult {
 	ApplicationCommand::set_global_application_commands(ctx.discord(), |b| b).await?;
+
+	Ok(())
+}
+
+/// Show help about internal commands
+#[poise::command(prefix_command, owners_only, hide_in_help)]
+pub async fn help(
+	ctx: Context<'_>,
+	#[description = "Specific command to show help about"] command: Option<String>,
+) -> InteractionResult {
+	let config = HelpConfiguration {
+		show_context_menu_commands: true,
+		..Default::default()
+	};
+
+	builtins::help(ctx, command.as_deref(), config).await?;
 
 	Ok(())
 }
