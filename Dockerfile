@@ -2,8 +2,8 @@
 FROM rust:latest as builder
 ENV RUSTFLAGS="-C target-cpu=native"
 
-# Install deps libs for dyn linking
-RUN apt update && apt install -y libpq-dev && apt clean
+# Install developement libraries and headers
+RUN apt update && apt install -y default-libmysqlclient-dev && apt clean
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin discord_smp_link
@@ -25,9 +25,10 @@ RUN rm ./target/release/deps/discord_smp_link*
 RUN cargo build --release
 
 # Run step
-FROM debian:buster-slim
+FROM debian:buster-slim as runtime
 
-RUN apt update -y && apt install -y libpq5 && rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN apt update -y && apt install -y default-libmysqlclient-dev && rm -rf /var/lib/apt/lists/*
 
 # Create a folder to recover logs and get .env file
 WORKDIR /discord_smp_link/

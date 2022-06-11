@@ -6,7 +6,3 @@ target/
 .vscode/
 .idea/
 logs/
-
-# Env
-.env*
-!.env.example
