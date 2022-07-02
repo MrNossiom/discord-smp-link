@@ -9,6 +9,7 @@ use diesel::{
 use dotenv::dotenv;
 use lazy_static::lazy_static;
 use oauth2::{ClientId, ClientSecret};
+use poise::{async_trait, serenity_prelude as serenity, ReplyHandle};
 use std::{
 	env,
 	sync::atomic::{AtomicBool, Ordering},
@@ -73,8 +74,6 @@ pub struct Data {
 	pub auth: AuthLink,
 	/// An instance of the parsed initial config
 	pub config: Config,
-	// The discord channel webhook to send logs to
-	// pub webhook: WebhookLogs<'static>,
 }
 
 impl Data {
@@ -91,22 +90,30 @@ impl Data {
 			.build(manager)
 			.expect("failed to create database pool");
 
-		// let http = SerenityHttp::new(&config.discord_token);
-
-		// let logs_webhook_url = env::var("LOGS_WEBHOOK").expect("LOGS_WEBHOOK is not set in .env");
-		// let logs_webhook = block_on(http.get_webhook_from_url(&logs_webhook_url))
-		// 	.expect("webhook in config file is invalid");
-
-		// let webhook = WebhookLogs::new(http, logs_webhook);
-
-		// Looper::start(Arc::new(webhook));
-
 		Self {
 			database,
 			auth: AuthLink::new(&config),
 			config,
-			// webhook,
 		}
+	}
+}
+
+/// Trait for sending ephemeral messages
+#[async_trait]
+pub trait Shout: Send + Sync {
+	/// Send an ephemeral message to the user
+	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error>;
+}
+
+#[async_trait]
+impl Shout for Context<'_> {
+	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error> {
+		self.send(|builder| {
+			builder
+				.content(Into::<String>::into(content))
+				.ephemeral(true)
+		})
+		.await
 	}
 }
 

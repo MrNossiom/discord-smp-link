@@ -59,7 +59,7 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 			on_error: command_on_error,
 			post_command,
 			listener: |ctx, event, fw, data| {
-				Box::pin(async move { event_handler(ctx, event, fw, *data) })
+				Box::pin(async move { event_handler(ctx, event, fw, data) })
 			},
 			prefix_options: PrefixFrameworkOptions {
 				prefix: Some(".".into()),
@@ -87,9 +87,9 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-	log::trace!("Program started");
 	setup_logging();
 	log::trace!("Logging setup");
+
 	spawn_server();
 	log::trace!("Server has spawned");
 

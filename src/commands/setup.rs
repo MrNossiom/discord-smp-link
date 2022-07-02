@@ -73,6 +73,7 @@ pub async fn setup(ctx: Context<'_>) -> InteractionResult {
 	Ok(())
 }
 
+/// Handles the class select action
 async fn handle_class_select(ctx: Context<'_>) -> InteractionResult {
 	ctx.send(|m| {
 		m.embed(|cre| cre.title("Choose your class..."))
@@ -87,5 +88,6 @@ async fn handle_class_select(ctx: Context<'_>) -> InteractionResult {
 	})
 	.await?;
 
+	// TODO: handle button class selection
 	todo!("handle button class select");
 }

@@ -11,7 +11,7 @@ use anyhow::Result;
 use diesel::prelude::*;
 use poise::{serenity_prelude::Context, Event};
 
-/// Implement Serenity's [`EventHandler`] to react to `Discord` events
+/// Serenity listener to react to `Discord` events
 pub fn event_handler(
 	_ctx: &Context,
 	event: &Event,
@@ -32,7 +32,7 @@ pub fn event_handler(
 				.first::<Member>(&STATE.database.get()?)
 			{
 				log::warn!(
-					"User {} ({}) already exists in database",
+					"User `{}` ({}) already exists in the database",
 					user.username,
 					user.discord_id
 				);
@@ -43,6 +43,12 @@ pub fn event_handler(
 					discord_id: new_member.user.id.0,
 				};
 
+				log::info!(
+					"Adding user `{}` ({}) to database",
+					new_user.username,
+					new_user.discord_id
+				);
+
 				diesel::insert_into(members::table)
 					.values(&new_user)
 					.execute(&STATE.database.get()?)?;
@@ -52,6 +58,8 @@ pub fn event_handler(
 		}
 
 		Event::GuildMemberRemoval { guild_id, user, .. } => {
+			log::info!("Deleting member ({})", guild_id.0);
+
 			diesel::delete(
 				members::table
 					.filter(members::guild_id.eq(guild_id.0))
@@ -68,7 +76,7 @@ pub fn event_handler(
 				.first::<Guild>(&STATE.database.get()?)
 			{
 				log::warn!(
-					"Guild {} ({}) already exists in database",
+					"Guild `{}` ({}) already exists in the database",
 					guild.name,
 					guild.id
 				);
@@ -80,6 +88,8 @@ pub fn event_handler(
 					setup_message_id: None,
 				};
 
+				log::info!("Adding guild `{}` ({}) to database", guild.name, guild.id);
+
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
 					.execute(&STATE.database.get()?)?;
@@ -89,7 +99,7 @@ pub fn event_handler(
 		}
 
 		Event::GuildDelete { incomplete, .. } => {
-			log::debug!("Guild {} deleted", incomplete.id);
+			log::warn!("Deleting guild ({})", incomplete.id);
 
 			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.0)))
 				.execute(&STATE.database.get()?)?;

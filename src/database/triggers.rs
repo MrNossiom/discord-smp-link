@@ -8,14 +8,14 @@ use crate::{handlers::auth::BasicTokenResponse, states::STATE};
 use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use hyper::{body::to_bytes, Body, Client, Request, StatusCode};
-use hyper_rustls::HttpsConnector;
+use hyper_rustls::HttpsConnectorBuilder;
 use oauth2::TokenResponse;
-use poise::serenity_prelude::User;
+use poise::serenity_prelude::{Member, User};
 use serde_json::Value;
 
 /// Insert a new user into the database
 /// Query google for the user's email and full name
-pub async fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
+pub async fn new_verified_member(member: &Member, res: &BasicTokenResponse) -> Result<()> {
 	let user_data = match query_google_user_metadata(res).await {
 		Ok(user_data) => user_data,
 		Err(e) => {
@@ -26,11 +26,12 @@ pub async fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
 	};
 
 	let id = members::table
-		.filter(members::id.eq(user.id.0 as i32))
+		.filter(members::discord_id.eq(member.user.id.0))
+		.filter(members::guild_id.eq(member.guild_id.0))
 		.select(members::id)
 		.first(&STATE.database.get()?)?;
 
-	let new_user = NewVerifiedMember {
+	let new_verified_member = NewVerifiedMember {
 		user_id: id,
 		first_name: &user_data.first_name,
 		last_name: &user_data.last_name,
@@ -38,7 +39,7 @@ pub async fn new_user(user: &User, res: &BasicTokenResponse) -> Result<()> {
 	};
 
 	diesel::insert_into(verified_members::table)
-		.values(new_user)
+		.values(new_verified_member)
 		.execute(&STATE.database.get()?)?;
 
 	Ok(())
@@ -67,7 +68,11 @@ struct GoogleUserMetadata {
 // TODO: move elsewhere
 /// Query google for the user's email and full name
 async fn query_google_user_metadata(token_res: &BasicTokenResponse) -> Result<GoogleUserMetadata> {
-	let https = HttpsConnector::with_native_roots();
+	let https = HttpsConnectorBuilder::new()
+		.with_native_roots()
+		.https_only()
+		.enable_http1()
+		.build();
 	let client: Client<_, Body> = Client::builder().build(https);
 
 	let req = Request::builder()

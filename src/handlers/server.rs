@@ -50,13 +50,17 @@ pub fn spawn_server() {
 					log::info!(
 						"{} {} - {}s - {}",
 						req.method(),
-						req.raw_url(),
+						if req.raw_url().len() > 80 {
+							format!("{} ...", &req.raw_url()[..80])
+						} else {
+							req.raw_url().into()
+						},
 						elapsed.as_secs(),
 						res.status_code
 					);
 				},
 				|req, elapsed| {
-					let _ = log::error!(
+					log::error!(
 						"{} {} - {}s - PANIC!",
 						req.method(),
 						req.raw_url(),

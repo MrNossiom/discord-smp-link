@@ -3,8 +3,8 @@
 use super::schema::*;
 use diesel::Queryable;
 
-/// Represent a user with `Discord` and `Google` metadata
-#[derive(Queryable, Identifiable, Debug, PartialEq)]
+/// Represent a `Discord` guild
+#[derive(Queryable, Identifiable, Debug, PartialEq, Eq)]
 pub struct Guild {
 	/// Primary key
 	pub id: u64,
@@ -34,8 +34,8 @@ pub struct NewGuild<'a> {
 	pub setup_message_id: Option<u64>,
 }
 
-/// Represent a user with `Discord` and `Google` metadata
-#[derive(Queryable, Identifiable, Debug, PartialEq)]
+/// Represent a known user with `Discord` metadata and some other informations
+#[derive(Queryable, Identifiable, Debug, PartialEq, Eq)]
 #[diesel(belongs_to(Guild))]
 pub struct Member {
 	/// Primary key
@@ -54,7 +54,7 @@ pub struct Member {
 	pub vocal_xp: i32,
 }
 
-/// Use to create a new [`User`]
+/// Use to create a new [`Member`]
 #[derive(Insertable)]
 #[table_name = "members"]
 pub struct NewMember<'a> {
@@ -66,13 +66,13 @@ pub struct NewMember<'a> {
 	pub username: &'a str,
 }
 
-/// Represent a user with `Discord` and `Google` metadata
+/// Represent a registered user with `Google` metadata
 #[derive(Queryable, Debug)]
 #[diesel(belongs_to(User))]
 pub struct VerifiedMember {
 	/// Primary key
 	pub id: i32,
-	/// Foreign Key to [`User`]
+	/// Foreign Key to [`Member`]
 	pub user_id: i32,
 
 	/// First name

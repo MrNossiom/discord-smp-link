@@ -1,6 +1,5 @@
 //! Different log outputs adaptors and main loop
 
-// pub mod discord;
 pub mod term_write;
 
 use self::term_write::{TermAdaptor, WriteAdaptor};
@@ -8,23 +7,11 @@ use crate::states::STATE;
 use chrono::Utc;
 use console::{style, StyledObject};
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use std::{fs::File, time::SystemTime};
+use std::fs::File;
 
 /// The config for the [`GlueLogger`]
-struct GlueLoggerConfig {
-	/// If defined only logs from the given crate will be logged
-	filter_crate_name: Option<&'static str>,
-}
-
-impl Default for GlueLoggerConfig {
-	fn default() -> Self {
-		let crate_name = env!("CARGO_PKG_NAME");
-
-		Self {
-			filter_crate_name: Some(crate_name),
-		}
-	}
-}
+#[derive(Default)]
+struct GlueLoggerConfig {}
 
 /// A bridge that filter logs and transmit to multiple output adaptors
 /// Does not logs anything by it self
@@ -32,6 +19,7 @@ struct GlueLogger {
 	/// The multiple output adaptors
 	adaptors: Vec<Box<dyn Log>>,
 	/// The glue logger config
+	#[allow(dead_code)]
 	config: GlueLoggerConfig,
 }
 
@@ -86,14 +74,8 @@ pub fn setup_logging() {
 
 	if STATE.config.production {
 		adaptors.push(WriteAdaptor::boxed(
-			File::create(format!(
-				"logs/{}.log",
-				SystemTime::now()
-					.duration_since(SystemTime::UNIX_EPOCH)
-					.expect("time went backwards")
-					.as_millis()
-			))
-			.expect("failed to create log file"),
+			File::create(format!("logs/{}.log", Utc::now().format("%d-%m-%H:%M:%S")))
+				.expect("failed to create log file"),
 			Level::Debug,
 		));
 	}

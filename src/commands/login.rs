@@ -1,7 +1,12 @@
 //! Auth flow commands
 //! links Discord and Google accounts together
 
-use crate::{database::triggers, states::InteractionResult, Context};
+use crate::{
+	database::triggers,
+	states::{InteractionResult, Shout},
+	Context,
+};
+use anyhow::bail;
 use poise::{
 	command,
 	serenity_prelude::{ButtonStyle, CollectComponentInteraction},
@@ -18,6 +23,11 @@ pub async fn login(ctx: Context<'_>) -> InteractionResult {
 ///
 /// Function used in the login and the setup command
 pub async fn _login(ctx: Context<'_>) -> InteractionResult {
+	let member = match ctx.author_member().await {
+		Some(member) => member,
+		None => bail!("You are not in a guild"),
+	};
+
 	let (oauth2_url, token_response) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
 
 	ctx.send(|reply| {
@@ -40,16 +50,16 @@ pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 	let token_response = match token_response.await {
 		Some(response) => response,
 		None => {
-			ctx.say("You didn't finish the authentication process in 5 minutes.")
+			ctx.shout("You didn't finish the authentication process in 5 minutes.".into())
 				.await?;
 
 			return Ok(());
 		}
 	};
 
-	triggers::new_user(ctx.author(), &token_response).await?;
+	triggers::new_verified_member(&member, &token_response).await?;
 
-	ctx.say("You successfully authenticated with Google!")
+	ctx.shout("You successfully authenticated with Google!".into())
 		.await?;
 
 	Ok(())
@@ -69,7 +79,7 @@ pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
 		.send(|reply| {
 			reply
 			.ephemeral(true)
-			.content("After you disconnected your accounts, you will have to use the /login command again" )
+			.content("After you disconnected your accounts, you will have to use the `/login` command again" )
 			.components(|components| {
 				components.create_action_row(|action_row| {
 					action_row
