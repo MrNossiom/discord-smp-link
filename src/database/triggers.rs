@@ -19,7 +19,7 @@ pub async fn new_verified_member(member: &Member, res: &BasicTokenResponse) -> R
 	let user_data = match query_google_user_metadata(res).await {
 		Ok(user_data) => user_data,
 		Err(e) => {
-			log::error!("Failed to query google user metadata: {}", e);
+			tracing::error!("Failed to query google user metadata: {}", e);
 
 			return Err(anyhow!("Failed to query google user metadata"));
 		}
@@ -116,7 +116,7 @@ async fn query_google_user_metadata(token_res: &BasicTokenResponse) -> Result<Go
 			})
 		}
 		Err(error) => {
-			log::error!("Failed to query google: {}", error);
+			tracing::error!("Failed to query google: {}", error);
 
 			Err(anyhow!("Failed to query google"))
 		}

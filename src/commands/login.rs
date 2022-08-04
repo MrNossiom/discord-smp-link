@@ -9,7 +9,7 @@ use crate::{
 use anyhow::bail;
 use poise::{
 	command,
-	serenity_prelude::{ButtonStyle, CollectComponentInteraction},
+	serenity_prelude::{component::ButtonStyle, CollectComponentInteraction},
 };
 use std::time::Duration;
 

@@ -20,7 +20,7 @@ pub fn event_handler(
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {
-			log::info!("{} is ready!", data_about_bot.user.name);
+			tracing::info!("{} is ready!", data_about_bot.user.name);
 
 			Ok(())
 		}
@@ -31,7 +31,7 @@ pub fn event_handler(
 				.filter(members::guild_id.eq(new_member.guild_id.0))
 				.first::<Member>(&STATE.database.get()?)
 			{
-				log::warn!(
+				tracing::warn!(
 					"User `{}` ({}) already exists in the database",
 					user.username,
 					user.discord_id
@@ -43,7 +43,7 @@ pub fn event_handler(
 					discord_id: new_member.user.id.0,
 				};
 
-				log::info!(
+				tracing::info!(
 					"Adding user `{}` ({}) to database",
 					new_user.username,
 					new_user.discord_id
@@ -58,7 +58,7 @@ pub fn event_handler(
 		}
 
 		Event::GuildMemberRemoval { guild_id, user, .. } => {
-			log::info!("Deleting member ({})", guild_id.0);
+			tracing::info!("Deleting member ({})", guild_id.0);
 
 			diesel::delete(
 				members::table
@@ -75,7 +75,7 @@ pub fn event_handler(
 				.filter(guilds::id.eq(guild.id.0))
 				.first::<Guild>(&STATE.database.get()?)
 			{
-				log::warn!(
+				tracing::warn!(
 					"Guild `{}` ({}) already exists in the database",
 					guild.name,
 					guild.id
@@ -88,7 +88,7 @@ pub fn event_handler(
 					setup_message_id: None,
 				};
 
-				log::info!("Adding guild `{}` ({}) to database", guild.name, guild.id);
+				tracing::info!("Adding guild `{}` ({}) to database", guild.name, guild.id);
 
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
@@ -99,7 +99,7 @@ pub fn event_handler(
 		}
 
 		Event::GuildDelete { incomplete, .. } => {
-			log::warn!("Deleting guild ({})", incomplete.id);
+			tracing::warn!("Deleting guild ({})", incomplete.id);
 
 			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.0)))
 				.execute(&STATE.database.get()?)?;
@@ -108,7 +108,7 @@ pub fn event_handler(
 		}
 
 		_ => {
-			log::debug!("You didn't handle this event : {:?}", event);
+			tracing::debug!("You didn't handle this event : {:?}", event);
 
 			Ok(())
 		}

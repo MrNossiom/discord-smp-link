@@ -9,12 +9,14 @@ use futures::StreamExt;
 use lazy_static::lazy_static;
 use poise::{
 	command,
-	serenity_prelude::{ButtonStyle, ComponentInteractionCollectorBuilder, CreateSelectMenuOption},
+	serenity_prelude::{
+		component::ButtonStyle, ComponentInteractionCollectorBuilder, CreateSelectMenuOption,
+	},
 };
 
 lazy_static! {
 	static ref CLASSES_OP: Vec<CreateSelectMenuOption> =
-		["201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211"]
+		["101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111"]
 			.iter()
 			.map(|id| CreateSelectMenuOption::new(id, id))
 			.collect();

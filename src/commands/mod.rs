@@ -1,7 +1,7 @@
 //! `Discord` client commands
 
 use crate::states::{Context, FrameworkError, Shout};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _, *};
 use console::style;
 use poise::BoxFuture;
 use uuid::Uuid;
@@ -15,7 +15,7 @@ pub mod login;
 /// Execute before each command
 pub fn pre_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
-		log::debug!(
+		tracing::debug!(
 			"{} invoked by {}",
 			ctx.invoked_command_name(),
 			ctx.author().name,
@@ -30,12 +30,12 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			FrameworkError::Command { error, ctx, .. } => {
 				let error_identifier = Uuid::new_v4();
 
-				log::error!(
-					target: error_identifier.to_string().as_str(),
-					"{} invoked `{}` but an error occurred: {}",
+				tracing::error!(
+					"[id: {}] {} invoked `{}` but an error occurred: {}",
+					error_identifier,
 					ctx.author().name,
 					ctx.invoked_command_name(),
-					error,
+					error.root_cause()
 				);
 
 				let error_msg = format!(
@@ -47,17 +47,17 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				ctx.shout(error_msg)
 					.await
 					.map(|_| ())
-					.map_err(|_| anyhow!("Failed to send internal error message"))
+					.context("Failed to send internal error message")
 			}
 
 			FrameworkError::ArgumentParse { error, .. } => {
-				log::error!(target: "Argument Parse", "{}", error);
+				tracing::error!(target: "Argument Parse", "{}", error);
 
 				Ok(())
 			}
 
 			FrameworkError::CommandStructureMismatch { description, .. } => {
-				log::error!(target: "Command Structure Mismatch", "You should sync your commands : {} ", description);
+				tracing::error!(target: "Command Structure Mismatch", "You should sync your commands : {} ", description);
 
 				Ok(())
 			}
@@ -72,7 +72,7 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				))
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send cooldown hit message")),
+				.context("Failed to send cooldown hit message"),
 
 			FrameworkError::MissingBotPermissions {
 				ctx,
@@ -84,7 +84,7 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				))
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send missing bot permissions message")),
+				.context("Failed to send missing bot permissions message"),
 
 			FrameworkError::MissingUserPermissions {
 				ctx,
@@ -96,32 +96,32 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				))
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send missing user permissions message")),
+				.context("Failed to send missing user permissions message"),
 
 			FrameworkError::NotAnOwner { ctx } => ctx
 				.shout("You are not the owner of this bot.".into())
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send not an owner message")),
+				.context("Failed to send not an owner message"),
 
 			FrameworkError::GuildOnly { ctx } => ctx
 				.shout("This command can only be used in a guild channel".into())
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send guild only message")),
+				.context("Failed to send guild only message"),
 
 			FrameworkError::DmOnly { ctx } => ctx
 				.shout("This command can only be used in a DM channel".into())
 				.await
 				.map(|_| ())
-				.map_err(|_| anyhow!("Failed to send dm only message")),
+				.context("Failed to send dm only message"),
 
 			FrameworkError::CommandCheckFailed { ctx, error } => {
 				let error_identifier = Uuid::new_v4();
 
-				log::error!(
-					target: error_identifier.to_string().as_str(),
-					"{} invoked `{}` but an error occurred in command check : {}",
+				tracing::error!(
+					"[id: {}] {} invoked `{}` but an error occurred in command check : {}",
+					error_identifier,
 					ctx.author().name,
 					ctx.invoked_command_name(),
 					error.unwrap_or_else(|| anyhow!("Unknown error"))
@@ -134,12 +134,12 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				ctx.shout(error_msg)
 					.await
 					.map(|_| ())
-					.map_err(|_| anyhow!("Failed to send command check failed message"))
+					.context("Failed to send command check failed message")
 			}
 
 			_ => Ok(()),
 		} {
-			log::error!("{}", error);
+			tracing::error!("{}", error);
 		};
 	})
 }
@@ -147,7 +147,7 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 /// Execute after every successful command
 pub fn post_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
-		log::info!(
+		tracing::info!(
 			"{} invoked `{}` successfully!",
 			style(&ctx.author().name).black().bright(),
 			style(ctx.invoked_command_name()).black().bright(),

@@ -47,20 +47,16 @@ pub fn spawn_server() {
 			log_custom(
 				request,
 				|req, res, elapsed| {
-					log::info!(
+					tracing::info!(
 						"{} {} - {}s - {}",
 						req.method(),
-						if req.raw_url().len() > 80 {
-							format!("{} ...", &req.raw_url()[..80])
-						} else {
-							req.raw_url().into()
-						},
+						req.raw_url(),
 						elapsed.as_secs(),
 						res.status_code
 					);
 				},
 				|req, elapsed| {
-					log::error!(
+					tracing::error!(
 						"{} {} - {}s - PANIC!",
 						req.method(),
 						req.raw_url(),
@@ -71,13 +67,15 @@ pub fn spawn_server() {
 			)
 		})
 		.unwrap_or_else(|err| {
-			log::error!("Could not create socket : {}", err);
+			tracing::error!("Could not create socket : {}", err);
 
 			process::exit(1);
 		})
 		.pool_size(4)
 		.run();
 	});
+
+	tracing::debug!("Server has spawned");
 }
 
 // TODO: move each handle in a separate function

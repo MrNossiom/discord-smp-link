@@ -31,4 +31,4 @@ table! {
 joinable!(members -> guilds (guild_id));
 joinable!(verified_members -> members (user_id));
 
-allow_tables_to_appear_in_same_query!(guilds, members, verified_members);
+allow_tables_to_appear_in_same_query!(guilds, members, verified_members,);

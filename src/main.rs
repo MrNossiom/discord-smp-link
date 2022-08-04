@@ -87,14 +87,12 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-	setup_logging();
-	log::trace!("Logging setup");
+	let _guard = setup_logging();
 
 	spawn_server();
-	log::trace!("Server has spawned");
 
 	if let Err(error) = build_client().run().await {
-		log::error!("Client exited with error: {}", error);
+		tracing::error!("Client exited with error: {}", error);
 
 		return ExitCode::FAILURE;
 	}
