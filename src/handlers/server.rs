@@ -31,6 +31,18 @@ struct Code500Template<'a> {
 #[template(path = "index.jinja")]
 struct IndexTemplate {}
 
+#[derive(Template, Default)]
+#[template(path = "contact.jinja")]
+struct ContactTemplate {}
+
+#[derive(Template, Default)]
+#[template(path = "privacy-policy.jinja")]
+struct PrivacyPolicyTemplate {}
+
+#[derive(Template, Default)]
+#[template(path = "terms-and-conditions.jinja")]
+struct TermsAmdConditionsTemplate {}
+
 /// A template for the `OAuth2` success or error page
 #[derive(Template, Default)]
 #[template(path = "auth.jinja")]
@@ -94,6 +106,9 @@ fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 
 	match (request.method(), request_url) {
 		("GET", "/") => Response::template(IndexTemplate {}),
+		("GET", "/contact") => Response::template(ContactTemplate {}),
+		("GET", "/privacy-policy") => Response::template(PrivacyPolicyTemplate {}),
+		("GET", "/terms-and-conditions") => Response::template(TermsAmdConditionsTemplate {}),
 		("GET", "/oauth2") => {
 			let code = match request.get_param("code") {
 				Some(code) => code,

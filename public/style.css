@@ -1,11 +1,17 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
 body {
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	justify-content: space-between;
 
-	font-family: "JetBrains Mono", sans-serif;
+	font-family: 'JetBrains Mono', sans-serif;
 }
 
 code {
@@ -20,4 +26,27 @@ code {
 
 .emoji-logo {
 	font-size: xx-large;
+}
+
+nav,
+footer {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-around;
+	width: 100%;
+	height: 10vh;
+
+	list-style: none;
+}
+
+footer {
+	background-color: #2885ff;
+}
+footer li a {
+	color: white;
+	text-decoration: none;
+}
+footer li a:hover {
+	text-decoration: underline;
 }

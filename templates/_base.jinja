@@ -1,11 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>{% block title %}{% endblock %}</title>
+		<title>{% block title %}{% endblock %} - Discord SMP Link</title>
 		<link rel="stylesheet" href="/style.css" />
 		{% block head %}{% endblock %}
 	</head>
 	<body>
+		<nav></nav>
+		
 		{% block content %}{% endblock %}
+
+		<footer>
+			<li><a href="/contact">Contact</a></li>
+			<li><a href="/terms-and-conditions">Terms and Conditions</a></li>
+			<li><a href="/privacy-policy">Privacy Policy</a></li>
+		</footer>
 	</body>
 </html>
