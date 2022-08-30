@@ -14,6 +14,7 @@ use poise::{
 };
 use std::{sync::Arc, time::Duration};
 
+#[allow(clippy::missing_docs_in_private_items)]
 #[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
 pub async fn login(ctx: Context<'_>) -> InteractionResult {
 	_login(ctx).await
@@ -65,6 +66,7 @@ pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 	Ok(())
 }
 
+#[allow(clippy::missing_docs_in_private_items)]
 #[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
 pub async fn logout(ctx: Context<'_>) -> InteractionResult {
 	_logout(ctx).await

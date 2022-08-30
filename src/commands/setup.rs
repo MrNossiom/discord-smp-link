@@ -1,27 +1,10 @@
 //! Setup messages for roles interactions
 
-use crate::{
-	commands::login::{_login, _logout},
-	states::{Context, InteractionResult},
-};
-use anyhow::anyhow;
-use futures::StreamExt;
-use lazy_static::lazy_static;
-use poise::{
-	command,
-	serenity_prelude::{
-		component::ButtonStyle, ComponentInteractionCollectorBuilder, CreateSelectMenuOption,
-	},
-};
+use crate::states::{Context, InteractionResult};
+use diesel::update;
+use poise::{command, serenity_prelude::component::ButtonStyle};
 
-lazy_static! {
-	static ref CLASSES_OP: Vec<CreateSelectMenuOption> =
-		["101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111"]
-			.iter()
-			.map(|id| CreateSelectMenuOption::new(id, id))
-			.collect();
-}
-
+#[allow(clippy::missing_docs_in_private_items)]
 #[command(
 	slash_command,
 	guild_only,
@@ -54,22 +37,21 @@ pub async fn setup(ctx: Context<'_>) -> InteractionResult {
 		})
 		.await?;
 
-	let mut interactions = ComponentInteractionCollectorBuilder::new(ctx.discord())
-		.message_id(reply.message().await?.id)
-		.build();
+	let reply_id = reply.message().await?.id.0;
 
-	while let Some(interaction) = interactions.next().await {
-		interaction.defer(&ctx.discord().http).await?;
+	// Update the setup message id
+	{
+		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};
+		use diesel::prelude::*;
 
-		// Handle button click
-		match interaction.data.custom_id.as_str() {
-			"setup.setup.login" => _login(ctx).await,
-			"setup.setup.logout" => _logout(ctx).await,
-			"setup.setup.choose_class" => handle_class_select(ctx).await,
+		let mut connexion = ctx.data().database.get()?;
 
-			msg => Err(anyhow!("Unknown custom id : {}", msg)),
-		}?;
+		update(guilds.find(ctx.guild_id().unwrap().0))
+			.set(setup_message_id.eq(reply_id))
+			.execute(&mut connexion)?;
 	}
+
+	// TODO: collect interactions in the event part
 
 	Ok(())
 }
@@ -81,7 +63,8 @@ async fn handle_class_select(ctx: Context<'_>) -> InteractionResult {
 			.components(|com| {
 				com.create_action_row(|row| {
 					row.create_select_menu(|sel| {
-						sel.options(|op| op.set_options((*CLASSES_OP).clone()))
+						// TODO: add groups
+						sel.options(|op| op.set_options(vec![]))
 							.custom_id("setup.setup.class_selected")
 					})
 				})

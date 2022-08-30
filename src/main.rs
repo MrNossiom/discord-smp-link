@@ -36,6 +36,7 @@ mod translation;
 extern crate diesel;
 
 use commands::{command_on_error, post_command, pre_command};
+use database::run_migrations;
 use events::event_handler;
 use handlers::server::spawn_server;
 use logging::setup_logging;
@@ -93,6 +94,8 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
 #[tokio::main]
 async fn main() -> ExitCode {
 	let data = Arc::new(Data::new());
+
+	run_migrations(&mut data.database.get().unwrap()).expect("failed to run migrations");
 
 	let _guard = setup_logging();
 	let _handle = spawn_server(Arc::clone(&data));

@@ -20,7 +20,7 @@ pub struct Guild {
 
 /// Use to create a new [`Guild`]
 #[derive(Insertable)]
-#[table_name = "guilds"]
+#[diesel(table_name = guilds)]
 pub struct NewGuild<'a> {
 	/// Primary key
 	pub id: u64,
@@ -56,7 +56,7 @@ pub struct Member {
 
 /// Use to create a new [`Member`]
 #[derive(Insertable)]
-#[table_name = "members"]
+#[diesel(table_name = members)]
 pub struct NewMember<'a> {
 	/// `Discord` ID
 	pub discord_id: u64,
@@ -85,7 +85,7 @@ pub struct VerifiedMember {
 
 /// Use to create a new [`VerifiedMember`]
 #[derive(Insertable)]
-#[table_name = "verified_members"]
+#[diesel(table_name = verified_members)]
 pub struct NewVerifiedMember<'a> {
 	/// User ID
 	pub user_id: i32,

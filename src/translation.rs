@@ -1,3 +1,5 @@
+//! Fluent Project translation system
+
 use crate::{states::Command, Context};
 use anyhow::{anyhow, Result};
 use fluent::{bundle, FluentArgs, FluentResource};

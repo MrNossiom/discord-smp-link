@@ -34,7 +34,7 @@ pub async fn new_verified_member(
 		.filter(members::discord_id.eq(member.user.id.0))
 		.filter(members::guild_id.eq(member.guild_id.0))
 		.select(members::id)
-		.first(&data.database.get()?)?;
+		.first(&mut data.database.get()?)?;
 
 	let new_verified_member = NewVerifiedMember {
 		user_id: id,
@@ -45,7 +45,7 @@ pub async fn new_verified_member(
 
 	diesel::insert_into(verified_members::table)
 		.values(new_verified_member)
-		.execute(&data.database.get()?)?;
+		.execute(&mut data.database.get()?)?;
 
 	Ok(())
 }
@@ -55,7 +55,7 @@ pub fn delete_user(data: Arc<Data>, user: &User) -> Result<()> {
 	// TODO: change cast to be functional
 	diesel::delete(members::table)
 		.filter(members::discord_id.eq(user.id.0))
-		.execute(&data.database.get()?)?;
+		.execute(&mut data.database.get()?)?;
 
 	Ok(())
 }

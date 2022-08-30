@@ -77,7 +77,8 @@ impl Data {
 			.build(manager)
 			.expect("failed to create database pool");
 
-		let translations = Translations::from_folder("translations", langid!("en-US")).unwrap();
+		let translations = Translations::from_folder("translations", langid!("en-US"))
+			.expect("failed to load translations");
 
 		Self {
 			database,
