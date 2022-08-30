@@ -112,7 +112,7 @@ pub type InteractionResult<E = Error> = Result<(), E>;
 /// The poise [`poise::Context`] provided to each command
 pub type Context<'a> = poise::Context<'a, Arc<Data>, Error>;
 /// The [`poise::Command`] type alias
-pub type Command = poise::Command<Data, Error>;
+pub type Command = poise::Command<Arc<Data>, Error>;
 /// The [`poise::Framework`] type alias
 pub type Framework = poise::Framework<Arc<Data>, Error>;
 /// The [`poise::FrameworkError`] type alias

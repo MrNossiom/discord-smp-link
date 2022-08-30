@@ -4,7 +4,7 @@ use super::{
 	models::NewVerifiedMember,
 	schema::{members, verified_members},
 };
-use crate::handlers::auth::BasicTokenResponse;
+use crate::{handlers::auth::BasicTokenResponse, states::Data};
 use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use hyper::{body::to_bytes, Body, Client, Request, StatusCode};
@@ -12,10 +12,15 @@ use hyper_rustls::HttpsConnectorBuilder;
 use oauth2::TokenResponse;
 use poise::serenity_prelude::{Member, User};
 use serde_json::Value;
+use std::sync::Arc;
 
 /// Insert a new user into the database
 /// Query google for the user's email and full name
-pub async fn new_verified_member(member: &Member, res: &BasicTokenResponse) -> Result<()> {
+pub async fn new_verified_member(
+	data: Arc<Data>,
+	member: &Member,
+	res: &BasicTokenResponse,
+) -> Result<()> {
 	let user_data = match query_google_user_metadata(res).await {
 		Ok(user_data) => user_data,
 		Err(e) => {
@@ -29,7 +34,7 @@ pub async fn new_verified_member(member: &Member, res: &BasicTokenResponse) -> R
 		.filter(members::discord_id.eq(member.user.id.0))
 		.filter(members::guild_id.eq(member.guild_id.0))
 		.select(members::id)
-		.first(&STATE.database.get()?)?;
+		.first(&data.database.get()?)?;
 
 	let new_verified_member = NewVerifiedMember {
 		user_id: id,
@@ -40,17 +45,17 @@ pub async fn new_verified_member(member: &Member, res: &BasicTokenResponse) -> R
 
 	diesel::insert_into(verified_members::table)
 		.values(new_verified_member)
-		.execute(&STATE.database.get()?)?;
+		.execute(&data.database.get()?)?;
 
 	Ok(())
 }
 
 /// Remove a user from the database
-pub fn delete_user(user: &User) -> Result<()> {
+pub fn delete_user(data: Arc<Data>, user: &User) -> Result<()> {
 	// TODO: change cast to be functional
 	diesel::delete(members::table)
 		.filter(members::discord_id.eq(user.id.0))
-		.execute(&STATE.database.get()?)?;
+		.execute(&data.database.get()?)?;
 
 	Ok(())
 }

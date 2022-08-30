@@ -13,9 +13,7 @@ diesel = { version = "1.4.8", default-features = false, features = [
 futures = "0.3.21"
 hyper = "0.14.19"
 hyper-rustls = { version = "0.23.0", features = ["rustls-native-certs"] }
-poise = { git = "https://github.com/kangalioo/poise", features = [
-	"collector",
-], branch = "master" }
+poise = { git = "https://github.com/kangalioo/poise", branch = "develop" }
 oauth2 = "4.2.0"
 rouille = "3.5.0"
 serde = "1.0.138"

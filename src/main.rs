@@ -54,8 +54,9 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
 				| GatewayIntents::GUILD_MESSAGES
 				| GatewayIntents::MESSAGE_CONTENT,
 		)
-		.user_data_setup(move |_ctx, _ready, _framework| {
-			Box::pin(async move { Ok(Arc::clone(&data)) })
+		.user_data_setup({
+			let data = Arc::clone(&data);
+			move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) })
 		})
 		.options(poise::FrameworkOptions {
 			pre_command,

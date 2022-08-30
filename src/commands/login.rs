@@ -12,7 +12,7 @@ use poise::{
 	command,
 	serenity_prelude::{component::ButtonStyle, CollectComponentInteraction},
 };
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 #[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
 pub async fn login(ctx: Context<'_>) -> InteractionResult {
@@ -57,7 +57,7 @@ pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 		}
 	};
 
-	triggers::new_verified_member(&member, &token_response).await?;
+	triggers::new_verified_member(Arc::clone(ctx.data()), &member, &token_response).await?;
 
 	ctx.shout("You successfully authenticated with Google!".into())
 		.await?;
@@ -102,7 +102,7 @@ pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
 		interaction.defer(&ctx.discord().http).await?;
 
 		if interaction.data.custom_id == "login.logout.disconnect" {
-			triggers::delete_user(ctx.author())?;
+			triggers::delete_user(Arc::clone(ctx.data()), ctx.author())?;
 		}
 	}
 
