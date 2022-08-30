@@ -3,9 +3,13 @@ target/
 
 # Misc
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 logs/
+
+# Localisation support
+!.vscode/i18n-ally-custom-framework.yml
 
 # Env
 .env*

@@ -4,6 +4,7 @@
 use crate::{
 	database::triggers,
 	states::{InteractionResult, Shout},
+	translation::Translate,
 	Context,
 };
 use anyhow::bail;
@@ -13,7 +14,6 @@ use poise::{
 };
 use std::time::Duration;
 
-/// Connecte ton compte google SMP avec ton compte Discord pour vérifier ton identité
 #[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
 pub async fn login(ctx: Context<'_>) -> InteractionResult {
 	_login(ctx).await
@@ -25,7 +25,7 @@ pub async fn login(ctx: Context<'_>) -> InteractionResult {
 pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 	let member = match ctx.author_member().await {
 		Some(member) => member,
-		None => bail!("You are not in a guild"),
+		None => bail!(ctx.get("not-in-guild", None)?),
 	};
 
 	let (oauth2_url, token_response) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
@@ -65,7 +65,6 @@ pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 	Ok(())
 }
 
-/// Dissocie ton compte Google SMP de ton compte Discord
 #[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
 pub async fn logout(ctx: Context<'_>) -> InteractionResult {
 	_logout(ctx).await
@@ -79,7 +78,7 @@ pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
 		.send(|reply| {
 			reply
 			.ephemeral(true)
-			.content("After you disconnected your accounts, you will have to use the `/login` command again" )
+			.content("After you disconnected your accounts, you will have to use the `/login` command again")
 			.components(|components| {
 				components.create_action_row(|action_row| {
 					action_row

@@ -1,6 +1,6 @@
 //! Handles all the states of the bot and initial configuration
 
-use crate::{database::DatabasePool, handlers::auth::AuthLink};
+use crate::{database::DatabasePool, handlers::auth::AuthLink, translation::Translations};
 use anyhow::{Error, Result};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
@@ -10,12 +10,13 @@ use dotenv::dotenv;
 use oauth2::{ClientId, ClientSecret};
 use poise::{async_trait, serenity_prelude as serenity, ReplyHandle};
 use std::{env, sync::Arc};
+use unic_langid::langid;
 
 /// App global configuration
 pub struct Config {
 	/// The token needed to access the `Discord` Api
 	pub discord_token: String,
-	/// The postgresql connection uri
+	/// The Postgres connection uri
 	pub database_url: String,
 	/// The google auth client id and secret pair
 	pub google_client: (ClientId, ClientSecret),
@@ -62,6 +63,8 @@ pub struct Data {
 	pub auth: AuthLink,
 	/// An instance of the parsed initial config
 	pub config: Config,
+	/// The translations for the client
+	pub translations: Translations,
 }
 
 impl Data {
@@ -74,10 +77,13 @@ impl Data {
 			.build(manager)
 			.expect("failed to create database pool");
 
+		let translations = Translations::from_folder("translations", langid!("en-US")).unwrap();
+
 		Self {
 			database,
 			auth: AuthLink::new(&config),
 			config,
+			translations,
 		}
 	}
 }

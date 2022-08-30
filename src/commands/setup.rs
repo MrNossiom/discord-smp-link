@@ -22,7 +22,6 @@ lazy_static! {
 			.collect();
 }
 
-/// Sets up the interaction roles & login & logout message
 #[command(
 	slash_command,
 	guild_only,

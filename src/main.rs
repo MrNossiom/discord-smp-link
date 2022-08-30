@@ -30,6 +30,7 @@ mod events;
 mod handlers;
 mod logging;
 mod states;
+mod translation;
 
 #[macro_use]
 extern crate diesel;
@@ -44,7 +45,7 @@ use std::{process::ExitCode, sync::Arc};
 
 /// Build the `poise` [framework](poise::Framework)
 fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
-	let mut client = Framework::builder()
+	Framework::builder()
 		.token(&data.config.discord_token)
 		.intents(
 			GatewayIntents::GUILDS
@@ -70,21 +71,22 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
 			commands: {
 				use commands::*;
 
-				vec![
+				let mut commands = vec![
 					helpers::help(),
 					helpers::register(),
-					helpers::reset_global(),
 					login::login(),
 					login::logout(),
 					setup(),
-				]
+				];
+
+				data.translations
+					.apply_interaction_translations(&mut commands);
+
+				commands
 			},
 			..Default::default()
-		});
-
-	client.initialize_owners(true);
-
-	client
+		})
+		.initialize_owners(true)
 }
 
 #[tokio::main]

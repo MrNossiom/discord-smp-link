@@ -1,0 +1,7 @@
+languageIds: [rust]
+enabledParsers: [ftl]
+
+usageMatchRegex:
+  - "[^\\w\\d]*\\.get\\(['\"`]({key})['\"`]"
+
+monopoly: true

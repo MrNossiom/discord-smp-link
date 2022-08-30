@@ -2,23 +2,15 @@
 
 use crate::states::{Context, InteractionResult};
 use poise::{
-	builtins::{self, register_application_commands, HelpConfiguration},
+	builtins::{self},
 	command,
-	serenity_prelude::command::Command,
+	samples::{register_application_commands_buttons, HelpConfiguration},
 };
 
 /// Register all slash commands to `Discord` either globally or in a specific guild
 #[command(prefix_command, owners_only)]
-pub async fn register(ctx: Context<'_>, #[flag] global: bool) -> InteractionResult {
-	register_application_commands(ctx, global).await?;
-
-	Ok(())
-}
-
-/// Unregister all global slash commands from `Discord`
-#[command(prefix_command, owners_only)]
-pub async fn reset_global(ctx: Context<'_>) -> InteractionResult {
-	Command::set_global_application_commands(ctx.discord(), |b| b).await?;
+pub async fn register(ctx: Context<'_>) -> InteractionResult {
+	register_application_commands_buttons(ctx).await?;
 
 	Ok(())
 }

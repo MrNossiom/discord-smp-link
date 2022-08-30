@@ -1,0 +1,19 @@
+{
+	"cSpell.words": [
+		"cooldown",
+		"langid",
+		"libmysqlclient",
+		"memoizer",
+		"Mysql",
+		"rustdoc",
+		"rustls",
+		"tokio",
+		"unic"
+	],
+
+	// Localisation support
+	"vscodeFluent.replacementTemplate": "ctx.get(\"$1\", None)?",
+	"i18n-ally.localesPaths": ["translations"],
+	"i18n-ally.enabledParsers": ["ftl"],
+	"i18n-ally.keystyle": "flat"
+}
