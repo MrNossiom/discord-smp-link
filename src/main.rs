@@ -39,13 +39,13 @@ use events::event_handler;
 use handlers::server::spawn_server;
 use logging::setup_logging;
 use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
-use states::{Context, Data, Framework, STATE};
-use std::process::ExitCode;
+use states::{Context, Data, Framework};
+use std::{process::ExitCode, sync::Arc};
 
 /// Build the `poise` [framework](poise::Framework)
-fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
-	let mut client = Framework::build()
-		.token(&STATE.config.discord_token)
+fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
+	let mut client = Framework::builder()
+		.token(&data.config.discord_token)
 		.intents(
 			GatewayIntents::GUILDS
 				| GatewayIntents::GUILD_VOICE_STATES
@@ -53,7 +53,9 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 				| GatewayIntents::GUILD_MESSAGES
 				| GatewayIntents::MESSAGE_CONTENT,
 		)
-		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(&*STATE) }))
+		.user_data_setup(move |_ctx, _ready, _framework| {
+			Box::pin(async move { Ok(Arc::clone(&data)) })
+		})
 		.options(poise::FrameworkOptions {
 			pre_command,
 			on_error: command_on_error,
@@ -87,11 +89,12 @@ fn build_client() -> FrameworkBuilder<&'static Data, anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+	let data = Arc::new(Data::new());
+
 	let _guard = setup_logging();
+	let _handle = spawn_server(Arc::clone(&data));
 
-	spawn_server();
-
-	if let Err(error) = build_client().run().await {
+	if let Err(error) = build_client(Arc::clone(&data)).run().await {
 		tracing::error!("Client exited with error: {}", error);
 
 		return ExitCode::FAILURE;

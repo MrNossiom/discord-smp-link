@@ -1,10 +1,14 @@
 //! Http Server to answer `OAuth2` redirects and show a presentation page
 
-use crate::states::STATE;
+use crate::states::Data;
 use askama::Template;
 use oauth2::{reqwest::http_client, AuthorizationCode};
 use rouille::{log_custom, Request, Response, Server};
-use std::{process, thread};
+use std::{
+	process,
+	sync::Arc,
+	thread::{self, JoinHandle},
+};
 
 /// A template for the 404 page
 #[derive(Template, Default)]
@@ -40,10 +44,13 @@ struct AuthTemplate<'a> {
 }
 
 /// Spawn the server in a separate thread
-pub fn spawn_server() {
+#[must_use]
+pub fn spawn_server(data: Arc<Data>) -> JoinHandle<()> {
+	tracing::debug!("Server spawning");
+
 	thread::spawn(move || {
 		// Listen on external interfaces `0.0.0.0`
-		Server::new(format!("0.0.0.0:{}", STATE.config.port), move |request| {
+		Server::new(format!("0.0.0.0:{}", data.config.port), move |request| {
 			log_custom(
 				request,
 				|req, res, elapsed| {
@@ -63,7 +70,7 @@ pub fn spawn_server() {
 						elapsed.as_secs()
 					);
 				},
-				|| handle_request(request),
+				|| handle_request(Arc::clone(&data), request),
 			)
 		})
 		.unwrap_or_else(|err| {
@@ -73,14 +80,12 @@ pub fn spawn_server() {
 		})
 		.pool_size(4)
 		.run();
-	});
-
-	tracing::debug!("Server has spawned");
+	})
 }
 
 // TODO: move each handle in a separate function
 /// Handles server requests
-fn handle_request(request: &Request) -> Response {
+fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 	let request_url = {
 		let url = request.raw_url();
 		let pos = url.find('?').unwrap_or(url.len());
@@ -112,7 +117,7 @@ fn handle_request(request: &Request) -> Response {
 				}
 			};
 
-			let mut queue = STATE.auth.queue.write().expect("RwLock poisoned");
+			let mut queue = data.auth.queue.write().expect("RwLock poisoned");
 
 			if queue.get(&state).is_none() {
 				return Response::template(AuthTemplate {
@@ -122,7 +127,7 @@ fn handle_request(request: &Request) -> Response {
 				});
 			};
 
-			let oauth2_response = STATE
+			let oauth2_response = data
 				.auth
 				.client
 				.exchange_code(AuthorizationCode::new(code))

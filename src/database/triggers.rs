@@ -4,7 +4,7 @@ use super::{
 	models::NewVerifiedMember,
 	schema::{members, verified_members},
 };
-use crate::{handlers::auth::BasicTokenResponse, states::STATE};
+use crate::handlers::auth::BasicTokenResponse;
 use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use hyper::{body::to_bytes, Body, Client, Request, StatusCode};

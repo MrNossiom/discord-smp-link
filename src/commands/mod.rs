@@ -1,7 +1,7 @@
 //! `Discord` client commands
 
 use crate::states::{Context, FrameworkError, Shout};
-use anyhow::{anyhow, Context as _, *};
+use anyhow::{anyhow, Context as _};
 use console::style;
 use poise::BoxFuture;
 use uuid::Uuid;

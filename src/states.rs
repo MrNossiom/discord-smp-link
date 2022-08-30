@@ -7,21 +7,9 @@ use diesel::{
 	MysqlConnection,
 };
 use dotenv::dotenv;
-use lazy_static::lazy_static;
 use oauth2::{ClientId, ClientSecret};
 use poise::{async_trait, serenity_prelude as serenity, ReplyHandle};
-use std::{
-	env,
-	sync::atomic::{AtomicBool, Ordering},
-};
-
-/// Store `true` if [`Data`] has been initialized
-static DATA_CALLED: AtomicBool = AtomicBool::new(false);
-
-lazy_static! {
-	/// The globally available [`Data`]
-	pub static ref STATE: Data = Data::new();
-}
+use std::{env, sync::Arc};
 
 /// App global configuration
 pub struct Config {
@@ -79,10 +67,6 @@ pub struct Data {
 impl Data {
 	/// Parse the bot data from
 	pub fn new() -> Self {
-		if DATA_CALLED.swap(true, Ordering::Relaxed) {
-			panic!("Data can only be initialized once");
-		}
-
 		let config = Config::from_dotenv();
 
 		let manager = ConnectionManager::<MysqlConnection>::new(&config.database_url);
@@ -120,10 +104,10 @@ impl Shout for Context<'_> {
 /// Common command return type
 pub type InteractionResult<E = Error> = Result<(), E>;
 /// The poise [`poise::Context`] provided to each command
-pub type Context<'a> = poise::Context<'a, &'static Data, Error>;
+pub type Context<'a> = poise::Context<'a, Arc<Data>, Error>;
 /// The [`poise::Command`] type alias
-pub type _Command = poise::Command<Data, Error>;
+pub type Command = poise::Command<Data, Error>;
 /// The [`poise::Framework`] type alias
-pub type Framework = poise::Framework<&'static Data, Error>;
+pub type Framework = poise::Framework<Arc<Data>, Error>;
 /// The [`poise::FrameworkError`] type alias
-pub type FrameworkError<'a> = poise::FrameworkError<'a, &'static Data, Error>;
+pub type FrameworkError<'a> = poise::FrameworkError<'a, Arc<Data>, Error>;

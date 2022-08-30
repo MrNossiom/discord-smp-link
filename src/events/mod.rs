@@ -5,18 +5,19 @@ use crate::{
 		models::{Guild, Member, NewGuild, NewMember},
 		schema::{guilds, members},
 	},
-	states::{Data, Framework, STATE},
+	states::Data,
 };
-use anyhow::Result;
+use anyhow::{Error, Result};
 use diesel::prelude::*;
-use poise::{serenity_prelude::Context, Event};
+use poise::{serenity_prelude::Context, Event, FrameworkContext};
+use std::sync::Arc;
 
 /// Serenity listener to react to `Discord` events
 pub fn event_handler(
 	_ctx: &Context,
 	event: &Event,
-	_framework: &Framework,
-	_data: &Data,
+	_framework: FrameworkContext<Arc<Data>, Error>,
+	data: &Data,
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {
@@ -29,7 +30,7 @@ pub fn event_handler(
 			if let Ok(user) = members::table
 				.filter(members::discord_id.eq(new_member.user.id.0))
 				.filter(members::guild_id.eq(new_member.guild_id.0))
-				.first::<Member>(&STATE.database.get()?)
+				.first::<Member>(&data.database.get()?)
 			{
 				tracing::warn!(
 					"User `{}` ({}) already exists in the database",
@@ -51,7 +52,7 @@ pub fn event_handler(
 
 				diesel::insert_into(members::table)
 					.values(&new_user)
-					.execute(&STATE.database.get()?)?;
+					.execute(&data.database.get()?)?;
 			}
 
 			Ok(())
@@ -65,7 +66,7 @@ pub fn event_handler(
 					.filter(members::guild_id.eq(guild_id.0))
 					.filter(members::discord_id.eq(user.id.0)),
 			)
-			.execute(&STATE.database.get()?)?;
+			.execute(&data.database.get()?)?;
 
 			Ok(())
 		}
@@ -73,7 +74,7 @@ pub fn event_handler(
 		Event::GuildCreate { guild, .. } => {
 			if let Ok(guild) = guilds::table
 				.filter(guilds::id.eq(guild.id.0))
-				.first::<Guild>(&STATE.database.get()?)
+				.first::<Guild>(&data.database.get()?)
 			{
 				tracing::warn!(
 					"Guild `{}` ({}) already exists in the database",
@@ -92,7 +93,7 @@ pub fn event_handler(
 
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
-					.execute(&STATE.database.get()?)?;
+					.execute(&data.database.get()?)?;
 			}
 
 			Ok(())
@@ -102,7 +103,7 @@ pub fn event_handler(
 			tracing::warn!("Deleting guild ({})", incomplete.id);
 
 			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.0)))
-				.execute(&STATE.database.get()?)?;
+				.execute(&data.database.get()?)?;
 
 			Ok(())
 		}
