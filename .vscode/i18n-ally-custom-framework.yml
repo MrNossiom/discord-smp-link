@@ -2,6 +2,9 @@ languageIds: [rust]
 enabledParsers: [ftl]
 
 usageMatchRegex:
-  - "[^\\w\\d]*\\.get\\(['\"`]({key})['\"`]"
+  # Translation Trait
+  - "[^\\w\\d]*\\.get\\([\\n\\t ]*?['\"`]({key})['\"`]"
+  # Applications commands functions
+  - "#\\[command\\(slash_command.*\\)\\]\\npub\\(crate\\) async fn (\\w+)\\("
 
 monopoly: true

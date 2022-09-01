@@ -1,6 +1,6 @@
 //! Fluent Project translation system
 
-use crate::{states::Command, Context};
+use crate::states::{ApplicationContext, Command, Context};
 use anyhow::{anyhow, Result};
 use fluent::{bundle, FluentArgs, FluentResource};
 use fluent_syntax::ast::Pattern;
@@ -28,9 +28,9 @@ fn read_fluent_file(path: &Path) -> Result<(LanguageIdentifier, FluentBundle)> {
 	// Extract locale from filename
 	let locale: LanguageIdentifier = path
 		.file_stem()
-		.ok_or(anyhow!("Invalid `.ftl` file"))?
+		.ok_or_else(|| anyhow!("Invalid `.ftl` file"))?
 		.to_str()
-		.ok_or(anyhow!("Invalid UTF-8 filename"))?
+		.ok_or_else(|| anyhow!("Invalid UTF-8 filename"))?
 		.parse()?;
 
 	// Load .ftl resource
@@ -68,62 +68,105 @@ impl Translations {
 			}
 
 			for (locale, bundle) in &self.bundles {
-				let msg = match bundle.get_message(&command.name) {
+				let command_translation = match bundle.get_message(&command.name) {
 					Some(x) => x,
 					None => {
 						tracing::error!(
-							"missing command translation {} for locale {}",
+							"translation for command `{}` with locale `{}` does not exist",
 							command.name,
 							locale
 						);
+
 						continue;
 					}
 				};
 
-				command.name_localizations.insert(
-					locale.to_string(),
-					format(bundle, msg.value().unwrap(), None),
-				);
+				match command_translation.value() {
+					Some(name) => {
+						command
+							.name_localizations
+							.insert(locale.to_string(), format(bundle, name, None));
+					}
+					None => {
+						tracing::error!(
+							"translation for command `{}` with locale `{}` does not have a name",
+							command.name,
+							locale
+						);
+					}
+				}
 
-				command.description_localizations.insert(
-					locale.to_string(),
-					format(
-						bundle,
-						msg.get_attribute("description").unwrap().value(),
-						None,
-					),
-				);
+				match command_translation.get_attribute("description") {
+					Some(description) => {
+						command.description_localizations.insert(
+							locale.to_string(),
+							format(bundle, description.value(), None),
+						);
+					}
+					None => {
+						tracing::error!(
+							"translation for command `{}` with locale `{}` does not have a description",
+							command.name,
+							locale
+						);
+					}
+				}
 
 				for parameter in &mut command.parameters {
-					parameter.name_localizations.insert(
-						locale.to_string(),
-						format(
-							bundle,
-							msg.get_attribute(&parameter.name).unwrap().value(),
-							None,
-						),
-					);
+					match command_translation.get_attribute(&parameter.name) {
+						Some(param_name) => {
+							parameter.name_localizations.insert(
+								locale.to_string(),
+								format(bundle, param_name.value(), None),
+							);
+						}
+						None => {
+							tracing::error!(
+								"translation for command `{}` with locale `{}` does not have a name for the parameter `{}`",
+								command.name,
+								locale,
+								parameter.name
+							);
+						}
+					}
 
-					parameter.description_localizations.insert(
-						locale.to_string(),
-						format(
-							bundle,
-							msg.get_attribute(&format!("{}-description", parameter.name))
-								.unwrap()
-								.value(),
-							None,
-						),
-					);
+					match command_translation
+						.get_attribute(&format!("{}-description", parameter.name))
+					{
+						Some(param_description) => {
+							parameter.description_localizations.insert(
+								locale.to_string(),
+								format(bundle, param_description.value(), None),
+							);
+						}
+						None => {
+							tracing::error!(
+								"translation for command `{}` with locale `{}` does not have a description for the parameter `{}`",
+								command.name,
+								locale,
+								parameter.name
+							);
+						}
+					}
 
 					for choice in &mut parameter.choices {
-						choice.localizations.insert(
-							locale.to_string(),
-							format(
-								bundle,
-								bundle.get_message(&choice.name).unwrap().value().unwrap(),
-								None,
-							),
-						);
+						match command_translation.get_attribute(&format!("{}-choice", choice.name))
+						{
+							Some(choice_name) => {
+								parameter.description_localizations.insert(
+									locale.to_string(),
+									format(bundle, choice_name.value(), None),
+								);
+							}
+							None => {
+								tracing::error!(
+									"translation for command `{}` with locale `{}` does not have a translation for the choice `{}`",
+									command.name,
+									locale,
+									choice.name
+								);
+							}
+						}
 					}
 				}
 			}
@@ -146,30 +189,66 @@ fn format(bundle: &FluentBundle, pattern: &Pattern<&str>, args: Option<&FluentAr
 	formatted
 }
 
+/// Trait for client internationalisation
 pub(crate) trait Translate {
-	fn get(&self, key: &str, args: Option<&FluentArgs>) -> Result<String>;
+	/// Get the translation for the given message with a locale provided by self context
+	fn get_checked(&self, key: &str, args: Option<&FluentArgs>) -> Result<String>;
+
+	/// Get a translated key of the key itself in case it is not found
+	fn get(&self, key: &str, args: Option<&FluentArgs>) -> String {
+		match self.get_checked(key, args) {
+			Ok(string) => string,
+			Err(error) => {
+				tracing::error!("error for key {key} with args {args:?}: {error}");
+				key.to_owned()
+			}
+		}
+	}
+}
+
+impl Translate for ApplicationContext<'_> {
+	fn get_checked(&self, key: &str, args: Option<&FluentArgs>) -> Result<String> {
+		let translations = &self.data.translations;
+		let locale: LanguageIdentifier = self.interaction.locale().parse()?;
+
+		let bundle = translations.bundles.get(&locale).unwrap_or_else(|| {
+			translations
+				.bundles
+				.get(&translations.fallback)
+				.expect("failed to load fallback locale bundle")
+		});
+
+		match bundle.get_message(key) {
+			Some(message) => match message.value() {
+				Some(pattern) => Ok(format(bundle, pattern, args)),
+				None => Err(anyhow!("message `{}` has no value", key)),
+			},
+			None => Err(anyhow!("unknown fluent key `{}`", key)),
+		}
+	}
 }
 
 impl Translate for Context<'_> {
-	fn get(&self, key: &str, args: Option<&FluentArgs>) -> Result<String> {
+	fn get_checked(&self, key: &str, args: Option<&FluentArgs>) -> Result<String> {
 		let translations = &self.data().translations;
-		let locale: LanguageIdentifier = self.locale().unwrap().parse().unwrap();
+		let locale: LanguageIdentifier = match self.locale() {
+			Some(locale) => locale.parse()?,
+			None => translations.fallback.clone(),
+		};
 
-		if let Some(bundle) = translations.bundles.get(&locale) {
-			Ok(format(
-				bundle,
-				bundle.get_message(key).unwrap().value().unwrap(),
-				args,
-			))
-		} else if let Some(bundle) = translations.bundles.get(&translations.fallback) {
-			Ok(format(
-				bundle,
-				bundle.get_message(key).unwrap().value().unwrap(),
-				args,
-			))
-		} else {
-			tracing::warn!("unknown fluent key `{}`", key);
-			Ok(key.to_owned())
+		let bundle = translations.bundles.get(&locale).unwrap_or_else(|| {
+			translations
+				.bundles
+				.get(&translations.fallback)
+				.expect("failed to load fallback locale bundle")
+		});
+
+		match bundle.get_message(key) {
+			Some(message) => match message.value() {
+				Some(pattern) => Ok(format(bundle, pattern, args)),
+				None => Err(anyhow!("message `{}` has no value", key)),
+			},
+			None => Err(anyhow!("unknown fluent key `{}`", key)),
 		}
 	}
 }
