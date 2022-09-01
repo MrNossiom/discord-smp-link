@@ -29,3 +29,4 @@ intl-memoizer = "0.5.1"
 fluent-syntax = "0.11.0"
 unic-langid = { version = "0.9.0", features = ["macros"] }
 diesel_migrations = { version = "2.0.0", features = ["mysql"] }
+thiserror = "1.0.33"

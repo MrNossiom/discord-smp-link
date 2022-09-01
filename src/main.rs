@@ -25,6 +25,7 @@
 //! Discord SMP Bot
 
 mod commands;
+mod constants;
 mod database;
 mod events;
 mod handlers;
@@ -32,20 +33,19 @@ mod logging;
 mod states;
 mod translation;
 
-#[macro_use]
-extern crate diesel;
-
-use commands::{command_on_error, post_command, pre_command};
-use database::run_migrations;
-use events::event_handler;
-use handlers::server::spawn_server;
-use logging::setup_logging;
-use poise::{serenity_prelude::GatewayIntents, FrameworkBuilder, PrefixFrameworkOptions};
-use states::{Context, Data, Framework};
+use crate::{
+	commands::{command_on_error, post_command, pre_command},
+	database::run_migrations,
+	events::event_handler,
+	handlers::server::spawn_server,
+	logging::setup_logging,
+	states::{Data, Framework, FrameworkBuilder},
+};
+use poise::serenity_prelude::GatewayIntents;
 use std::{process::ExitCode, sync::Arc};
 
 /// Build the `poise` [framework](poise::Framework)
-fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
+fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 	Framework::builder()
 		.token(&data.config.discord_token)
 		.intents(
@@ -66,23 +66,22 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
 			listener: |ctx, event, fw, data| {
 				Box::pin(async move { event_handler(ctx, event, fw, data) })
 			},
-			prefix_options: PrefixFrameworkOptions {
-				prefix: Some(".".into()),
-				..Default::default()
-			},
+			prefix_options: Default::default(),
 			commands: {
 				use commands::*;
 
+				#[rustfmt::skip]
 				let mut commands = vec![
-					helpers::help(),
-					helpers::register(),
-					login::login(),
-					login::logout(),
 					setup(),
+					login::login(), login::logout(),
+					information(),
+					helpers::dev(),
 				];
 
 				data.translations
 					.apply_interaction_translations(&mut commands);
+
+				commands.push(helpers::register_dev());
 
 				commands
 			},
@@ -98,7 +97,7 @@ async fn main() -> ExitCode {
 	run_migrations(&mut data.database.get().expect("failed to get a connection"))
 		.expect("failed to run migrations");
 
-	let _guard = setup_logging();
+	let _guard = setup_logging(Arc::clone(&data));
 	let _handle = spawn_server(Arc::clone(&data));
 
 	if let Err(error) = build_client(Arc::clone(&data)).run().await {

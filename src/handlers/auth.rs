@@ -15,25 +15,26 @@ use std::{
 	task::{Context, Poll},
 	time::{Duration, Instant},
 };
+use thiserror::Error;
 
 /// The type of the `OAuth2` response
-pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
+pub(crate) type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
 
 /// The type of the auth queue
-pub type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
+pub(crate) type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
 
 /// A manager to get redirect urls and tokens
-pub struct AuthLink {
+pub(crate) struct AuthLink {
 	/// The inner client used to manage the flow
-	pub client: BasicClient,
+	pub(crate) client: BasicClient,
 	/// A queue to wait for the user to finish the flow
-	pub queue: Arc<RwLock<AuthQueue>>,
+	pub(crate) queue: Arc<RwLock<AuthQueue>>,
 }
 
 impl AuthLink {
 	/// Create a new [`AuthLink`]
 	#[must_use]
-	pub fn new(config: &Config) -> Self {
+	pub(crate) fn new(config: &Config) -> Self {
 		let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
 			.expect("invalid auth url");
 		let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into())
@@ -62,7 +63,7 @@ impl AuthLink {
 
 	/// Gets a url and a future to make to user auth
 	#[must_use]
-	pub fn process_oauth2(&self, max_duration: Duration) -> (Url, AuthProcess) {
+	pub(crate) fn process_oauth2(&self, max_duration: Duration) -> (Url, AuthProcess) {
 		let (authorize_url, csrf_state) = self
 			.client
 			.authorize_url(CsrfToken::new_random)
@@ -82,7 +83,7 @@ impl AuthLink {
 
 /// Returned by [`AuthLink`] for a new authentification process
 /// Implement [`Future`] to make code more readable
-pub struct AuthProcess {
+pub(crate) struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
 	/// The OAuth2 queue to handle
@@ -112,28 +113,40 @@ impl AuthProcess {
 }
 
 impl Future for AuthProcess {
-	type Output = Option<BasicTokenResponse>;
+	type Output = Result<BasicTokenResponse, AuthProcessError>;
 
-	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+	fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
 		let mut queue = self.queue.write().expect("RwLock is poisoned");
 
 		if Instant::now() > self.wait_until {
-			Poll::Ready(None)
-		} else if queue
-			.get(&self.csrf_state.secret().clone())
-			.unwrap()
-			.is_some()
-		{
-			let value = queue
-				.remove(&self.csrf_state.secret().clone())
-				.unwrap()
-				.unwrap();
+			return Poll::Ready(Err(AuthProcessError::Timeout));
+		}
 
-			Poll::Ready(Some(value))
-		} else {
-			cx.waker().clone().wake();
+		match queue.get(&self.csrf_state.secret().clone()) {
+			None => Poll::Ready(Err(AuthProcessError::NotQueued)),
+			Some(Some(_)) => {
+				let token = queue
+					.remove(&self.csrf_state.secret().clone())
+					.expect("entry was checked just before")
+					.expect("entry was checked just before");
 
-			Poll::Pending
+				Poll::Ready(Ok(token))
+			}
+			Some(None) => {
+				// Add a delay to avoid spamming the queue
+
+				cx.waker().clone().wake();
+
+				Poll::Pending
+			}
 		}
 	}
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum AuthProcessError {
+	#[error("The authentication timeout has expired")]
+	Timeout,
+	#[error("The given csrf state is not queued")]
+	NotQueued,
 }

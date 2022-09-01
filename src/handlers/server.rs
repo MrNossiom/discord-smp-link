@@ -31,14 +31,17 @@ struct Code500Template<'a> {
 #[template(path = "index.jinja")]
 struct IndexTemplate {}
 
+/// A template for the contact page
 #[derive(Template, Default)]
 #[template(path = "contact.jinja")]
 struct ContactTemplate {}
 
+/// A template for the Privacy Policy page
 #[derive(Template, Default)]
 #[template(path = "privacy-policy.jinja")]
 struct PrivacyPolicyTemplate {}
 
+/// A template for the Terms of Service page
 #[derive(Template, Default)]
 #[template(path = "terms-and-conditions.jinja")]
 struct TermsAmdConditionsTemplate {}
@@ -57,8 +60,8 @@ struct AuthTemplate<'a> {
 
 /// Spawn the server in a separate thread
 #[must_use]
-pub fn spawn_server(data: Arc<Data>) -> JoinHandle<()> {
-	tracing::debug!("Server spawning");
+pub(crate) fn spawn_server(data: Arc<Data>) -> JoinHandle<()> {
+	tracing::debug!("Spawning server");
 
 	thread::spawn(move || {
 		// Listen on external interfaces `0.0.0.0`
@@ -176,6 +179,7 @@ fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 				Response::template(Code404Template {
 					ressource_path: request_url,
 				})
+				.with_status_code(404)
 			}
 		}
 	}

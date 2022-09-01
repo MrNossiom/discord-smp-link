@@ -1,47 +1,52 @@
 //! `Discord` client commands
 
-use crate::states::{Context, FrameworkError, Shout};
+use crate::{
+	states::{Context, ContextPolyfill, FrameworkError},
+	translation::Translate,
+};
 use anyhow::{anyhow, Context as _};
 use console::style;
+use fluent::fluent_args;
 use poise::BoxFuture;
 use uuid::Uuid;
 
+mod information;
 mod setup;
 
-pub use setup::setup;
-pub mod helpers;
-pub mod login;
+pub(crate) use information::information;
+pub(crate) use setup::setup;
+pub(crate) mod helpers;
+pub(crate) mod login;
 
 /// Execute before each command
-pub fn pre_command(ctx: Context) -> BoxFuture<()> {
+pub(crate) fn pre_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
-		tracing::debug!(
-			"{} invoked by {}",
-			ctx.invoked_command_name(),
-			ctx.author().name,
+		tracing::info!(
+			"{} invoked {}",
+			style(&ctx.author().name).black().bright(),
+			style(ctx.invoked_command_name()).black().bright(),
 		);
 	})
 }
 
 /// Execute on a error during code execution
-pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
+pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 	Box::pin(async move {
-		if let Err(error) = match error {
+		let error = match error {
 			FrameworkError::Command { error, ctx, .. } => {
-				let error_identifier = Uuid::new_v4();
+				let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 				tracing::error!(
 					"[id: {}] {} invoked `{}` but an error occurred: {}",
 					error_identifier,
 					ctx.author().name,
 					ctx.invoked_command_name(),
-					error.root_cause()
+					error
 				);
 
-				let error_msg = format!(
-					"An internal error occurred with the command execution. \
-					If this error persist please contact the dev with the following code: `{}`",
-					error_identifier.as_braced()
+				let error_msg = ctx.get(
+					"internal-error-with-id",
+					Some(&fluent_args!["id" => error_identifier]),
 				);
 
 				ctx.shout(error_msg)
@@ -51,13 +56,16 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			}
 
 			FrameworkError::ArgumentParse { error, .. } => {
-				tracing::error!(target: "Argument Parse", "{}", error);
+				tracing::error!("Argument Parse: {}", error);
 
 				Ok(())
 			}
 
 			FrameworkError::CommandStructureMismatch { description, .. } => {
-				tracing::error!(target: "Command Structure Mismatch", "You should sync your commands : {} ", description);
+				tracing::error!(
+					"Command Structure Mismatch: You should sync your commands: {} ",
+					description
+				);
 
 				Ok(())
 			}
@@ -79,7 +87,7 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				missing_permissions,
 			} => ctx
 				.shout(format!(
-					"The bot is missing the following permissions : {}",
+					"The bot is missing the following permissions: {}",
 					missing_permissions
 				))
 				.await
@@ -117,7 +125,7 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				.context("Failed to send dm only message"),
 
 			FrameworkError::CommandCheckFailed { ctx, error } => {
-				let error_identifier = Uuid::new_v4();
+				let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 				tracing::error!(
 					"[id: {}] {} invoked `{}` but an error occurred in command check : {}",
@@ -127,8 +135,9 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					error.unwrap_or_else(|| anyhow!("Unknown error"))
 				);
 
-				let error_msg = format!(
-					"An internal error happened during the command execution. If this error persist please contact the dev with the following code : `{}`", error_identifier.as_braced()
+				let error_msg = ctx.get(
+					"internal-error-with-id",
+					Some(&fluent_args!["id" => error_identifier]),
 				);
 
 				ctx.shout(error_msg)
@@ -138,16 +147,18 @@ pub fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			}
 
 			_ => Ok(()),
-		} {
+		};
+
+		if let Err(error) = error {
 			tracing::error!("{}", error);
 		};
 	})
 }
 
 /// Execute after every successful command
-pub fn post_command(ctx: Context) -> BoxFuture<()> {
+pub(crate) fn post_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
-		tracing::info!(
+		tracing::debug!(
 			"{} invoked `{}` successfully!",
 			style(&ctx.author().name).black().bright(),
 			style(ctx.invoked_command_name()).black().bright(),

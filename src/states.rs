@@ -1,32 +1,34 @@
 //! Handles all the states of the bot and initial configuration
 
 use crate::{database::DatabasePool, handlers::auth::AuthLink, translation::Translations};
-use anyhow::{Error, Result};
+use anyhow::Result;
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
 	MysqlConnection,
 };
 use dotenv::dotenv;
 use oauth2::{ClientId, ClientSecret};
-use poise::{async_trait, serenity_prelude as serenity, ReplyHandle};
+use poise::{
+	async_trait, send_application_reply, serenity_prelude as serenity, CreateReply, ReplyHandle,
+};
 use std::{env, sync::Arc};
 use unic_langid::langid;
 
 /// App global configuration
-pub struct Config {
+pub(crate) struct Config {
 	/// The token needed to access the `Discord` Api
-	pub discord_token: String,
+	pub(crate) discord_token: String,
 	/// The Postgres connection uri
-	pub database_url: String,
+	pub(crate) database_url: String,
 	/// The google auth client id and secret pair
-	pub google_client: (ClientId, ClientSecret),
+	pub(crate) google_client: (ClientId, ClientSecret),
 
 	/// The url of the oauth2 callback
-	pub server_url: String,
+	pub(crate) server_url: String,
 	/// The port to run the server on
-	pub port: String,
+	pub(crate) port: String,
 	/// Whether or not to use production defaults
-	pub production: bool,
+	pub(crate) production: bool,
 }
 
 impl Config {
@@ -56,20 +58,20 @@ impl Config {
 }
 
 /// App global data
-pub struct Data {
+pub(crate) struct Data {
 	/// An access to the database
-	pub database: DatabasePool,
+	pub(crate) database: DatabasePool,
 	/// A instance of the auth provider
-	pub auth: AuthLink,
+	pub(crate) auth: AuthLink,
 	/// An instance of the parsed initial config
-	pub config: Config,
+	pub(crate) config: Config,
 	/// The translations for the client
-	pub translations: Translations,
+	pub(crate) translations: Translations,
 }
 
 impl Data {
 	/// Parse the bot data from
-	pub fn new() -> Self {
+	pub(crate) fn new() -> Self {
 		let config = Config::from_dotenv();
 
 		let manager = ConnectionManager::<MysqlConnection>::new(&config.database_url);
@@ -91,30 +93,66 @@ impl Data {
 
 /// Trait for sending ephemeral messages
 #[async_trait]
-pub trait Shout: Send + Sync {
+pub(crate) trait ApplicationContextPolyfill<'b>: Send + Sync {
+	/// Send an ephemeral message to the user
+	async fn send<'att>(
+		self,
+		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
+	) -> Result<ReplyHandle<'b>, serenity::Error>;
+
 	/// Send an ephemeral message to the user
 	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error>;
 }
 
 #[async_trait]
-impl Shout for Context<'_> {
+impl<'b> ApplicationContextPolyfill<'b> for ApplicationContext<'b> {
+	/// Send an ephemeral message to the user
+	#[inline]
+	async fn send<'att>(
+		self,
+		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
+	) -> Result<ReplyHandle<'b>, serenity::Error> {
+		send_application_reply(self, builder).await
+	}
+
+	#[inline]
 	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error> {
-		self.send(|builder| {
-			builder
-				.content(Into::<String>::into(content))
-				.ephemeral(true)
-		})
-		.await
+		self.send(|builder| builder.content(content).ephemeral(true))
+			.await
+	}
+}
+
+/// Trait for sending ephemeral messages
+#[async_trait]
+pub(crate) trait ContextPolyfill: Send + Sync {
+	/// Send an ephemeral message to the user
+	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error>;
+}
+
+#[async_trait]
+impl ContextPolyfill for Context<'_> {
+	#[inline]
+	async fn shout(&self, content: String) -> Result<ReplyHandle<'_>, serenity::Error> {
+		self.send(|builder| builder.content(content).ephemeral(true))
+			.await
 	}
 }
 
 /// Common command return type
-pub type InteractionResult<E = Error> = Result<(), E>;
+pub(crate) type InteractionResult = anyhow::Result<()>;
 /// The poise [`poise::Context`] provided to each command
-pub type Context<'a> = poise::Context<'a, Arc<Data>, Error>;
+pub(crate) type Context<'a> = poise::Context<'a, Arc<Data>, anyhow::Error>;
+/// The poise [`poise::ApplicationContext`] provided to each slash command
+pub(crate) type ApplicationContext<'a> = poise::ApplicationContext<'a, Arc<Data>, anyhow::Error>;
+/// The poise [`poise::PrefixContext`] provided to each prefix command
+pub(crate) type PrefixContext<'a> = poise::PrefixContext<'a, Arc<Data>, anyhow::Error>;
 /// The [`poise::Command`] type alias
-pub type Command = poise::Command<Arc<Data>, Error>;
+pub(crate) type Command = poise::Command<Arc<Data>, anyhow::Error>;
 /// The [`poise::Framework`] type alias
-pub type Framework = poise::Framework<Arc<Data>, Error>;
+pub(crate) type Framework = poise::Framework<Arc<Data>, anyhow::Error>;
+/// The [`poise::FrameworkContext`] type alias
+pub(crate) type FrameworkContext<'a> = poise::FrameworkContext<'a, Arc<Data>, anyhow::Error>;
 /// The [`poise::FrameworkError`] type alias
-pub type FrameworkError<'a> = poise::FrameworkError<'a, Arc<Data>, Error>;
+pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, Arc<Data>, anyhow::Error>;
+/// The [`poise::FrameworkBuilder`] type alias
+pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<Arc<Data>, anyhow::Error>;

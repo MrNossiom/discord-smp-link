@@ -1,4 +1,4 @@
 //! `Server` and `Auth` handlers
 
-pub mod auth;
-pub mod server;
+pub(crate) mod auth;
+pub(crate) mod server;

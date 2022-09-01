@@ -2,46 +2,51 @@
 //! links Discord and Google accounts together
 
 use crate::{
+	constants::AUTHENTICATION_TIMEOUT,
 	database::triggers,
-	states::{InteractionResult, Shout},
+	handlers::auth::AuthProcessError,
+	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
-	Context,
 };
-use anyhow::bail;
+use anyhow::anyhow;
 use poise::{
 	command,
 	serenity_prelude::{component::ButtonStyle, CollectComponentInteraction},
 };
 use std::{sync::Arc, time::Duration};
 
-#[allow(clippy::missing_docs_in_private_items)]
-#[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
-pub async fn login(ctx: Context<'_>) -> InteractionResult {
+/// Starts the authentication flow
+#[command(slash_command, guild_only)]
+pub(crate) async fn login(ctx: ApplicationContext<'_>) -> InteractionResult {
 	_login(ctx).await
 }
 
 /// Starts the auth process
 ///
 /// Function used in the login and the setup command
-pub async fn _login(ctx: Context<'_>) -> InteractionResult {
-	let member = match ctx.author_member().await {
+pub(crate) async fn _login(ctx: ApplicationContext<'_>) -> InteractionResult {
+	let member = match ctx.interaction.member() {
 		Some(member) => member,
-		None => bail!(ctx.get("not-in-guild", None)?),
+		None => {
+			let msg = ctx.get("not-in-guild", None);
+			ctx.shout(msg).await?;
+			return Ok(());
+		}
 	};
 
-	let (oauth2_url, token_response) = ctx.data().auth.process_oauth2(Duration::from_secs(60 * 5));
+	let (oauth2_url, token_response) = ctx.data.auth.process_oauth2(AUTHENTICATION_TIMEOUT);
 
 	ctx.send(|reply| {
 		reply
 			.ephemeral(true)
-			.content("Use your SMP account to connect yourself")
+			.content(ctx.get("use-google-account-to-login", None))
 			.components(|components| {
 				components.create_action_row(|action_row| {
 					action_row.create_button(|button| {
 						button
 							.label("Continue")
-							.url(oauth2_url)
 							.style(ButtonStyle::Link)
+							.url(oauth2_url)
 					})
 				})
 			})
@@ -49,33 +54,37 @@ pub async fn _login(ctx: Context<'_>) -> InteractionResult {
 	.await?;
 
 	let token_response = match token_response.await {
-		Some(response) => response,
-		None => {
-			ctx.shout("You didn't finish the authentication process in 5 minutes.".into())
-				.await?;
+		Ok(response) => response,
+		Err(error) => match error {
+			AuthProcessError::Timeout => {
+				let msg = ctx.get("did-not-finish-auth-process", None);
+				ctx.shout(msg).await?;
 
-			return Ok(());
-		}
+				return Ok(());
+			}
+
+			error => return Err(anyhow!("{error}")),
+		},
 	};
 
-	triggers::new_verified_member(Arc::clone(ctx.data()), &member, &token_response).await?;
+	triggers::new_verified_member(Arc::clone(ctx.data), member, &token_response).await?;
 
-	ctx.shout("You successfully authenticated with Google!".into())
-		.await?;
+	let msg = ctx.get("authentication-successful", None);
+	ctx.shout(msg).await?;
 
 	Ok(())
 }
 
-#[allow(clippy::missing_docs_in_private_items)]
-#[command(slash_command, guild_only, hide_in_help, member_cooldown = 10)]
-pub async fn logout(ctx: Context<'_>) -> InteractionResult {
+/// Logs out the user
+#[command(slash_command, guild_only)]
+pub(crate) async fn logout(ctx: ApplicationContext<'_>) -> InteractionResult {
 	_logout(ctx).await
 }
 
 /// Starts the dissociate accounts process
 ///
 /// Function used in the login and the setup command
-pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
+pub(crate) async fn _logout(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let reply = ctx
 		.send(|reply| {
 			reply
@@ -95,16 +104,16 @@ pub async fn _logout(ctx: Context<'_>) -> InteractionResult {
 		})
 		.await?;
 
-	if let Some(interaction) = CollectComponentInteraction::new(ctx.discord())
+	if let Some(interaction) = CollectComponentInteraction::new(ctx.discord)
 		.message_id(reply.message().await?.id)
 		// Use maximum duration from oauth response, 60 is tmp
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		interaction.defer(&ctx.discord().http).await?;
+		interaction.defer(&ctx.discord.http).await?;
 
 		if interaction.data.custom_id == "login.logout.disconnect" {
-			triggers::delete_user(Arc::clone(ctx.data()), ctx.author())?;
+			triggers::delete_user(Arc::clone(ctx.data), ctx.interaction.user())?;
 		}
 	}
 

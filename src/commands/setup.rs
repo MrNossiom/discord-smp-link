@@ -1,17 +1,12 @@
 //! Setup messages for roles interactions
 
-use crate::states::{Context, InteractionResult};
+use crate::states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult};
 use diesel::update;
 use poise::{command, serenity_prelude::component::ButtonStyle};
 
 #[allow(clippy::missing_docs_in_private_items)]
-#[command(
-	slash_command,
-	guild_only,
-	hide_in_help,
-	required_permissions = "ADMINISTRATOR"
-)]
-pub async fn setup(ctx: Context<'_>) -> InteractionResult {
+#[command(slash_command, guild_only, required_permissions = "ADMINISTRATOR")]
+pub(crate) async fn setup(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let reply = ctx
 		.send(|m| {
 			m.embed(|cre| cre.title("Choose your level..."))
@@ -55,7 +50,7 @@ pub async fn setup(ctx: Context<'_>) -> InteractionResult {
 }
 
 /// Handles the class select action
-async fn handle_class_select(ctx: Context<'_>) -> InteractionResult {
+async fn handle_class_select(ctx: ApplicationContext<'_>) -> InteractionResult {
 	ctx.send(|m| {
 		m.embed(|cre| cre.title("Choose your class..."))
 			.components(|com| {

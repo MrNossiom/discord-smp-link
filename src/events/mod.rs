@@ -5,18 +5,17 @@ use crate::{
 		models::{Guild, Member, NewGuild, NewMember},
 		schema::{guilds, members},
 	},
-	states::Data,
+	states::{Data, FrameworkContext},
 };
-use anyhow::{Error, Result};
+use anyhow::Result;
 use diesel::prelude::*;
-use poise::{serenity_prelude::Context, Event, FrameworkContext};
-use std::sync::Arc;
+use poise::{serenity_prelude::Context, Event};
 
 /// Serenity listener to react to `Discord` events
-pub fn event_handler(
+pub(crate) fn event_handler(
 	_ctx: &Context,
 	event: &Event,
-	_framework: FrameworkContext<Arc<Data>, Error>,
+	_framework: FrameworkContext,
 	data: &Data,
 ) -> Result<()> {
 	match event {
@@ -113,7 +112,7 @@ pub fn event_handler(
 		}
 
 		_ => {
-			tracing::debug!("You didn't handle this event : {:?}", event);
+			tracing::debug!("Didn't handle event: {:?}", event);
 
 			Ok(())
 		}
