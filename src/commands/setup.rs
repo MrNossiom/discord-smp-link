@@ -44,11 +44,9 @@ pub async fn setup(ctx: Context<'_>) -> InteractionResult {
 		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};
 		use diesel::prelude::*;
 
-		let mut connexion = ctx.data().database.get()?;
-
-		update(guilds.find(ctx.guild_id().unwrap().0))
+		update(guilds.find(ctx.interaction.guild_id().unwrap().0))
 			.set(setup_message_id.eq(reply_id))
-			.execute(&mut connexion)?;
+			.execute(&mut ctx.data.database.get()?)?;
 	}
 
 	// TODO: collect interactions in the event part

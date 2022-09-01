@@ -95,7 +95,8 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder<Arc<Data>, anyhow::Error> {
 async fn main() -> ExitCode {
 	let data = Arc::new(Data::new());
 
-	run_migrations(&mut data.database.get().unwrap()).expect("failed to run migrations");
+	run_migrations(&mut data.database.get().expect("failed to get a connection"))
+		.expect("failed to run migrations");
 
 	let _guard = setup_logging();
 	let _handle = spawn_server(Arc::clone(&data));

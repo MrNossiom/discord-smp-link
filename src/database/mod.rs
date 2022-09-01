@@ -8,18 +8,18 @@ use diesel::{
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::error::Error;
 
-pub mod models;
-pub mod triggers;
+pub(crate) mod models;
+pub(crate) mod triggers;
 
 /// The automatically generated schema by `Diesel`
 #[rustfmt::skip]
-pub mod schema;
+pub(crate) mod schema;
 
 /// The type alias for a Postgres connection pool
-pub type DatabasePool = Pool<ConnectionManager<MysqlConnection>>;
+pub(crate) type DatabasePool = Pool<ConnectionManager<MysqlConnection>>;
 
 /// The migrations to apply to the database
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+pub(crate) const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 /// Applies the migrations to the database
 pub(crate) fn run_migrations(

@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     guilds (id) {
         id -> Unsigned<Bigint>,
         name -> Varchar,
@@ -7,7 +9,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     members (id) {
         id -> Integer,
         discord_id -> Unsigned<Bigint>,
@@ -18,20 +20,20 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     verified_members (id) {
         id -> Integer,
-        user_id -> Integer,
+        member_id -> Integer,
         first_name -> Varchar,
         last_name -> Varchar,
         mail -> Varchar,
     }
 }
 
-joinable!(members -> guilds (guild_id));
-joinable!(verified_members -> members (user_id));
+diesel::joinable!(members -> guilds (guild_id));
+diesel::joinable!(verified_members -> members (member_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     guilds,
     members,
     verified_members,

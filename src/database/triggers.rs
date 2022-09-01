@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 /// Insert a new user into the database
 /// Query google for the user's email and full name
-pub async fn new_verified_member(
+pub(crate) async fn new_verified_member(
 	data: Arc<Data>,
 	member: &Member,
 	res: &BasicTokenResponse,
@@ -37,7 +37,7 @@ pub async fn new_verified_member(
 		.first(&mut data.database.get()?)?;
 
 	let new_verified_member = NewVerifiedMember {
-		user_id: id,
+		member_id: id,
 		first_name: &user_data.first_name,
 		last_name: &user_data.last_name,
 		mail: &user_data.mail,
@@ -51,7 +51,7 @@ pub async fn new_verified_member(
 }
 
 /// Remove a user from the database
-pub fn delete_user(data: Arc<Data>, user: &User) -> Result<()> {
+pub(crate) fn delete_user(data: Arc<Data>, user: &User) -> Result<()> {
 	// TODO: change cast to be functional
 	diesel::delete(members::table)
 		.filter(members::discord_id.eq(user.id.0))
