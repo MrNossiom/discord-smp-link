@@ -19,6 +19,7 @@ RUN rm src/*.rs
 # Copy your source tree
 COPY ./src ./src
 COPY ./templates ./templates
+COPY ./migrations ./migrations
 
 # Build for release
 RUN rm ./target/release/deps/discord_smp_link*
@@ -35,6 +36,7 @@ WORKDIR /discord_smp_link/
 
 # Copy the public content
 COPY ./public ./public
+COPY ./translations ./translations
 
 # Copy the build artifact from the build stage
 COPY --from=builder /discord_smp_link/target/release/discord_smp_link ./discord_smp_link

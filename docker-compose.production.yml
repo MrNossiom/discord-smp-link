@@ -15,7 +15,7 @@ services:
             timeout: 5s
             retries: 10
     client:
-        build: .
+        build: ghcr.io/mrnossiom/discord-smp-link:latest
         volumes:
             - .env.docker:/discord_smp_link/.env
             - ./logs/:/discord_smp_link/logs

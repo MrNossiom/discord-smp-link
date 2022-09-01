@@ -14,11 +14,21 @@ Fill the `.env.docker` with the required credentials and settings :
 -   `PORT`: The port on which the server must be bind (`8080`)
 -   `PRODUCTION`: `true` or `false`
 
-Build the production docker container :
+Build the production docker container:
 
-> `docker compose --file docker-compose.prod.yml up -d`
+> `docker build .`
+> and then
+> `docker tag <image_id> discord-smp-link:latest`
 
 ## Development
+
+To run the local MySQL database, you can use the `docker-compose.local.yml` file:
+
+> `docker compose docker-compose.local.yml up -d`
+> or
+> `just up production`
+
+## Compiling
 
 You need to install the C library `mysql-client` before compiling the Rust code.
 
