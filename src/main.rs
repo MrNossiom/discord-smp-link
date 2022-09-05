@@ -64,7 +64,7 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 			on_error: command_on_error,
 			post_command,
 			listener: |ctx, event, fw, data| {
-				Box::pin(async move { event_handler(ctx, event, fw, data) })
+				Box::pin(async move { event_handler(ctx, event, fw, data).await })
 			},
 			prefix_options: Default::default(),
 			commands: {
@@ -73,15 +73,14 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 				#[rustfmt::skip]
 				let mut commands = vec![
 					setup(),
-					login::login(), login::logout(),
 					information(),
 					helpers::dev(),
 				];
 
 				data.translations
-					.apply_interaction_translations(&mut commands);
+					.apply_translations_to_interactions(&mut commands);
 
-				commands.push(helpers::register_dev());
+				commands.push(helpers::_register());
 
 				commands
 			},

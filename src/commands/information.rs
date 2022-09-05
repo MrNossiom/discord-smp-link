@@ -14,7 +14,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 	let discord_guild_id = match ctx.interaction.guild_id() {
 		Some(x) => x,
 		None => {
-			let get = ctx.get("not-in-guild", None);
+			let get = ctx.get("error-guild-only", None);
 			ctx.shout(get).await?;
 
 			return Ok(());
@@ -24,18 +24,30 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 	let member = {
 		use crate::database::schema::members::dsl::*;
 
-		members
+		let member = members
 			.filter(discord_id.eq(user.id.0))
 			.filter(guild_id.eq(discord_guild_id.0))
-			.first::<Member>(&mut ctx.data.database.get()?)?
+			.first::<Member>(&mut ctx.data.database.get()?);
+
+		match member {
+			Ok(x) => x,
+			Err(_) => {
+				let get = ctx.get("member-unknown", None);
+				ctx.shout(get).await?;
+
+				return Ok(());
+			}
+		}
 	};
 
-	let maybe = VerifiedMember::belonging_to(&member).first(&mut ctx.data.database.get()?);
+	let maybe_verified_member =
+		VerifiedMember::belonging_to(&member).first(&mut ctx.data.database.get()?);
 
-	let verified_member: VerifiedMember = match maybe {
+	let verified_member: VerifiedMember = match maybe_verified_member {
 		Ok(member) => member,
-		Err(error) => {
-			println!("{:?}", error);
+		Err(_) => {
+			let get = ctx.get("member-not-verified", None);
+			ctx.shout(get).await?;
 
 			return Ok(());
 		}

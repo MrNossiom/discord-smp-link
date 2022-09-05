@@ -1,35 +1,28 @@
-//! Auth flow commands
-//! links Discord and Google accounts together
+//! Auth flow event handlers
+//! Links Discord and Google accounts together
 
 use crate::{
 	constants::AUTHENTICATION_TIMEOUT,
-	database::triggers,
+	database::{schema::members, triggers},
 	handlers::auth::AuthProcessError,
-	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
+	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
 use anyhow::anyhow;
-use poise::{
-	command,
-	serenity_prelude::{component::ButtonStyle, CollectComponentInteraction},
-};
+use diesel::prelude::*;
+use poise::serenity_prelude::{component::ButtonStyle, CollectComponentInteraction};
 use std::{sync::Arc, time::Duration};
-
-/// Starts the authentication flow
-#[command(slash_command, guild_only)]
-pub(crate) async fn login(ctx: ApplicationContext<'_>) -> InteractionResult {
-	_login(ctx).await
-}
 
 /// Starts the auth process
 ///
 /// Function used in the login and the setup command
-pub(crate) async fn _login(ctx: ApplicationContext<'_>) -> InteractionResult {
-	let member = match ctx.interaction.member() {
+pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult {
+	let member = match &ctx.interaction.member {
 		Some(member) => member,
 		None => {
-			let msg = ctx.get("not-in-guild", None);
-			ctx.shout(msg).await?;
+			ctx.send(|c| c.content(ctx.get("error-guild-only", None)))
+				.await?;
+
 			return Ok(());
 		}
 	};
@@ -57,8 +50,8 @@ pub(crate) async fn _login(ctx: ApplicationContext<'_>) -> InteractionResult {
 		Ok(response) => response,
 		Err(error) => match error {
 			AuthProcessError::Timeout => {
-				let msg = ctx.get("did-not-finish-auth-process", None);
-				ctx.shout(msg).await?;
+				let content = ctx.get("did-not-finish-auth-process", None);
+				ctx.shout(content).await?;
 
 				return Ok(());
 			}
@@ -69,38 +62,31 @@ pub(crate) async fn _login(ctx: ApplicationContext<'_>) -> InteractionResult {
 
 	triggers::new_verified_member(Arc::clone(ctx.data), member, &token_response).await?;
 
-	let msg = ctx.get("authentication-successful", None);
-	ctx.shout(msg).await?;
+	let content = ctx.get("authentication-successful", None);
+	ctx.shout(content).await?;
 
 	Ok(())
-}
-
-/// Logs out the user
-#[command(slash_command, guild_only)]
-pub(crate) async fn logout(ctx: ApplicationContext<'_>) -> InteractionResult {
-	_logout(ctx).await
 }
 
 /// Starts the dissociate accounts process
 ///
 /// Function used in the login and the setup command
-pub(crate) async fn _logout(ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let reply = ctx
 		.send(|reply| {
 			reply
-			.ephemeral(true)
-			.content("After you disconnected your accounts, you will have to use the `/login` command again")
-			.components(|components| {
-				components.create_action_row(|action_row| {
-					action_row
-						.create_button(|button| {
+				.ephemeral(true)
+				.content(ctx.get("logout-warning", None))
+				.components(|components| {
+					components.create_action_row(|action_row| {
+						action_row.create_button(|button| {
 							button
 								.label("Disconnect your account")
 								.custom_id("login.logout.disconnect")
 								.style(ButtonStyle::Danger)
 						})
+					})
 				})
-			})
 		})
 		.await?;
 
@@ -110,11 +96,14 @@ pub(crate) async fn _logout(ctx: ApplicationContext<'_>) -> InteractionResult {
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		interaction.defer(&ctx.discord.http).await?;
+		match &*interaction.data.custom_id {
+			// TODO: change cast to be functional
+			"login.logout.disconnect" => diesel::delete(members::table)
+				.filter(members::discord_id.eq(ctx.interaction.user.id.0))
+				.execute(&mut ctx.data.database.get()?)?,
 
-		if interaction.data.custom_id == "login.logout.disconnect" {
-			triggers::delete_user(Arc::clone(ctx.data), ctx.interaction.user())?;
-		}
+			_ => unreachable!(),
+		};
 	}
 
 	Ok(())

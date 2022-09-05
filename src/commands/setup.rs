@@ -1,70 +1,55 @@
 //! Setup messages for roles interactions
 
-use crate::states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult};
+use crate::{
+	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
+	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
+	translation::Translate,
+};
 use diesel::update;
 use poise::{command, serenity_prelude::component::ButtonStyle};
 
 #[allow(clippy::missing_docs_in_private_items)]
-#[command(slash_command, guild_only, required_permissions = "ADMINISTRATOR")]
+#[command(
+	slash_command,
+	guild_only,
+	default_member_permissions = "ADMINISTRATOR"
+)]
 pub(crate) async fn setup(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let reply = ctx
-		.send(|m| {
-			m.embed(|cre| cre.title("Choose your level..."))
-				.components(|com| {
-					com.create_action_row(|row| {
-						row.create_button(|butt| {
-							butt.label("Login")
-								.style(ButtonStyle::Success)
-								.custom_id("setup.setup.login")
-						})
-						.create_button(|butt| {
-							butt.label("Logout")
-								.style(ButtonStyle::Danger)
-								.custom_id("setup.setup.logout")
-						})
-						.create_button(|butt| {
-							butt.label("Choose class")
-								.style(ButtonStyle::Primary)
-								.custom_id("setup.setup.class_select")
-						})
+		.interaction
+		.channel_id()
+		.send_message(ctx.discord, |m| {
+			m.content(ctx.get("setup-message", None)).components(|com| {
+				com.create_action_row(|row| {
+					row.create_button(|butt| {
+						butt.label(ctx.get("setup-button-login", None))
+							.style(ButtonStyle::Success)
+							.custom_id(LOGIN_BUTTON_INTERACTION)
+					})
+					.create_button(|butt| {
+						butt.label(ctx.get("setup-button-logout", None))
+							.style(ButtonStyle::Danger)
+							.custom_id(LOGOUT_BUTTON_INTERACTION)
 					})
 				})
+			})
 		})
 		.await?;
 
-	let reply_id = reply.message().await?.id.0;
+	{
+		let get = ctx.get("done", None);
+		ctx.shout(get).await?;
+	}
 
 	// Update the setup message id
 	{
 		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};
 		use diesel::prelude::*;
 
-		update(guilds.find(ctx.interaction.guild_id().unwrap().0))
-			.set(setup_message_id.eq(reply_id))
+		update(guilds.find(ctx.interaction.guild_id().expect("command is guild_only").0))
+			.set(setup_message_id.eq(reply.id.0))
 			.execute(&mut ctx.data.database.get()?)?;
 	}
 
-	// TODO: collect interactions in the event part
-
 	Ok(())
-}
-
-/// Handles the class select action
-async fn handle_class_select(ctx: ApplicationContext<'_>) -> InteractionResult {
-	ctx.send(|m| {
-		m.embed(|cre| cre.title("Choose your class..."))
-			.components(|com| {
-				com.create_action_row(|row| {
-					row.create_select_menu(|sel| {
-						// TODO: add groups
-						sel.options(|op| op.set_options(vec![]))
-							.custom_id("setup.setup.class_selected")
-					})
-				})
-			})
-	})
-	.await?;
-
-	// TODO: handle button class selection
-	todo!("handle button class select");
 }

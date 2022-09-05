@@ -1,22 +1,30 @@
 //! `Discord` client events handlers
 
+use std::sync::{atomic::AtomicBool, Arc};
+
 use crate::{
+	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
 	database::{
 		models::{Guild, Member, NewGuild, NewMember},
 		schema::{guilds, members},
 	},
-	states::{Data, FrameworkContext},
+	states::{Data, FrameworkContext, MessageComponentContext},
 };
 use anyhow::Result;
 use diesel::prelude::*;
-use poise::{serenity_prelude::Context, Event};
+use poise::{
+	serenity_prelude::{Context, Interaction},
+	Event,
+};
+
+mod login;
 
 /// Serenity listener to react to `Discord` events
-pub(crate) fn event_handler(
-	_ctx: &Context,
-	event: &Event,
-	_framework: FrameworkContext,
-	data: &Data,
+pub(crate) async fn event_handler(
+	ctx: &Context,
+	event: &Event<'_>,
+	framework: FrameworkContext<'_>,
+	data: &Arc<Data>,
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {
@@ -109,6 +117,26 @@ pub(crate) fn event_handler(
 				.execute(&mut data.database.get()?)?;
 
 			Ok(())
+		}
+
+		Event::InteractionCreate {
+			interaction: Interaction::MessageComponent(interaction),
+		} => {
+			let ctx = MessageComponentContext {
+				interaction,
+				framework,
+				data,
+				discord: ctx,
+				has_sent_initial_response: &AtomicBool::new(false),
+			};
+
+			match interaction.data.custom_id.as_str() {
+				LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
+				LOGOUT_BUTTON_INTERACTION => login::logout(ctx).await,
+
+				// TODO: handle
+				_ => Ok(()),
+			}
 		}
 
 		_ => {

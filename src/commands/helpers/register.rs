@@ -1,56 +1,14 @@
-//! Act on discord client metadata
+//! Register or unregister all slash commands either globally or in a specific guild
 
-use crate::states::{
-	ApplicationContext, ApplicationContextPolyfill, InteractionResult, PrefixContext,
-};
+use crate::states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult};
 use poise::{
 	command,
 	serenity_prelude::{ButtonStyle, Command, CreateApplicationCommands},
 };
 
-/// Register all development slash commands
-#[command(prefix_command, owners_only, guild_only)]
-pub(crate) async fn register_dev(ctx: PrefixContext<'_>) -> InteractionResult {
-	let guild_id = ctx.msg.guild_id.expect("this command is guild only");
-
-	for command in &ctx.framework.options.commands {
-		if !command.hide_in_help {
-			continue;
-		}
-
-		if let Some(slash_command) = command.create_as_slash_command() {
-			guild_id
-				.create_application_command(ctx.discord, |c| {
-					*c = slash_command;
-					c
-				})
-				.await?;
-		}
-
-		if let Some(context_menu_command) = command.create_as_context_menu_command() {
-			guild_id
-				.create_application_command(ctx.discord, |c| {
-					*c = context_menu_command;
-					c
-				})
-				.await?;
-		}
-	}
-
-	Ok(())
-}
-
-/// A set of commands restricted to owners
-/// Can be registered with [`register_dev`] prefix command
-#[allow(clippy::unused_async)]
-#[command(slash_command, owners_only, hide_in_help, subcommands("register"))]
-pub(crate) async fn dev(_ctx: ApplicationContext<'_>) -> InteractionResult {
-	Ok(())
-}
-
-/// Register all slash commands to `Discord` either globally or in a specific guild
+/// Register or unregister all slash commands either globally or in a specific guild
 #[command(slash_command, owners_only, hide_in_help)]
-async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(super) async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut commands_builder = CreateApplicationCommands::default();
 
 	for command in &ctx.framework.options.commands {
@@ -110,7 +68,7 @@ async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 			&interaction.data.custom_id
 		}
 		None => {
-			ctx.shout("You didn't interact in time".into()).await?;
+			ctx.shout("You didn't interact in time").await?;
 			return Ok(());
 		}
 	};
@@ -137,7 +95,7 @@ async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 		let guild_id = match ctx.interaction.guild_id() {
 			Some(x) => x,
 			None => {
-				ctx.shout("Must be called in guild".into()).await?;
+				ctx.shout("Must be called in guild").await?;
 				return Ok(());
 			}
 		};
@@ -156,7 +114,7 @@ async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 		}
 	}
 
-	ctx.shout("Done!".into()).await?;
+	ctx.shout("Done!").await?;
 
 	Ok(())
 }

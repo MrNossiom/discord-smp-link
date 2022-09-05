@@ -10,7 +10,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use hyper::{body::to_bytes, Body, Client, Request, StatusCode};
 use hyper_rustls::HttpsConnectorBuilder;
 use oauth2::TokenResponse;
-use poise::serenity_prelude::{Member, User};
+use poise::serenity_prelude::Member;
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -30,6 +30,7 @@ pub(crate) async fn new_verified_member(
 		}
 	};
 
+	// TODO: handle if the user does not exist
 	let id = members::table
 		.filter(members::discord_id.eq(member.user.id.0))
 		.filter(members::guild_id.eq(member.guild_id.0))
@@ -45,16 +46,6 @@ pub(crate) async fn new_verified_member(
 
 	diesel::insert_into(verified_members::table)
 		.values(new_verified_member)
-		.execute(&mut data.database.get()?)?;
-
-	Ok(())
-}
-
-/// Remove a user from the database
-pub(crate) fn delete_user(data: Arc<Data>, user: &User) -> Result<()> {
-	// TODO: change cast to be functional
-	diesel::delete(members::table)
-		.filter(members::discord_id.eq(user.id.0))
 		.execute(&mut data.database.get()?)?;
 
 	Ok(())

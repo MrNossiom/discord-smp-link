@@ -24,6 +24,7 @@ pub(crate) type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields
 pub(crate) type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
 
 /// A manager to get redirect urls and tokens
+#[derive(Debug)]
 pub(crate) struct AuthLink {
 	/// The inner client used to manage the flow
 	pub(crate) client: BasicClient,
@@ -143,10 +144,13 @@ impl Future for AuthProcess {
 	}
 }
 
+/// Errors that can happen during the authentification process
 #[derive(Error, Debug)]
 pub(crate) enum AuthProcessError {
+	/// The authentification process timed out
 	#[error("The authentication timeout has expired")]
 	Timeout,
+	/// The authentification process was not queued
 	#[error("The given csrf state is not queued")]
 	NotQueued,
 }
