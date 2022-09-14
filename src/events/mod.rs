@@ -18,6 +18,7 @@ use poise::{
 };
 
 mod login;
+mod logout;
 
 /// Serenity listener to react to `Discord` events
 pub(crate) async fn event_handler(
@@ -98,6 +99,7 @@ pub(crate) async fn event_handler(
 					name: guild.name.as_str(),
 					owner_id: guild.owner_id.0,
 					setup_message_id: None,
+					verified_role_id: None,
 				};
 
 				tracing::info!("Adding guild `{}` ({}) to database", guild.name, guild.id);
@@ -132,7 +134,7 @@ pub(crate) async fn event_handler(
 
 			match interaction.data.custom_id.as_str() {
 				LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
-				LOGOUT_BUTTON_INTERACTION => login::logout(ctx).await,
+				LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
 
 				// TODO: handle
 				_ => Ok(()),
@@ -140,7 +142,7 @@ pub(crate) async fn event_handler(
 		}
 
 		_ => {
-			tracing::debug!("Didn't handle event: {:?}", event);
+			tracing::trace!("Didn't handle event: {:?}", event);
 
 			Ok(())
 		}

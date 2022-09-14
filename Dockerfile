@@ -29,7 +29,7 @@ RUN cargo build --release
 FROM debian:buster-slim as runtime
 
 # Install dependencies
-RUN apt update -y && apt install -y default-libmysqlclient-dev && rm -rf /var/lib/apt/lists/*
+RUN apt update -y && apt install -y default-libmysqlclient-dev libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Create a folder to recover logs and get .env file
 WORKDIR /discord_smp_link/

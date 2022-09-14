@@ -1,55 +1,52 @@
 //! Context Command for informations about a verified member.
 
 use crate::{
-	database::models::{Member, VerifiedMember},
+	database::models::VerifiedMember,
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
+use anyhow::anyhow;
 use diesel::prelude::*;
+use fluent::fluent_args;
 use poise::{command, serenity_prelude::User};
 
 /// Show informations about a registered member
 #[command(context_menu_command = "Informations", guild_only)]
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
-	let discord_guild_id = match ctx.interaction.guild_id() {
-		Some(x) => x,
-		None => {
-			let get = ctx.get("error-guild-only", None);
-			ctx.shout(get).await?;
+	let guild_id = ctx
+		.interaction
+		.guild_id()
+		.ok_or_else(|| anyhow!("guild only command"))?;
 
-			return Ok(());
-		}
-	};
+	let verified_member: VerifiedMember = {
+		use crate::database::schema::{
+			members::dsl as members, verified_members::dsl as verified_members,
+		};
 
-	let member = {
-		use crate::database::schema::members::dsl::*;
+		let verified_member = verified_members::verified_members
+			.inner_join(members::members)
+			.filter(members::discord_id.eq(user.id.0))
+			.filter(members::guild_id.eq(guild_id.0))
+			.select((
+				verified_members::member_id,
+				verified_members::mail,
+				verified_members::first_name,
+				verified_members::last_name,
+				verified_members::class_id,
+			))
+			.first::<VerifiedMember>(&mut ctx.data.database.get()?);
 
-		let member = members
-			.filter(discord_id.eq(user.id.0))
-			.filter(guild_id.eq(discord_guild_id.0))
-			.first::<Member>(&mut ctx.data.database.get()?);
-
-		match member {
+		match verified_member {
 			Ok(x) => x,
 			Err(_) => {
-				let get = ctx.get("member-unknown", None);
+				let get = ctx.get(
+					"error-member-not-verified",
+					Some(&fluent_args!["user" => user.name]),
+				);
 				ctx.shout(get).await?;
 
 				return Ok(());
 			}
-		}
-	};
-
-	let maybe_verified_member =
-		VerifiedMember::belonging_to(&member).first(&mut ctx.data.database.get()?);
-
-	let verified_member: VerifiedMember = match maybe_verified_member {
-		Ok(member) => member,
-		Err(_) => {
-			let get = ctx.get("member-not-verified", None);
-			ctx.shout(get).await?;
-
-			return Ok(());
 		}
 	};
 
@@ -62,6 +59,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 				))
 				.field("Mail", verified_member.mail, false)
 				.color(0x00FF00)
+				.footer(|footer| footer.text("Discord SMP Link © 2023"))
 		})
 	})
 	.await?;

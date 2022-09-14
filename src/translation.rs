@@ -2,7 +2,7 @@
 
 use crate::states::{ApplicationContext, Command, Context, MessageComponentContext};
 use anyhow::{anyhow, Result};
-use fluent::{bundle, FluentArgs, FluentResource};
+use fluent::{bundle, FluentArgs, FluentMessage, FluentResource};
 use fluent_syntax::ast::Pattern;
 use intl_memoizer::concurrent::IntlLangMemoizer as ConcurrentIntlLangMemoizer;
 use std::{
@@ -45,7 +45,7 @@ fn read_fluent_file(path: &Path) -> Result<(LanguageIdentifier, FluentBundle)> {
 		.parse()?;
 
 	// Load .ftl resource
-	let file_contents = read_to_string(&path)?;
+	let file_contents = read_to_string(path)?;
 	let resource = FluentResource::try_new(file_contents)
 		.map_err(|(_, e)| anyhow!("failed to parse {:?}: {:?}", path, e))?;
 
@@ -113,27 +113,40 @@ impl Translations {
 		}
 	}
 
-	/// Apply translations to the given commands
-	pub(crate) fn apply_translations_to_interactions(&self, commands: &mut [Command]) {
+	/// Apply translations to the given command tree
+	pub(crate) fn apply_translations_to_interactions(
+		&self,
+		commands: &mut [Command],
+		parent_name: Option<String>,
+	) {
 		for command in &mut *commands {
 			// Skip prefix commands
 			if command.prefix_action.is_some() {
 				continue;
 			}
 
-			self.apply_translations_to_interaction(command)
+			self.apply_translations_to_interaction(command, parent_name.clone())
 		}
 	}
 
-	/// Apply translations to the given command
-	pub(crate) fn apply_translations_to_interaction(&self, command: &mut Command) {
+	/// Apply translations to the given group or command
+	pub(crate) fn apply_translations_to_interaction(
+		&self,
+		command: &mut Command,
+		parent_name: Option<String>,
+	) {
+		let full_command_name = match parent_name {
+			Some(parent_name) => format!("{}-{}", parent_name, command.name),
+			None => command.name.clone(),
+		};
+
 		for (locale, bundle) in &self.bundles {
-			let command_translation = match bundle.get_message(&command.name) {
-				Some(x) => x,
+			let command_translation = match bundle.get_message(&full_command_name) {
+				Some(message) => message,
 				None => {
 					tracing::error!(
 						"translation for command `{}` with locale `{}` does not exist",
-						command.name,
+						full_command_name,
 						locale
 					);
 
@@ -150,85 +163,106 @@ impl Translations {
 				None => {
 					tracing::error!(
 						"translation for command `{}` with locale `{}` does not have a name",
-						command.name,
+						full_command_name,
 						locale
 					);
 				}
 			}
 
-			match command_translation.get_attribute("description") {
-				Some(description) => {
-					command.description_localizations.insert(
+			// Skip subcommands groups
+			if !command.subcommands.is_empty() {
+				continue;
+			}
+
+			Self::apply_translations_to_slash_command(
+				locale,
+				bundle,
+				&command_translation,
+				command,
+				&full_command_name,
+			)
+		}
+
+		self.apply_translations_to_interactions(&mut command.subcommands, Some(full_command_name))
+	}
+
+	/// Apply translations to the given slash command
+	fn apply_translations_to_slash_command(
+		locale: &LanguageIdentifier,
+		bundle: &FluentBundle,
+		command_translation: &FluentMessage,
+		command: &mut Command,
+		full_command_name: &String,
+	) {
+		match command_translation.get_attribute("description") {
+			Some(description) => {
+				command.description_localizations.insert(
+					locale.to_string(),
+					Self::format(bundle, description.value(), None).into(),
+				);
+			}
+			None => {
+				tracing::error!(
+					"translation for command `{}` with locale `{}` does not have a description",
+					full_command_name,
+					locale
+				);
+			}
+		}
+
+		for parameter in &mut command.parameters {
+			match command_translation.get_attribute(&parameter.name) {
+				Some(param_name) => {
+					parameter.name_localizations.insert(
 						locale.to_string(),
-						Self::format(bundle, description.value(), None).into(),
+						Self::format(bundle, param_name.value(), None).into(),
 					);
 				}
 				None => {
 					tracing::error!(
-						"translation for command `{}` with locale `{}` does not have a description",
-						command.name,
-						locale
+						"translation for command `{}` with locale `{}` does not have a name for the parameter `{}`",
+						full_command_name,
+						locale,
+						parameter.name
 					);
 				}
 			}
 
-			for parameter in &mut command.parameters {
-				match command_translation.get_attribute(&parameter.name) {
-					Some(param_name) => {
-						parameter.name_localizations.insert(
-							locale.to_string(),
-							Self::format(bundle, param_name.value(), None).into(),
-						);
-					}
-					None => {
-						tracing::error!(
-							"translation for command `{}` with locale `{}` does not have a name for the parameter `{}`",
-							command.name,
-							locale,
-							parameter.name
-						);
-					}
+			match command_translation.get_attribute(&format!("{}-description", parameter.name)) {
+				Some(param_description) => {
+					parameter.description_localizations.insert(
+						locale.to_string(),
+						Self::format(bundle, param_description.value(), None).into(),
+					);
 				}
-
-				match command_translation.get_attribute(&format!("{}-description", parameter.name))
-				{
-					Some(param_description) => {
-						parameter.description_localizations.insert(
-							locale.to_string(),
-							Self::format(bundle, param_description.value(), None).into(),
-						);
-					}
-					None => {
-						tracing::error!(
-							"translation for command `{}` with locale `{}` does not have a description for the parameter `{}`",
-							command.name,
-							locale,
-							parameter.name
-						);
-					}
-				}
-
-				for choice in &mut parameter.choices {
-					match command_translation.get_attribute(&format!("{}-choice", choice.name)) {
-						Some(choice_name) => {
-							parameter.description_localizations.insert(
-								locale.to_string(),
-								Self::format(bundle, choice_name.value(), None).into(),
-							);
-						}
-						None => {
-							tracing::error!(
-								"translation for command `{}` with locale `{}` does not have a translation for the choice `{}`",
-								command.name,
-								locale,
-								choice.name
-							);
-						}
-					}
+				None => {
+					tracing::error!(
+						"translation for command `{}` with locale `{}` does not have a description for the parameter `{}`",
+						full_command_name,
+						locale,
+						parameter.name
+					);
 				}
 			}
 
-			self.apply_translations_to_interactions(&mut command.subcommands)
+			for choice in &mut parameter.choices {
+				match command_translation.get_attribute(&format!("{}-choice", choice.name)) {
+					Some(choice_name) => {
+						parameter.description_localizations.insert(
+							locale.to_string(),
+							Self::format(bundle, choice_name.value(), None).into(),
+						);
+					}
+					None => {
+						tracing::error!(
+							"translation for command `{}` with locale `{}` does not have a translation for the choice `{}`",
+							full_command_name,
+							locale,
+							choice.name
+						);
+					}
+				}
+			}
 		}
 	}
 }

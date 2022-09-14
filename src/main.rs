@@ -74,11 +74,11 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 				let mut commands = vec![
 					setup(),
 					information(),
-					helpers::dev(),
+					helpers::debug(),
 				];
 
 				data.translations
-					.apply_translations_to_interactions(&mut commands);
+					.apply_translations_to_interactions(&mut commands, None);
 
 				commands.push(helpers::_register());
 

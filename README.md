@@ -16,17 +16,17 @@ Fill the `.env.docker` with the required credentials and settings :
 
 Build the production docker container:
 
-> `docker build .`
-> and then
-> `docker tag <image_id> discord-smp-link:latest`
+> `docker build . -t ghcr.io/mrnossiom/discord-smp-link:latest`
+> and lunch it with
+> `docker compose -f docker-compose.production.yml up -d` or `just up production`
 
 ## Development
 
 To run the local MySQL database, you can use the `docker-compose.local.yml` file:
 
-> `docker compose docker-compose.local.yml up -d`
+> `docker compose -f docker-compose.local.yml up -d`
 > or
-> `just up production`
+> `just up local`
 
 ## Compiling
 

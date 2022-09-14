@@ -1,13 +1,19 @@
 //! `OAuth2` flow with users
 
 use crate::states::Config;
+use anyhow::{anyhow, Result};
 use futures::Future;
+use hyper::client::HttpConnector;
+use hyper::{body::to_bytes, Body, Client, Request, StatusCode};
+use hyper_rustls::{HttpsConnector, HttpsConnectorBuilder};
+use oauth2::TokenResponse;
 use oauth2::{
 	basic::{BasicClient, BasicTokenType},
 	url::Url,
 	AuthUrl, CsrfToken, EmptyExtraTokenFields, RedirectUrl, RevocationUrl, Scope,
 	StandardTokenResponse, TokenUrl,
 };
+use serde_json::Value;
 use std::{
 	collections::HashMap,
 	pin::Pin,
@@ -23,6 +29,16 @@ pub(crate) type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields
 /// The type of the auth queue
 pub(crate) type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
 
+/// The information returned by google
+pub(crate) struct GoogleUserMetadata {
+	/// The user's mail
+	pub(crate) mail: String,
+	/// The user's first name
+	pub(crate) first_name: String,
+	/// The user's last name
+	pub(crate) last_name: String,
+}
+
 /// A manager to get redirect urls and tokens
 #[derive(Debug)]
 pub(crate) struct AuthLink {
@@ -30,6 +46,8 @@ pub(crate) struct AuthLink {
 	pub(crate) client: BasicClient,
 	/// A queue to wait for the user to finish the flow
 	pub(crate) queue: Arc<RwLock<AuthQueue>>,
+	/// A queue to wait for the user to finish the flow
+	pub(crate) http: Client<HttpsConnector<HttpConnector>, Body>,
 }
 
 impl AuthLink {
@@ -56,9 +74,17 @@ impl AuthLink {
 				.expect("invalid revoke url"),
 		);
 
+		let https = HttpsConnectorBuilder::new()
+			.with_native_roots()
+			.https_only()
+			.enable_http1()
+			.build();
+		let client: Client<_, Body> = Client::builder().build(https);
+
 		Self {
 			client: oauth_client,
 			queue: Default::default(),
+			http: client,
 		}
 	}
 
@@ -79,6 +105,55 @@ impl AuthLink {
 			authorize_url,
 			AuthProcess::new(max_duration, Arc::clone(&self.queue), csrf_state),
 		)
+	}
+
+	/// Query google for the user's email and full name
+	pub(crate) async fn query_google_user_metadata(
+		&self,
+		token_res: &BasicTokenResponse,
+	) -> Result<GoogleUserMetadata> {
+		let req = Request::builder()
+			.header(
+				"Authorization",
+				format!("Bearer {}", token_res.access_token().secret()),
+			)
+			.uri("https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses")
+			.body(Body::empty())
+			.expect("Failed to build request");
+
+		match self.http.request(req).await {
+			Ok(res) => {
+				if res.status() != StatusCode::OK {
+					return Err(anyhow!("Failed to query google user metadata"));
+				}
+
+				let body = to_bytes(res.into_body())
+					.await
+					.expect("Failed to read response");
+				let body = serde_json::from_slice::<Value>(&body).expect("Failed to parse body");
+
+				let mail = body["emailAddresses"][0]["value"]
+					.as_str()
+					.expect("Failed to get email address")
+					.to_owned();
+
+				let first_name = body["names"][0]["givenName"]
+					.as_str()
+					.expect("Failed to get first name")
+					.to_owned();
+				let last_name = body["names"][0]["familyName"]
+					.as_str()
+					.expect("Failed to get last name")
+					.to_owned();
+
+				Ok(GoogleUserMetadata {
+					mail,
+					first_name,
+					last_name,
+				})
+			}
+			Err(error) => Err(anyhow!("Failed to query google: {error}")),
+		}
 	}
 }
 

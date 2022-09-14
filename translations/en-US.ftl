@@ -7,25 +7,57 @@ done = Done!
 
 # Setup
 setup = setup
-    .description = Sets up the login and logout message.
-setup-message = Login or Logout
+    .description = A set of commands to setup the bot.
+
+setup-message = message
+    .description = Sets the login and logout message.
+setup-message-message = Login or Logout?
+
+setup-role = role
+    .description = Setup the role to apply to verified members.
+    .role = role
+    .role-description = Which role to give
 
 # Information Context Menu
 information = information
     .description = Gives informations about a verified member.
-    .user = User
+    .user = user
     .user-description = The user to get informations about.
 
 # Dev
-dev = dev
-    .description = A set of commands for developers.
+debug = debug
+    .description = Debug related commands.
 
-dev-force-login-already-verified = { $user } is already verified.
-dev-force-login-added = { $user } has been added to the database.
-dev-force-login-no-member = Member { $user } does not exist.
+debug-force = force
+    .description = Force an action on an other user.
 
-dev-refresh-user-already-in-database = { $user } is already in the database.
-dev-refresh-user-added = { $user } successfully added.
+debug-force-logout = logout
+    .description = Force disconnect a verified member.
+    .user = user
+    .user-description = The user to force disconnect.
+debug-force-logout-done = { $user } has been unregistered.
+debug-force-logout-not-verified = Member { $user } is not verified.
+
+debug-refresh = refresh
+    .description = Loads elements in the database.
+
+debug-refresh-member = member
+    .description = Refresh a member.
+    .member = member
+    .member-description = The member to refresh.
+debug-refresh-member-already-in-database = { $user } is already in the database.
+debug-refresh-member-added = { $user } successfully added.
+
+debug-refresh-members = members
+    .description = Loads every members in the database.
+debug-refresh-members-added = { $count } members have been added to the database.
+
+debug-register = register
+    .description = Register slash commands to Discord.
+    .register = register
+    .register-description = Register or Unregister?
+    .global = global
+    .global-description = Guild or Global?
 
 
 ## Login
@@ -44,9 +76,15 @@ error-cooldown = You will be able to use this command again in { $seconds } seco
 error-not-an-owner = You must be the owner of this bot.
 error-guild-only = This command can only be used in a guild channel.
 error-dm-only = This command can only be used in a DM channel.
-error-internal-with-id = An internal error has occurred. If the error persist, please contact an administrator : `{ $id }`.
+error-internal-with-id = An internal error has occurred. If the error persist, please contact an administrator: `{ $id }`.
+error-member-not-registered = L'utilisateur { $user } n'existe pas dans la base de données.
+error-process-timed-out = The process timed out.
+error-user-timeout = You took too long to answer.
 
 # Buttons
-setup-button-login = Login
-setup-button-logout = Logout
-logout-warning = After you disconnected your accounts, you will lose access to the server and have to autenticate again.
+event-setup-login-button = Login
+event-setup-logout-button = Logout
+
+event-logout-warning = After you disconnected your accounts, you will lose access to the server and have to autenticate again.
+event-logout-disconnect-button = Disconnect your account
+event-logout-success = Your account has been disconnected.

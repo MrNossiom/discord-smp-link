@@ -1,14 +1,24 @@
 //! Register or unregister all slash commands either globally or in a specific guild
 
-use crate::states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult};
+use crate::{
+	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
+	translation::Translate,
+};
 use poise::{
 	command,
-	serenity_prelude::{ButtonStyle, Command, CreateApplicationCommands},
+	serenity_prelude::{Command, CreateApplicationCommands},
 };
 
 /// Register or unregister all slash commands either globally or in a specific guild
 #[command(slash_command, owners_only, hide_in_help)]
-pub(super) async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(super) async fn register(
+	ctx: ApplicationContext<'_>,
+	register: Option<bool>,
+	global: Option<bool>,
+) -> InteractionResult {
+	let register = register.unwrap_or(true);
+	let global = global.unwrap_or(false);
+
 	let mut commands_builder = CreateApplicationCommands::default();
 
 	for command in &ctx.framework.options.commands {
@@ -25,62 +35,6 @@ pub(super) async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 		}
 	}
 
-	let reply = ctx
-		.send(|m| {
-			m.ephemeral(true)
-				.content("Choose what to do with the commands:")
-				.components(|c| {
-					c.create_action_row(|r| {
-						r.create_button(|b| {
-							b.custom_id("register.global")
-								.label("Register globally")
-								.style(ButtonStyle::Primary)
-						})
-						.create_button(|b| {
-							b.custom_id("unregister.global")
-								.label("Delete globally")
-								.style(ButtonStyle::Danger)
-						})
-						.create_button(|b| {
-							b.custom_id("register.guild")
-								.label("Register in guild")
-								.style(ButtonStyle::Primary)
-						})
-						.create_button(|b| {
-							b.custom_id("unregister.guild")
-								.label("Delete in guild")
-								.style(ButtonStyle::Danger)
-						})
-					})
-				})
-		})
-		.await?;
-
-	let interaction = reply
-		.message()
-		.await?
-		.await_component_interaction(ctx.discord)
-		.await;
-
-	let pressed_button_id = match &interaction {
-		Some(interaction) => {
-			interaction.defer(ctx.discord).await?;
-			&interaction.data.custom_id
-		}
-		None => {
-			ctx.shout("You didn't interact in time").await?;
-			return Ok(());
-		}
-	};
-
-	let (register, global) = match &**pressed_button_id {
-		"register.global" => (true, true),
-		"unregister.global" => (false, true),
-		"register.guild" => (true, false),
-		"unregister.guild" => (false, false),
-		_ => unreachable!(),
-	};
-
 	if global {
 		if register {
 			Command::set_global_application_commands(ctx.discord, |b| {
@@ -95,7 +49,8 @@ pub(super) async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 		let guild_id = match ctx.interaction.guild_id() {
 			Some(x) => x,
 			None => {
-				ctx.shout("Must be called in guild").await?;
+				let get = ctx.get("error-guild-only", None);
+				ctx.shout(get).await?;
 				return Ok(());
 			}
 		};
@@ -114,7 +69,8 @@ pub(super) async fn register(ctx: ApplicationContext<'_>) -> InteractionResult {
 		}
 	}
 
-	ctx.shout("Done!").await?;
+	let get = ctx.get("done", None);
+	ctx.shout(get).await?;
 
 	Ok(())
 }

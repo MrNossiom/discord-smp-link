@@ -6,14 +6,17 @@ use diesel::{
 	r2d2::{ConnectionManager, Pool},
 	MysqlConnection,
 };
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
 	async_trait, send_application_reply,
 	serenity_prelude::{self as serenity},
 	CreateReply, ReplyHandle,
 };
-use std::{env, sync::Arc};
+use std::{
+	env::{self},
+	sync::Arc,
+};
 use unic_langid::langid;
 
 /// App global configuration
@@ -180,6 +183,7 @@ pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, ArcData, anyhow::
 /// The [`poise::FrameworkBuilder`] type alias
 pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<ArcData, anyhow::Error>;
 
+#[allow(dead_code)]
 mod polyfill {
 	//! Polyfill for the [`MessageComponentInteraction`](poise::serenity_prelude::MessageComponentInteraction) type
 
@@ -187,7 +191,10 @@ mod polyfill {
 		serenity_prelude::{self as serenity, MessageComponentInteraction},
 		CreateReply,
 	};
-	use std::{borrow::Cow, sync::atomic::AtomicBool};
+	use std::{
+		borrow::Cow,
+		sync::atomic::{AtomicBool, Ordering},
+	};
 
 	/// The [`poise::Context`] like for Message components interactions
 	#[derive(Copy, Clone)]
@@ -217,9 +224,7 @@ mod polyfill {
 			let mut reply = CreateReply::default();
 			builder(&mut reply);
 
-			let has_sent_initial_response = self
-				.has_sent_initial_response
-				.load(std::sync::atomic::Ordering::SeqCst);
+			let has_sent_initial_response = self.has_sent_initial_response.load(Ordering::SeqCst);
 
 			let followup = if has_sent_initial_response {
 				Some(Box::new(
@@ -259,14 +264,14 @@ mod polyfill {
 		#[inline]
 		pub(crate) async fn shout(
 			&self,
-			content: String,
+			content: impl Into<String> + Send,
 		) -> Result<MessageComponentReplyHandle<'_>, serenity::Error> {
-			self.send(|builder| builder.content(content).ephemeral(true))
+			self.send(|builder| builder.content(content.into()).ephemeral(true))
 				.await
 		}
 	}
 
-	/// Returned from [`send_reply()`] to operate on the sent message
+	/// Returned from [`MessageComponentContext::send()`] to operate on the sent message
 	///
 	/// Discord sometimes returns the [`serenity::Message`] object directly, but sometimes you have to
 	/// request it manually. This enum abstracts over the two cases
@@ -286,7 +291,7 @@ mod polyfill {
 	impl MessageComponentReplyHandle<'_> {
 		/// Retrieve the message object of the sent reply.
 		///
-		/// If you don't need ownership of Message, you can use [`ReplyHandle::message`]
+		/// If you don't need ownership of Message, you can use [`Self::message`]
 		///
 		/// Only needs to do an HTTP request in the application command response case
 		pub(crate) async fn into_message(self) -> Result<serenity::Message, serenity::Error> {
@@ -304,9 +309,7 @@ mod polyfill {
 			))
 		}
 
-		/// Edits the message that this [`ReplyHandle`] points to
-		// TODO: return the edited Message object?
-		// TODO: should I eliminate the ctx parameter by storing it in self instead? Would infect
+		/// Edits the message that this [`Self`] points to
 		//  ReplyHandle with <U, E> type parameters
 		pub(crate) async fn edit<'att, U: Send + Sync, E>(
 			&self,

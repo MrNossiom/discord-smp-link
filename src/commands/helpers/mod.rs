@@ -20,7 +20,7 @@ use register::register;
 	hide_in_help,
 	subcommands("force", "refresh", "register")
 )]
-pub(crate) async fn dev(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn debug(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 

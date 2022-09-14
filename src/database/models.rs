@@ -1,99 +1,136 @@
+#![allow(clippy::missing_docs_in_private_items)]
+
 //! `Diesel` models that represent database objects
 
 use super::schema::*;
-use diesel::{Associations, Identifiable, Insertable, Queryable};
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable};
 
 /// Represent a `Discord` guild
-#[derive(Queryable, Identifiable, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable)]
 pub(crate) struct Guild {
-	/// Primary key
 	pub(crate) id: u64,
 
-	/// Guild name
 	pub(crate) name: String,
-	/// Guild Owner ID
 	pub(crate) owner_id: u64,
 
-	/// The id of interaction setup message
 	pub(crate) setup_message_id: Option<u64>,
+	pub(crate) verified_role_id: Option<u64>,
 }
 
 /// Use to create a new [`Guild`]
-#[derive(Insertable)]
+#[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = guilds)]
 pub(crate) struct NewGuild<'a> {
-	/// Primary key
 	pub(crate) id: u64,
 
-	/// Guild name
 	pub(crate) name: &'a str,
-	/// Guild Owner ID
 	pub(crate) owner_id: u64,
 
-	/// The id of interaction setup message
 	pub(crate) setup_message_id: Option<u64>,
+	pub(crate) verified_role_id: Option<u64>,
 }
 
 /// Represent a known user with `Discord` metadata and some other informations
-#[derive(Queryable, Identifiable, Associations, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
 #[diesel(table_name = members, belongs_to(Guild))]
 pub(crate) struct Member {
-	/// Primary key
 	pub(crate) id: i32,
 
-	/// `Discord` ID
 	pub(crate) discord_id: u64,
-	/// Foreign Key to [`Guild`]
 	pub(crate) guild_id: u64,
-	/// `Discord` username
 	pub(crate) username: String,
 
-	/// XP for messages
 	pub(crate) message_xp: i32,
-	/// XP for vocal
 	pub(crate) vocal_xp: i32,
 }
 
 /// Use to create a new [`Member`]
-#[derive(Insertable)]
+#[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = members)]
 pub(crate) struct NewMember<'a> {
-	/// `Discord` ID
 	pub(crate) discord_id: u64,
-	/// Foreign Key to [`Guild`]
 	pub(crate) guild_id: u64,
-	/// `Discord` username
 	pub(crate) username: &'a str,
 }
 
 /// Represent a registered user with `Google` metadata
-#[derive(Queryable, Identifiable, Debug, Associations)]
-#[diesel(table_name = verified_members, belongs_to(Member))]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[diesel(table_name = verified_members, belongs_to(Member), primary_key(member_id))]
 pub(crate) struct VerifiedMember {
-	/// Primary key
-	pub(crate) id: i32,
-	/// Foreign Key to [`Member`]
 	pub(crate) member_id: i32,
 
-	/// First name
-	pub(crate) first_name: String,
-	/// Last name
-	pub(crate) last_name: String,
-	/// Account mail
 	pub(crate) mail: String,
+	pub(crate) first_name: String,
+	pub(crate) last_name: String,
+
+	pub(crate) class_id: i32,
 }
 
 /// Use to create a new [`VerifiedMember`]
-#[derive(Insertable)]
+#[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = verified_members)]
 pub(crate) struct NewVerifiedMember<'a> {
-	/// User ID
 	pub(crate) member_id: i32,
 
-	/// First name
 	pub(crate) first_name: &'a str,
-	/// Last name
 	pub(crate) last_name: &'a str,
-	/// Account mail
 	pub(crate) mail: &'a str,
+
+	pub(crate) class_id: i32,
+}
+
+/// Represent a Class
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[diesel(table_name = classes, belongs_to(Guild))]
+pub(crate) struct Class {
+	id: i32,
+
+	name: String,
+	guild_id: u64,
+}
+
+/// Use to create a new [`Class`]
+#[derive(Debug, Insertable, AsChangeset)]
+#[diesel(table_name = classes)]
+pub(crate) struct NewClass<'a> {
+	id: i32,
+
+	name: &'a str,
+	guild_id: u64,
+}
+
+/// Represent a Group
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[diesel(table_name = groups, belongs_to(Guild))]
+pub(crate) struct Group {
+	id: i32,
+
+	name: String,
+	guild_id: u64,
+}
+
+/// Use to create a new [`Group`]
+#[derive(Debug, Insertable, AsChangeset)]
+#[diesel(table_name = groups)]
+pub(crate) struct NewGroup<'a> {
+	id: i32,
+
+	name: &'a str,
+	guild_id: u64,
+}
+
+/// Represent a relation between a [`Group`] and a [`VerifiedMember`]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[diesel(table_name = groups_of_verified_members, belongs_to(Group), belongs_to(VerifiedMember), primary_key(verified_member_id, group_id))]
+pub(crate) struct GroupOfVerifiedMember {
+	verified_member_id: i32,
+	group_id: i32,
+}
+
+/// Use to create a new [`GroupOfVerifiedMember`]
+#[derive(Debug, Insertable, AsChangeset)]
+#[diesel(table_name = groups_of_verified_members)]
+pub(crate) struct NewGroupOfVerifiedMember {
+	verified_member_id: i32,
+	group_id: i32,
 }
