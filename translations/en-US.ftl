@@ -1,6 +1,7 @@
 ## General
 
 done = Done!
+continue = Continue
 
 
 ## Commands

@@ -5,6 +5,7 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         guild_id -> Unsigned<Bigint>,
+        role_id -> Unsigned<Bigint>,
     }
 }
 
@@ -13,6 +14,7 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         guild_id -> Unsigned<Bigint>,
+        role_id -> Unsigned<Bigint>,
     }
 }
 

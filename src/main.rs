@@ -53,7 +53,8 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 				| GatewayIntents::GUILD_VOICE_STATES
 				| GatewayIntents::DIRECT_MESSAGES
 				| GatewayIntents::GUILD_MESSAGES
-				| GatewayIntents::MESSAGE_CONTENT,
+				| GatewayIntents::MESSAGE_CONTENT
+				| GatewayIntents::GUILD_MEMBERS,
 		)
 		.user_data_setup({
 			let data = Arc::clone(&data);

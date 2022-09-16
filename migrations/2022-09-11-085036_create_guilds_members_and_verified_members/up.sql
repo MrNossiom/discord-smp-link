@@ -17,11 +17,16 @@ CREATE TABLE `classes`
 (
     `id`       INTEGER         NOT NULL AUTO_INCREMENT,
     `name`     TEXT            NOT NULL,
+
     `guild_id` BIGINT UNSIGNED NOT NULL,
+    `role_id`  BIGINT UNSIGNED NOT NULL,
 
     PRIMARY KEY (`id`),
 
+    -- Guarantee that there is no name duplicates in the same Guild.
     UNIQUE (`name`, `guild_id`),
+    -- Guarantee that a role isn't used for multiple groups.
+    UNIQUE (`guild_id`, `role_id`),
 
     FOREIGN KEY (`guild_id`) REFERENCES `guilds` (`id`)
         ON DELETE RESTRICT ON UPDATE CASCADE

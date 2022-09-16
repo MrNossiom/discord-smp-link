@@ -98,7 +98,6 @@ pub(crate) fn spawn_server(data: Arc<Data>) -> JoinHandle<()> {
 	})
 }
 
-// TODO: move each handle in a separate function
 /// Handles server requests
 fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 	let request_url = {
@@ -112,64 +111,7 @@ fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 		("GET", "/contact") => Response::template(ContactTemplate {}),
 		("GET", "/privacy-policy") => Response::template(PrivacyPolicyTemplate {}),
 		("GET", "/terms-and-conditions") => Response::template(TermsAmdConditionsTemplate {}),
-		("GET", "/oauth2") => {
-			let code = match request.get_param("code") {
-				Some(code) => code,
-				None => {
-					return Response::template(AuthTemplate {
-						is_success: false,
-						error_message: "You need to provide a 'code' param in url",
-						..Default::default()
-					});
-				}
-			};
-
-			let state = match request.get_param("state") {
-				Some(state) => state,
-				None => {
-					return Response::template(AuthTemplate {
-						is_success: false,
-						error_message: "You need to provide a 'state' param in url",
-						..Default::default()
-					});
-				}
-			};
-
-			let mut queue = data.auth.queue.write().expect("RwLock poisoned");
-
-			if queue.get(&state).is_none() {
-				return Response::template(AuthTemplate {
-					is_success: false,
-					error_message: "The given 'state' wasn't queued anymore",
-					..Default::default()
-				});
-			};
-
-			let oauth2_response = data
-				.auth
-				.client
-				.exchange_code(AuthorizationCode::new(code))
-				.request(http_client);
-
-			let token_response = match oauth2_response {
-				Ok(token_res) => token_res,
-				Err(error) => {
-					return Response::template(AuthTemplate {
-						is_success: false,
-						error_message: &error.to_string(),
-						..Default::default()
-					});
-				}
-			};
-
-			queue.insert(state, Some(token_response));
-
-			Response::template(AuthTemplate {
-				is_success: true,
-				username: "",
-				..Default::default()
-			})
-		}
+		("GET", "/oauth2") => handle_oauth2(data, request),
 		_ => {
 			let response = rouille::match_assets(request, "./public");
 
@@ -183,6 +125,67 @@ fn handle_request(data: Arc<Data>, request: &Request) -> Response {
 			}
 		}
 	}
+}
+
+// TODO: show more comprehensive errors to the user
+/// Handle requests to `/oauth2` endpoints
+fn handle_oauth2(data: Arc<Data>, request: &Request) -> Response {
+	let code = match request.get_param("code") {
+		Some(code) => code,
+		None => {
+			return Response::template(AuthTemplate {
+				is_success: false,
+				error_message: "You need to provide a 'code' param in url",
+				..Default::default()
+			});
+		}
+	};
+
+	let state = match request.get_param("state") {
+		Some(state) => state,
+		None => {
+			return Response::template(AuthTemplate {
+				is_success: false,
+				error_message: "You need to provide a 'state' param in url",
+				..Default::default()
+			});
+		}
+	};
+
+	let mut queue = data.auth.queue.write().expect("RwLock poisoned");
+
+	if queue.get(&state).is_none() {
+		return Response::template(AuthTemplate {
+			is_success: false,
+			error_message: "The given 'state' wasn't queued anymore",
+			..Default::default()
+		});
+	};
+
+	let oauth2_response = data
+		.auth
+		.client
+		.exchange_code(AuthorizationCode::new(code))
+		.request(http_client);
+
+	let token_response = match oauth2_response {
+		Ok(token_res) => token_res,
+		Err(error) => {
+			return Response::template(AuthTemplate {
+				is_success: false,
+				error_message: &error.to_string(),
+				..Default::default()
+			});
+		}
+	};
+
+	queue.insert(state, Some(token_response));
+
+	Response::template(AuthTemplate {
+		is_success: true,
+		username: "",
+		..Default::default()
+	})
 }
 
 /// The trait for a custom `rouille` template response

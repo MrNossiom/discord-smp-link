@@ -1,6 +1,7 @@
 ## General
 
 done = Fini!
+continue = Continuer
 
 
 ## Commands
@@ -39,8 +40,8 @@ debug-refresh = recharge
 
 debug-refresh-member = membre
     .description = Charge un membre dans la base de données.
-    .user = membre
-    .user-description = Le membre à charger.
+    .member = membre
+    .member-description = Le membre à charger.
 debug-refresh-member-already-in-database = { $user } est déjà dans la base de donées.
 debug-refresh-member-added = { $user } à bien été ajouté.
 

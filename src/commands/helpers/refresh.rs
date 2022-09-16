@@ -29,31 +29,31 @@ pub(super) async fn refresh(_ctx: ApplicationContext<'_>) -> InteractionResult {
 #[command(slash_command, owners_only, hide_in_help)]
 pub(super) async fn member(
 	ctx: ApplicationContext<'_>,
-	user: serenity::Member,
+	member: serenity::Member,
 ) -> InteractionResult {
 	use crate::database::schema::members::dsl as members;
 
 	let mut connection = ctx.data.database.get()?;
 
 	if let Ok(member) = members::members
-		.filter(members::discord_id.eq(user.user.id.0))
-		.filter(members::guild_id.eq(user.guild_id.0))
+		.filter(members::discord_id.eq(member.user.id.0))
+		.filter(members::guild_id.eq(member.guild_id.0))
 		.first::<Member>(&mut connection)
 	{
 		let content = ctx.get(
-			"debug-refresh-user-already-in-database",
+			"debug-refresh-member-already-in-database",
 			Some(&fluent_args!["user" => member.username]),
 		);
 		ctx.shout(content).await?;
 	} else {
 		let new_user = NewMember {
-			guild_id: user.guild_id.0,
-			username: user.user.name.as_str(),
-			discord_id: user.user.id.0,
+			guild_id: member.guild_id.0,
+			username: member.user.name.as_str(),
+			discord_id: member.user.id.0,
 		};
 
 		let content = ctx.get(
-			"debug-refresh-user-added",
+			"debug-refresh-member-added",
 			Some(&fluent_args!["user" => new_user.username]),
 		);
 		ctx.shout(content).await?;
@@ -66,6 +66,7 @@ pub(super) async fn member(
 	Ok(())
 }
 
+// Requires the `GUILD_MEMBERS` intent to fetch all members
 /// Loads every guild member in the database
 #[command(slash_command, owners_only, hide_in_help)]
 pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {

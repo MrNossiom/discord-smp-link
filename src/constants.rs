@@ -11,4 +11,8 @@ pub(crate) mod events {
 	pub(crate) const LOGIN_BUTTON_INTERACTION: &str = "events.setup.button.login";
 	/// The setup message button logout interaction
 	pub(crate) const LOGOUT_BUTTON_INTERACTION: &str = "events.setup.button.logout";
+
+	/// The login event follow up class selection interaction
+	pub(crate) const AUTHENTICATION_SELECT_MENU_INTERACTION: &str =
+		"events.login.button.class-menu";
 }

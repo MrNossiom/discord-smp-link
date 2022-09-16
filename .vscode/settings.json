@@ -1,8 +1,10 @@
 {
 	"cSpell.words": [
+		"askama",
 		"builtins",
 		"cooldown",
 		"csrf",
+		"jinja",
 		"langid",
 		"libmysqlclient",
 		"memoizer",

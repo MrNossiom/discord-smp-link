@@ -60,11 +60,6 @@ pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
 		})
 		.await?;
 
-	{
-		let get = ctx.get("done", None);
-		ctx.shout(get).await?;
-	}
-
 	// Update the `setup_message_id`
 	{
 		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};

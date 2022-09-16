@@ -67,20 +67,24 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		})
 		.await?;
 
-	if let Some(interaction) = CollectComponentInteraction::new(ctx.discord)
+	match CollectComponentInteraction::new(ctx.discord)
 		.message_id(reply.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		match &*interaction.data.custom_id {
-			CUSTOM_ID_DISCONNECT => inner_logout(ctx, member_id).await?,
+		Some(interaction) => {
+			interaction.defer(ctx.discord).await?;
 
-			// TODO: handle timeout
-			_ => {
-				let get = ctx.get("error-user-timeout", None);
-				ctx.shout(get).await?;
-			}
-		};
+			match &*interaction.data.custom_id {
+				CUSTOM_ID_DISCONNECT => inner_logout(ctx, member_id).await?,
+
+				_ => unreachable!(),
+			};
+		}
+		None => {
+			let get = ctx.get("error-user-timeout", None);
+			ctx.shout(get).await?;
+		}
 	}
 
 	Ok(())

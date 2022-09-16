@@ -310,23 +310,12 @@ mod polyfill {
 		}
 
 		/// Edits the message that this [`Self`] points to
-		//  ReplyHandle with <U, E> type parameters
-		pub(crate) async fn edit<'att, U: Send + Sync, E>(
+		pub(crate) async fn edit<'att>(
 			&self,
-			ctx: poise::Context<'_, U, E>,
 			builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
 		) -> Result<(), serenity::Error> {
-			// TODO: deduplicate this block of code
-			let mut reply = poise::CreateReply {
-				ephemeral: ctx.command().ephemeral,
-				allowed_mentions: ctx.framework().options().allowed_mentions.clone(),
-				..Default::default()
-			};
+			let mut reply = poise::CreateReply::default();
 			builder(&mut reply);
-
-			if let Some(callback) = ctx.framework().options().reply_callback {
-				callback(ctx, &mut reply);
-			}
 
 			if let Some(followup) = &self.followup {
 				self.interaction

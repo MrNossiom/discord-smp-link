@@ -29,7 +29,7 @@ pub(crate) async fn event_handler(
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {
-			tracing::info!("{} is ready!", data_about_bot.user.name);
+			tracing::info!("`{}` is ready!", data_about_bot.user.name);
 
 			Ok(())
 		}
@@ -132,11 +132,16 @@ pub(crate) async fn event_handler(
 				has_sent_initial_response: &AtomicBool::new(false),
 			};
 
+			tracing::info!(
+				"`{}` interacted with a component `{}`",
+				ctx.interaction.user.name,
+				ctx.interaction.data.custom_id,
+			);
+
 			match interaction.data.custom_id.as_str() {
 				LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
 				LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
 
-				// TODO: handle
 				_ => Ok(()),
 			}
 		}

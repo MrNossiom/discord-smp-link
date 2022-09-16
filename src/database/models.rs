@@ -83,54 +83,58 @@ pub(crate) struct NewVerifiedMember<'a> {
 #[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
 #[diesel(table_name = classes, belongs_to(Guild))]
 pub(crate) struct Class {
-	id: i32,
+	pub(crate) id: i32,
 
-	name: String,
-	guild_id: u64,
+	pub(crate) name: String,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
 }
 
 /// Use to create a new [`Class`]
 #[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = classes)]
 pub(crate) struct NewClass<'a> {
-	id: i32,
+	pub(crate) id: i32,
 
-	name: &'a str,
-	guild_id: u64,
+	pub(crate) name: &'a str,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
 }
 
 /// Represent a Group
 #[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
 #[diesel(table_name = groups, belongs_to(Guild))]
 pub(crate) struct Group {
-	id: i32,
+	pub(crate) id: i32,
 
-	name: String,
-	guild_id: u64,
+	pub(crate) name: String,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
 }
 
 /// Use to create a new [`Group`]
 #[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = groups)]
 pub(crate) struct NewGroup<'a> {
-	id: i32,
+	pub(crate) id: i32,
 
-	name: &'a str,
-	guild_id: u64,
+	pub(crate) name: &'a str,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
 }
 
 /// Represent a relation between a [`Group`] and a [`VerifiedMember`]
 #[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
 #[diesel(table_name = groups_of_verified_members, belongs_to(Group), belongs_to(VerifiedMember), primary_key(verified_member_id, group_id))]
 pub(crate) struct GroupOfVerifiedMember {
-	verified_member_id: i32,
-	group_id: i32,
+	pub(crate) verified_member_id: i32,
+	pub(crate) group_id: i32,
 }
 
 /// Use to create a new [`GroupOfVerifiedMember`]
 #[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = groups_of_verified_members)]
 pub(crate) struct NewGroupOfVerifiedMember {
-	verified_member_id: i32,
-	group_id: i32,
+	pub(crate) verified_member_id: i32,
+	pub(crate) group_id: i32,
 }

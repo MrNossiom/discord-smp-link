@@ -15,6 +15,7 @@ pub(crate) fn setup_logging(data: Arc<Data>) -> WorkerGuard {
 	let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
 
 	// TODO: add Discord logger from `gnomeutils` crate
+	// TODO: add LogTail logger
 	let global_subscriber = Subscriber::builder()
 		.with_max_level(if data.config.production {
 			Level::DEBUG
