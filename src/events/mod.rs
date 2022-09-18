@@ -1,14 +1,12 @@
 //! `Discord` client events handlers
 
-use std::sync::{atomic::AtomicBool, Arc};
-
 use crate::{
 	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
 	database::{
 		models::{Guild, Member, NewGuild, NewMember},
 		schema::{guilds, members},
 	},
-	states::{Data, FrameworkContext, MessageComponentContext},
+	states::{ArcData, FrameworkContext, MessageComponentContext},
 };
 use anyhow::Result;
 use diesel::prelude::*;
@@ -16,16 +14,18 @@ use poise::{
 	serenity_prelude::{Context, Interaction},
 	Event,
 };
+use std::sync::atomic::AtomicBool;
 
 mod login;
 mod logout;
 
 /// Serenity listener to react to `Discord` events
+#[allow(clippy::too_many_lines)]
 pub(crate) async fn event_handler(
 	ctx: &Context,
 	event: &Event<'_>,
 	framework: FrameworkContext<'_>,
-	data: &Arc<Data>,
+	data: &ArcData,
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {

@@ -18,7 +18,7 @@ use unic_langid::LanguageIdentifier;
 type FluentBundle = bundle::FluentBundle<FluentResource, ConcurrentIntlLangMemoizer>;
 
 /// Manages the client internationalization
-pub struct Translations {
+pub(crate) struct Translations {
 	/// The fallback locale
 	fallback: LanguageIdentifier,
 	/// The available locales

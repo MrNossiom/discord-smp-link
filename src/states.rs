@@ -1,7 +1,7 @@
 //! Handles all the states of the bot and initial configuration
 
 use crate::{database::DatabasePool, handlers::auth::AuthLink, translation::Translations};
-use anyhow::Result;
+use anyhow::{anyhow, Context as _};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
 	MysqlConnection,
@@ -14,10 +14,71 @@ use poise::{
 	CreateReply, ReplyHandle,
 };
 use std::{
-	env::{self},
+	env::{self, VarError},
+	fs, io,
 	sync::Arc,
 };
 use unic_langid::langid;
+
+/// HTTPS Certificates for the server
+#[derive(Debug, Clone)]
+pub(crate) struct Certificates(
+	pub(crate) Vec<rustls::Certificate>,
+	pub(crate) rustls::PrivateKey,
+);
+
+impl Certificates {
+	/// Loads the certificates from the certs folder
+	fn from_certs_folder() -> anyhow::Result<Self> {
+		// TODO
+		let certs = Self::load_certs("certs/cert.pem")?;
+		let private_key = Self::load_private_key("certs/private.key")?;
+
+		Ok(Self(certs, private_key))
+	}
+
+	/// Load public certificate from file.
+	fn load_certs(filename: &str) -> io::Result<Vec<rustls::Certificate>> {
+		// Open certificate file.
+		let certificate_file = fs::File::open(filename).map_err(|e| {
+			io::Error::new(
+				io::ErrorKind::Other,
+				format!("failed to open {}: {}", filename, e),
+			)
+		})?;
+		let mut reader = io::BufReader::new(certificate_file);
+
+		// Load and return certificate.
+		let certs = rustls_pemfile::certs(&mut reader)
+			.map_err(|_| io::Error::new(io::ErrorKind::Other, "failed to load certificate"))?;
+		Ok(certs.into_iter().map(rustls::Certificate).collect())
+	}
+
+	/// Load private key from file.
+	fn load_private_key(filename: &str) -> io::Result<rustls::PrivateKey> {
+		// Open key file.
+		let key_file = fs::File::open(filename).map_err(|e| {
+			io::Error::new(
+				io::ErrorKind::Other,
+				format!("failed to open {}: {}", filename, e),
+			)
+		})?;
+		let mut reader = io::BufReader::new(key_file);
+
+		// Load and return a single private key.
+		let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)
+			.map_err(|_| io::Error::new(io::ErrorKind::Other, "failed to load private key"))?;
+
+		if keys.len() != 1 {
+			return Err(io::Error::new(
+				io::ErrorKind::Other,
+				"expected a single private key",
+			));
+		}
+
+		Ok(rustls::PrivateKey(keys[0].clone()))
+	}
+}
 
 /// App global configuration
 #[derive(Debug)]
@@ -31,35 +92,60 @@ pub(crate) struct Config {
 
 	/// The url of the oauth2 callback
 	pub(crate) server_url: String,
-	/// The port to run the server on
-	pub(crate) port: String,
+	/// The port to run the HTTP server on
+	pub(crate) port_http: u16,
+	/// The port to run the HTTPS server on
+	pub(crate) port_https: u16,
 	/// Whether or not to use production defaults
 	pub(crate) production: bool,
 }
 
+/// Resolve an environment variable or return an appropriate error
+fn get_required_env_var(name: &str) -> anyhow::Result<String> {
+	match env::var(name) {
+		Ok(val) => Ok(val),
+		Err(VarError::NotPresent) => Err(anyhow!("{} must be set in the environnement", name)),
+		Err(VarError::NotUnicode(_)) => {
+			Err(anyhow!("{} does not contains Unicode valid text", name))
+		}
+	}
+}
+
 impl Config {
 	/// Parse the config from `.env` file
-	fn from_dotenv() -> Self {
+	fn from_dotenv() -> anyhow::Result<Self> {
+		// Load the `.env` file ond error if not found
 		if dotenv().is_err() {
-			panic!("Couldn't find `.env` file, please create one");
+			return Err(anyhow!("Couldn't find `.env` file, please create one"));
 		}
 
-		Self {
-			database_url: env::var("DATABASE_URL").expect("DATABASE_URL is not set"),
-			discord_token: env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN is not set"),
+		let port_http = env::var("PORT")
+			.unwrap_or_else(|_| "80".into())
+			.parse::<u16>()
+			.map_err(|_| anyhow!("PORT environnement variable must be a `u16`"))?;
+
+		let port_https = env::var("PORT_HTTPS")
+			.unwrap_or_else(|_| "443".into())
+			.parse::<u16>()
+			.map_err(|_| anyhow!("PORT environnement variable must be a `u16`"))?;
+
+		let production = env::var("PRODUCTION")
+			.unwrap_or_else(|_| "false".into())
+			.parse::<bool>()
+			.map_err(|_| anyhow!("PRODUCTION environnement variable must be a `bool`"))?;
+
+		Ok(Self {
+			database_url: get_required_env_var("DATABASE_URL")?,
+			discord_token: get_required_env_var("DISCORD_TOKEN")?,
 			google_client: (
-				ClientId::new(env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID is not set")),
-				ClientSecret::new(
-					env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_ID is not set"),
-				),
+				ClientId::new(get_required_env_var("GOOGLE_CLIENT_ID")?),
+				ClientSecret::new(get_required_env_var("GOOGLE_CLIENT_SECRET")?),
 			),
-			server_url: env::var("SERVER_URL").expect("SERVER_URL is not set"),
-			port: env::var("PORT").expect("PORT is not set"),
-			production: env::var("PRODUCTION")
-				.unwrap_or_else(|_| "false".into())
-				.parse::<bool>()
-				.expect("PRODUCTION is not a boolean"),
-		}
+			server_url: get_required_env_var("SERVER_URL")?,
+			port_http,
+			port_https,
+			production,
+		})
 	}
 }
 
@@ -74,27 +160,31 @@ pub(crate) struct Data {
 	pub(crate) config: Config,
 	/// The translations for the client
 	pub(crate) translations: Translations,
+	/// The HTTPS certificates
+	pub(crate) certificates: Certificates,
 }
 
 impl Data {
 	/// Parse the bot data from
-	pub(crate) fn new() -> Self {
-		let config = Config::from_dotenv();
+	pub(crate) fn new() -> anyhow::Result<Self> {
+		let config = Config::from_dotenv()?;
 
 		let manager = ConnectionManager::<MysqlConnection>::new(&config.database_url);
 		let database = Pool::builder()
 			.build(manager)
-			.expect("failed to create database pool");
+			.context("failed to create database pool")?;
 
+		// TODO: make the default locale configurable
 		let translations = Translations::from_folder("translations", langid!("fr"))
-			.expect("failed to load translations");
+			.context("failed to load translations")?;
 
-		Self {
+		Ok(Self {
 			database,
-			auth: AuthLink::new(&config),
+			auth: AuthLink::new(&config)?,
 			config,
 			translations,
-		}
+			certificates: Certificates::from_certs_folder()?,
+		})
 	}
 }
 

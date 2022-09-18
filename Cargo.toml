@@ -4,21 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = { version = "1.0.63", features = ["backtrace"] }
+anyhow = { version = "1.0.65", features = ["backtrace"] }
 askama = "0.11.1"
-diesel = { version = "2.0.0", default-features = false, features = [
-	"mysql",
-	"chrono",
-	"r2d2",
-] }
 futures = "0.3.24"
-hyper = "0.14.20"
+hyper = { version = "0.14.20", features = ["full"] }
 hyper-rustls = { version = "0.23.0", features = ["rustls-native-certs"] }
 poise = { git = "https://github.com/kangalioo/poise", branch = "develop" }
 oauth2 = "4.2.3"
-rouille = "3.5.0"
 serde = "1.0.144"
-tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.21.1", features = ["full"] }
 dotenvy = "0.15.3"
 console = "0.15.1"
 chrono = "0.4.22"
@@ -32,4 +26,19 @@ intl-memoizer = "0.5.1"
 fluent-syntax = "0.11.0"
 unic-langid = { version = "0.9.0", features = ["macros"] }
 diesel_migrations = { version = "2.0.0", features = ["mysql"] }
-thiserror = "1.0.33"
+thiserror = "1.0.35"
+tokio-rustls = "0.23.4"
+rustls = "0.20.6"
+rustls-pemfile = "1.0.1"
+hyper-staticfile = "0.9.1"
+url = "2.3.1"
+
+[dependencies.diesel]
+version = "2.0.0"
+default-features = false
+features = ["mysql", "r2d2"]
+
+[dependencies.reqwest]
+version = "0.11.11"
+default-features = false
+features = ["rustls-tls-native-roots"]

@@ -11,7 +11,8 @@ Fill the `.env.docker` with the required credentials and settings :
 
 -   `LOGS_WEBHOOK`: A `Discord` webhook URL (`https://discord.com/api/webhooks/channel_id/xxx`)
 -   `SERVER_URL`: The URL to join our server over the Internet
--   `PORT`: The port on which the server must be bind (`8080`)
+-   `PORT`: The port on which the HTTP server must be bind (defaults to `80`)
+-   `PORT_HTTPS`: The port on which the HTTPS server must be bind (`443`)
 -   `PRODUCTION`: `true` or `false`
 
 Build the production docker container:
@@ -27,6 +28,10 @@ To run the local MySQL database, you can use the `docker-compose.local.yml` file
 > `docker compose -f docker-compose.local.yml up -d`
 > or
 > `just up local`
+
+You can use [`mkcert`](https://github.com/FiloSottile/mkcert) to generate a local certificate for the HTTPS server:
+
+> `mkcert -install` and then `mkcert localhost`
 
 ## Compiling
 

@@ -1,12 +1,15 @@
 # Build
 target/
 
-# Misc
+# Configuration
 .DS_Store
 .vscode/*
 !.vscode/settings.json
 .idea/
+
+# Misc
 logs/
+certs/
 
 # Localisation support
 !.vscode/i18n-ally-custom-framework.yml

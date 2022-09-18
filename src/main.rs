@@ -37,15 +37,17 @@ use crate::{
 	commands::{command_on_error, post_command, pre_command},
 	database::run_migrations,
 	events::event_handler,
-	handlers::server::spawn_server,
+	handlers::server::start_server,
 	logging::setup_logging,
 	states::{Data, Framework, FrameworkBuilder},
 };
+use anyhow::{anyhow, Context};
 use poise::serenity_prelude::GatewayIntents;
-use std::{process::ExitCode, sync::Arc};
+use states::ArcData;
+use std::sync::Arc;
 
 /// Build the `poise` [framework](poise::Framework)
-fn build_client(data: Arc<Data>) -> FrameworkBuilder {
+fn build_client(data: ArcData) -> FrameworkBuilder {
 	Framework::builder()
 		.token(&data.config.discord_token)
 		.intents(
@@ -91,20 +93,18 @@ fn build_client(data: Arc<Data>) -> FrameworkBuilder {
 }
 
 #[tokio::main]
-async fn main() -> ExitCode {
-	let data = Arc::new(Data::new());
+async fn main() -> anyhow::Result<()> {
+	let data = Arc::new(Data::new()?);
 
-	run_migrations(&mut data.database.get().expect("failed to get a connection"))
+	run_migrations(&mut data.database.get().context("failed to get a connection")?)
 		.expect("failed to run migrations");
 
 	let _guard = setup_logging(Arc::clone(&data));
-	let _handle = spawn_server(Arc::clone(&data));
+	let _handle = start_server(Arc::clone(&data))?;
 
 	if let Err(error) = build_client(Arc::clone(&data)).run().await {
-		tracing::error!("Client exited with error: {}", error);
-
-		return ExitCode::FAILURE;
+		return Err(anyhow!("Client exited with error: {}", error));
 	}
 
-	ExitCode::SUCCESS
+	Ok(())
 }

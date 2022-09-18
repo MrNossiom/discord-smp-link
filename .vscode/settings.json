@@ -1,5 +1,6 @@
 {
 	"cSpell.words": [
+		"alpn",
 		"askama",
 		"builtins",
 		"cooldown",
@@ -8,9 +9,12 @@
 		"langid",
 		"libmysqlclient",
 		"memoizer",
+		"mkcert",
 		"Mysql",
+		"pemfile",
 		"rustdoc",
 		"rustls",
+		"staticfile",
 		"thiserror",
 		"tokio",
 		"unic"
