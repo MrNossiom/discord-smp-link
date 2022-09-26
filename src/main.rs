@@ -43,13 +43,16 @@ use crate::{
 };
 use anyhow::{anyhow, Context};
 use poise::serenity_prelude::GatewayIntents;
+use secrecy::ExposeSecret;
 use states::ArcData;
 use std::sync::Arc;
+use tracing::instrument;
 
 /// Build the `poise` [framework](poise::Framework)
+#[instrument]
 fn build_client(data: ArcData) -> FrameworkBuilder {
 	Framework::builder()
-		.token(&data.config.discord_token)
+		.token(data.config.discord_token.expose_secret())
 		.intents(
 			GatewayIntents::GUILDS
 				| GatewayIntents::GUILD_VOICE_STATES
@@ -96,11 +99,11 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 async fn main() -> anyhow::Result<()> {
 	let data = Arc::new(Data::new()?);
 
+	setup_logging(Arc::clone(&data))?;
+	let _handle = start_server(Arc::clone(&data))?;
+
 	run_migrations(&mut data.database.get().context("failed to get a connection")?)
 		.expect("failed to run migrations");
-
-	let _guard = setup_logging(Arc::clone(&data));
-	let _handle = start_server(Arc::clone(&data))?;
 
 	if let Err(error) = build_client(Arc::clone(&data)).run().await {
 		return Err(anyhow!("Client exited with error: {}", error));

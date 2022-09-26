@@ -5,7 +5,6 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::{anyhow, Context as _};
-use console::style;
 use fluent::fluent_args;
 use poise::BoxFuture;
 use uuid::Uuid;
@@ -21,9 +20,10 @@ pub(crate) mod helpers;
 pub(crate) fn pre_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
 		tracing::info!(
+			user_id = ctx.author().id.0,
 			"{} invoked {}",
-			style(&ctx.author().name).black().bright(),
-			style(ctx.invoked_command_name()).black().bright(),
+			&ctx.author().name,
+			ctx.invoked_command_name(),
 		);
 	})
 }
@@ -37,8 +37,9 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 				tracing::error!(
-					"[id: {}] {} invoked `{}` but an error occurred: {:#}",
-					error_identifier,
+					user_id = ctx.author().id.0,
+					error_id = error_identifier,
+					"{} invoked `{}` but an error occurred: {:#}",
 					ctx.author().name,
 					ctx.invoked_command_name(),
 					error
@@ -129,8 +130,9 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 				tracing::error!(
-					"[id: {}] {} invoked `{}` but an error occurred in command check : {:#}",
-					error_identifier,
+					user_id = ctx.author().id.0,
+					error_id = error_identifier,
+					"{} invoked `{}` but an error occurred in command check: {:#}",
 					ctx.author().name,
 					ctx.invoked_command_name(),
 					error.unwrap_or_else(|| anyhow!("Unknown error"))
@@ -148,13 +150,14 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			}
 
 			error => {
-				tracing::error!("{error:?}");
+				tracing::error!(error = ?error, "Framework error");
+
 				Ok(())
 			}
 		};
 
 		if let Err(error) = error {
-			tracing::error!("{:#}", error);
+			tracing::error!(error = ?error);
 		};
 	})
 }
@@ -163,9 +166,10 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 pub(crate) fn post_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
 		tracing::debug!(
+			user_id = ctx.author().id.0,
 			"{} invoked `{}` successfully!",
-			style(&ctx.author().name).black().bright(),
-			style(ctx.invoked_command_name()).black().bright(),
+			&ctx.author().name,
+			ctx.invoked_command_name(),
 		);
 	})
 }

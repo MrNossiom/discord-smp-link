@@ -1,6 +1,15 @@
 version: '3.7'
 
 services:
+    client:
+        build: ghcr.io/mrnossiom/discord-smp-link:latest
+        volumes:
+            - .env.docker:/discord_smp_link/.env
+        depends_on:
+            database: 
+                condition: service_healthy
+        network_mode: "host"
+
     database:
         image: mariadb
         environment:
@@ -14,12 +23,10 @@ services:
             test: mysqladmin ping -h 127.0.0.1 -u $$MARIADB_USER -p=$$MARIADB_PASSWORD
             timeout: 5s
             retries: 10
-    client:
-        build: ghcr.io/mrnossiom/discord-smp-link:latest
+
+    logs_sink:
+        image: timberio/vector:0.24.X-distroless-static
+        ports:
+            - 8686:8686
         volumes:
-            - .env.docker:/discord_smp_link/.env
-            - ./logs/:/discord_smp_link/logs
-        depends_on:
-            database: 
-                condition: service_healthy
-        network_mode: "host"
+            - ~/vector.toml:/etc/vector/vector.toml

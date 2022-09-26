@@ -6,31 +6,38 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.65", features = ["backtrace"] }
 askama = "0.11.1"
+axum = { version = "0.5.16", features = ["http2", "macros"] }
+axum-extra = { version = "0.3.7", features = ["spa"] }
+console-subscriber = "0.1.8"
+diesel_migrations = { version = "2.0.0", features = ["mysql"] }
+dotenvy = "0.15.5"
+fluent = "0.16.0"
+fluent-syntax = "0.11.0"
 futures = "0.3.24"
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-rustls = { version = "0.23.0", features = ["rustls-native-certs"] }
-poise = { git = "https://github.com/kangalioo/poise", branch = "develop" }
-oauth2 = "4.2.3"
-serde = "1.0.144"
-tokio = { version = "1.21.1", features = ["full"] }
-dotenvy = "0.15.3"
-console = "0.15.1"
-chrono = "0.4.22"
-uuid = { version = "1.1.2", features = ["v4"] }
-serde_json = "1.0.85"
-tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
-tracing-appender = "0.2.2"
-fluent = "0.16.0"
 intl-memoizer = "0.5.1"
-fluent-syntax = "0.11.0"
-unic-langid = { version = "0.9.0", features = ["macros"] }
-diesel_migrations = { version = "2.0.0", features = ["mysql"] }
-thiserror = "1.0.35"
-tokio-rustls = "0.23.4"
+oauth2 = "4.2.3"
+poise = { git = "https://github.com/kangalioo/poise", branch = "develop" }
 rustls = "0.20.6"
 rustls-pemfile = "1.0.1"
-hyper-staticfile = "0.9.1"
+thiserror = "1.0.36"
+secrecy = "0.8.0"
+serde = "1.0.145"
+serde_json = "1.0.85"
+tokio = { version = "1.21.1", features = ["full", "tracing"] }
+tokio-rustls = "0.23.4"
+tracing = "0.1.36"
+tracing-subscriber = { version = "0.3.15", features = [
+	"registry",
+	"env-filter",
+	"json",
+] }
+tracing-appender = "0.2.2"
+# We don't need the valuable feature, but the documentation doesn't compile if we don't use it.
+tracing-stackdriver = { version = "0.5.0", features = ["valuable"] }
+unic-langid = { version = "0.9.0", features = ["macros"] }
+uuid = { version = "1.1.2", features = ["v4"] }
 url = "2.3.1"
 
 [dependencies.diesel]
@@ -39,6 +46,15 @@ default-features = false
 features = ["mysql", "r2d2"]
 
 [dependencies.reqwest]
-version = "0.11.11"
+version = "0.11.12"
 default-features = false
 features = ["rustls-tls-native-roots"]
+
+[dependencies.tower]
+version = "0.4.13"
+default-features = false
+features = ["tracing"]
+
+[dependencies.tower-http]
+version = "0.3.4"
+features = ["tracing", "trace", "timeout", "fs", "redirect"]

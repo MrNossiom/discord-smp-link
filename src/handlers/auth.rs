@@ -1,5 +1,6 @@
 //! `OAuth2` flow with users
 
+use crate::constants::{scopes, urls};
 use crate::states::Config;
 use anyhow::{anyhow, Context as _};
 use futures::Future;
@@ -52,32 +53,23 @@ pub(crate) struct AuthLink {
 impl AuthLink {
 	/// Create a new [`AuthLink`]
 	pub(crate) fn new(config: &Config) -> anyhow::Result<Self> {
-		let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
-			.context("invalid auth url")?;
-		let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into())
-			.context("invalid token url")?;
+		let auth_url = AuthUrl::new(urls::GOOGLE_AUTH_ENDPOINT.into())?;
+		let token_url = TokenUrl::new(urls::GOOGLE_TOKEN_ENDPOINT.into())?;
 
-		let oauth_client = BasicClient::new(
-			config.google_client.0.clone(),
-			Some(config.google_client.1.clone()),
-			auth_url,
-			Some(token_url),
-		)
-		.set_redirect_uri(
-			RedirectUrl::new(format!("http://{}/oauth2", config.server_url))
-				.context("invalid redirect url")?,
-		)
-		.set_revocation_uri(
-			RevocationUrl::new("https://oauth2.googleapis.com/revoke".into())
-				.context("invalid revoke url")?,
-		);
+		let (client_id, client_secret) = config.google_client.clone();
 
-		let client = Client::builder().build()?;
+		let oauth_client =
+			BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
+				.set_redirect_uri(RedirectUrl::new(format!(
+					"https://{}/oauth2",
+					config.server_url
+				))?)
+				.set_revocation_uri(RevocationUrl::new(urls::GOOGLE_REVOKE_ENDPOINT.into())?);
 
 		Ok(Self {
 			client: oauth_client,
 			queue: Default::default(),
-			http: client,
+			http: Default::default(),
 		})
 	}
 
@@ -88,9 +80,8 @@ impl AuthLink {
 			.client
 			.authorize_url(CsrfToken::new_random)
 			.add_scopes([
-				Scope::new("https://www.googleapis.com/auth/userinfo.email".into()),
-				Scope::new("https://www.googleapis.com/auth/userinfo.profile".into()),
-				// Scope::new("https://www.googleapis.com/auth/classroom.courses.readonly".into()),
+				Scope::new(scopes::USER_INFO_EMAIL.into()),
+				Scope::new(scopes::USER_INFO_PROFILE.into()),
 			])
 			.url();
 

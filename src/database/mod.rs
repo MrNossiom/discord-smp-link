@@ -24,7 +24,9 @@ pub(crate) const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 pub(crate) fn run_migrations(
 	connection: &mut impl MigrationHarness<Mysql>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-	connection.run_pending_migrations(MIGRATIONS)?;
+	let migrations_applied = connection.run_pending_migrations(MIGRATIONS)?;
+
+	tracing::debug!(migrations = ?migrations_applied, "Applied migrations");
 
 	Ok(())
 }

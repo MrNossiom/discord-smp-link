@@ -38,6 +38,8 @@ pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
 			.await?;
 	}
 
+	// TODO: use guild locale or interaction locale as fallback
+
 	let reply = ctx
 		.interaction
 		.channel_id()

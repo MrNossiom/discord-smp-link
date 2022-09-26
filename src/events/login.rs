@@ -21,10 +21,12 @@ use poise::serenity_prelude::{
 	CreateSelectMenuOption, GuildId, RoleId,
 };
 use std::time::Duration;
+use tracing::instrument;
 
 // TODO: heist all requirements and move every database or Discord call to the end
 /// Starts the auth process after the user clicked on the login button
 #[allow(clippy::too_many_lines)]
+#[instrument(skip_all, fields(user_id = %ctx.interaction.user.id))]
 pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get()?;
 	let member = ctx
@@ -185,7 +187,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	Ok(())
 }
 
-///
+/// Get a Discord Select Menu Component with all the registered classes of the guild.
 fn get_guild_classes_select_menu(
 	guild_id: &GuildId,
 	connection: &mut PooledConnection<ConnectionManager<MysqlConnection>>,

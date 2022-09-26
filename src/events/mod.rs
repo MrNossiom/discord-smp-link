@@ -43,9 +43,9 @@ pub(crate) async fn event_handler(
 				.first::<Member>(&mut connection)
 			{
 				tracing::warn!(
-					"User `{}` ({}) already exists in the database",
+					id = user.discord_id,
+					"User `{}` already exists in the database",
 					user.username,
-					user.discord_id
 				);
 			} else {
 				let new_user = NewMember {
@@ -55,9 +55,9 @@ pub(crate) async fn event_handler(
 				};
 
 				tracing::info!(
-					"Adding user `{}` ({}) to database",
+					id = new_user.discord_id,
+					"Adding user `{}` to database",
 					new_user.username,
-					new_user.discord_id
 				);
 
 				diesel::insert_into(members::table)
@@ -69,7 +69,7 @@ pub(crate) async fn event_handler(
 		}
 
 		Event::GuildMemberRemoval { guild_id, user, .. } => {
-			tracing::info!("Deleting member ({})", guild_id.0);
+			tracing::info!(id = guild_id.0, "Deleting member `{}`", user.name);
 
 			diesel::delete(
 				members::table
@@ -89,9 +89,9 @@ pub(crate) async fn event_handler(
 				.first::<Guild>(&mut connection)
 			{
 				tracing::warn!(
-					"Guild `{}` ({}) already exists in the database",
+					id = guild.id,
+					"Guild `{}` already exists in the database",
 					guild.name,
-					guild.id
 				);
 			} else {
 				let new_guild = NewGuild {
@@ -102,7 +102,7 @@ pub(crate) async fn event_handler(
 					verified_role_id: None,
 				};
 
-				tracing::info!("Adding guild `{}` ({}) to database", guild.name, guild.id);
+				tracing::info!(id = guild.id.0, "Adding guild `{}` to database", guild.name);
 
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
@@ -133,9 +133,10 @@ pub(crate) async fn event_handler(
 			};
 
 			tracing::info!(
-				"`{}` interacted with a component `{}`",
+				user_id = ctx.interaction.user.id.0,
+				custom_id = ctx.interaction.data.custom_id,
+				"`{}` interacted with a component",
 				ctx.interaction.user.name,
-				ctx.interaction.data.custom_id,
 			);
 
 			match interaction.data.custom_id.as_str() {
@@ -147,7 +148,7 @@ pub(crate) async fn event_handler(
 		}
 
 		_ => {
-			tracing::trace!("Didn't handle event: {:?}", event);
+			tracing::trace!(event = ?event, "missed event");
 
 			Ok(())
 		}

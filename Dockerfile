@@ -1,22 +1,29 @@
-# Build step
-FROM rust:latest as builder
-ENV RUSTFLAGS="-C target-cpu=native"
+# Build layer
+FROM rustlang/rust:nightly as builder
+
+# Add LLVM project APT repository
+RUN wget https://apt.llvm.org/llvm-snapshot.gpg.key
+RUN apt-key add llvm-snapshot.gpg.key
+RUN rm llvm-snapshot.gpg.key
 
 # Install developement libraries and headers
-RUN apt update && apt install -y default-libmysqlclient-dev && apt clean
+RUN apt update -y
+RUN apt install -y default-libmysqlclient-dev clang lldb lld
+RUN apt clean -y
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin discord_smp_link
 WORKDIR /discord_smp_link/
 
-# Copy over your manifests
+COPY ./.cargo ./.cargo
+# Copy over the manifests
 COPY Cargo.toml Cargo.lock ./
 
 # Build and cache your dependencies
 RUN cargo build --release
 RUN rm src/*.rs
 
-# Copy your source tree
+# Copy the source
 COPY ./src ./src
 COPY ./templates ./templates
 COPY ./migrations ./migrations
@@ -29,7 +36,9 @@ RUN cargo build --release
 FROM debian:buster-slim as runtime
 
 # Install dependencies
-RUN apt update -y && apt install -y default-libmysqlclient-dev libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt update -y
+RUN apt install -y default-libmysqlclient-dev libssl-dev ca-certificates
+RUN rm -rf /var/lib/apt/lists/*
 
 # Create a folder to recover logs and get .env file
 WORKDIR /discord_smp_link/

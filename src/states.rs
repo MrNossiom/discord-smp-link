@@ -7,12 +7,14 @@ use diesel::{
 	MysqlConnection,
 };
 use dotenvy::dotenv;
+use hyper::Uri;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
 	async_trait, send_application_reply,
 	serenity_prelude::{self as serenity},
 	CreateReply, ReplyHandle,
 };
+use secrecy::{ExposeSecret, Secret};
 use std::{
 	env::{self, VarError},
 	fs, io,
@@ -84,11 +86,13 @@ impl Certificates {
 #[derive(Debug)]
 pub(crate) struct Config {
 	/// The token needed to access the `Discord` Api
-	pub(crate) discord_token: String,
-	/// The Postgres connection uri
-	pub(crate) database_url: String,
-	/// The google auth client id and secret pair
+	pub(crate) discord_token: Secret<String>,
+	/// The `Postgres` connection uri
+	pub(crate) database_url: Secret<String>,
+	/// The `Google` auth client id and secret pair
 	pub(crate) google_client: (ClientId, ClientSecret),
+	/// The `Discord` invite link to rejoin the support server
+	pub(crate) discord_invite_link: Uri,
 
 	/// The url of the oauth2 callback
 	pub(crate) server_url: String,
@@ -96,6 +100,7 @@ pub(crate) struct Config {
 	pub(crate) port_http: u16,
 	/// The port to run the HTTPS server on
 	pub(crate) port_https: u16,
+
 	/// Whether or not to use production defaults
 	pub(crate) production: bool,
 }
@@ -119,6 +124,11 @@ impl Config {
 			return Err(anyhow!("Couldn't find `.env` file, please create one"));
 		}
 
+		let discord_invite_code = get_required_env_var("DISCORD_INVITE_CODE")?;
+		let discord_invite_link = format!("https://discord.gg/{}", discord_invite_code)
+			.parse()
+			.context("DISCORD_INVITE_CODE env must be wrong")?;
+
 		let port_http = env::var("PORT")
 			.unwrap_or_else(|_| "80".into())
 			.parse::<u16>()
@@ -135,15 +145,18 @@ impl Config {
 			.map_err(|_| anyhow!("PRODUCTION environnement variable must be a `bool`"))?;
 
 		Ok(Self {
-			database_url: get_required_env_var("DATABASE_URL")?,
-			discord_token: get_required_env_var("DISCORD_TOKEN")?,
+			discord_token: Secret::new(get_required_env_var("DISCORD_TOKEN")?),
+			database_url: Secret::new(get_required_env_var("DATABASE_URL")?),
 			google_client: (
 				ClientId::new(get_required_env_var("GOOGLE_CLIENT_ID")?),
 				ClientSecret::new(get_required_env_var("GOOGLE_CLIENT_SECRET")?),
 			),
+			discord_invite_link,
+
 			server_url: get_required_env_var("SERVER_URL")?,
 			port_http,
 			port_https,
+
 			production,
 		})
 	}
@@ -169,7 +182,8 @@ impl Data {
 	pub(crate) fn new() -> anyhow::Result<Self> {
 		let config = Config::from_dotenv()?;
 
-		let manager = ConnectionManager::<MysqlConnection>::new(&config.database_url);
+		let manager =
+			ConnectionManager::<MysqlConnection>::new(config.database_url.expose_secret());
 		let database = Pool::builder()
 			.build(manager)
 			.context("failed to create database pool")?;
@@ -273,6 +287,7 @@ pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, ArcData, anyhow::
 /// The [`poise::FrameworkBuilder`] type alias
 pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<ArcData, anyhow::Error>;
 
+// TODO: move elsewhere
 #[allow(dead_code)]
 mod polyfill {
 	//! Polyfill for the [`MessageComponentInteraction`](poise::serenity_prelude::MessageComponentInteraction) type

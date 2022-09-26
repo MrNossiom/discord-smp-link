@@ -16,3 +16,25 @@ pub(crate) mod events {
 	pub(crate) const AUTHENTICATION_SELECT_MENU_INTERACTION: &str =
 		"events.login.button.class-menu";
 }
+
+/// A set of URLs used in the library
+pub(crate) mod urls {
+	/// The Google `OAuth2` authorization endpoint
+	pub(crate) const GOOGLE_AUTH_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+	/// The Google `OAuth2` token exchange endpoint
+	pub(crate) const GOOGLE_TOKEN_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v3/token";
+	/// The Google `OAuth2` revoke endpoint
+	pub(crate) const GOOGLE_REVOKE_ENDPOINT: &str = "https://oauth2.googleapis.com/revoke";
+}
+
+/// Google `OAuth2` scopes used in the authentification process
+pub(crate) mod scopes {
+	/// User's email scope
+	pub(crate) const USER_INFO_EMAIL: &str = "https://www.googleapis.com/auth/userinfo.email";
+	/// User's informations scope
+	pub(crate) const USER_INFO_PROFILE: &str = "https://www.googleapis.com/auth/userinfo.profile";
+
+	// /// User's classrooms readonly scope
+	// pub(crate) const CLASSROOM_COURSES_READONLY: &str =
+	// 	"https://www.googleapis.com/auth/classroom.courses.readonly";
+}

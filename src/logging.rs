@@ -1,33 +1,25 @@
 //! Different log outputs adaptors and main loop
 
 use crate::states::ArcData;
-use tracing::Level;
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{
-	fmt::{Layer, Subscriber},
-	prelude::*,
-};
+use tracing::metadata::LevelFilter;
+use tracing_stackdriver::Stackdriver;
+use tracing_subscriber::{fmt::Layer, prelude::*, EnvFilter, Registry};
 
 /// Initializes the loggers adaptors and set the global logger
-pub(crate) fn setup_logging(data: ArcData) -> WorkerGuard {
-	let file_appender = tracing_appender::rolling::hourly("./logs", "log");
-	let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+pub(crate) fn setup_logging(data: ArcData) -> anyhow::Result<()> {
+	let filter = EnvFilter::builder()
+		.with_default_directive(LevelFilter::INFO.into())
+		.from_env()?;
 
-	// TODO: add Discord logger from `gnomeutils` crate
-	// TODO: add LogTail logger
-	let global_subscriber = Subscriber::builder()
-		.with_max_level(if data.config.production {
-			Level::DEBUG
+	// TODO: add LogTail sink and Discord sink from `GnomeUtils` crate
+	Registry::default()
+		.with(if data.config.production {
+			Stackdriver::layer().with_filter(filter).boxed()
 		} else {
-			Level::INFO
+			Layer::default().pretty().with_filter(filter).boxed()
 		})
-		.finish()
-		.with(Layer::default().with_writer(file_writer));
+		.with(console_subscriber::spawn())
+		.try_init()?;
 
-	tracing::subscriber::set_global_default(global_subscriber)
-		.expect("Unable to set global tracing subscriber");
-
-	tracing::debug!("Logging setup complete");
-
-	guard
+	Ok(())
 }

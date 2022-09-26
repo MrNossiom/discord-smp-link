@@ -6,7 +6,7 @@ build:
 	@cargo build
 # Builds your current project
 run:
-	@cargo run
+	RUST_LOG='info,discord_smp_link=trace' cargo run
 
 # Starts the docker compose file with the provided scope
 up SCOPE:
@@ -14,6 +14,3 @@ up SCOPE:
 # Stops the docker compose file with the provided scope
 down SCOPE:
 	docker compose --file docker-compose.{{SCOPE}}.yml down
-
-purge-logs:
-	@rm logs/log.*
