@@ -1,9 +1,20 @@
 //! HTTPS and HTTP servers to answer `OAuth2` Google redirects and serve the basic web pages.
 //!
-//! Most of the code here comes from the [`oauth2`](https://docs.rs/oauth2) crate.
+//! Most of the code here comes from the [`hyper-rustls`](https://docs.rs/hyper-rustls) repository.
 
-use super::handler::MakeRequestHandler;
+use super::{
+	handler::{fallback, handle_error_static, handle_oauth2, TemplateResponse},
+	templates::{
+		ContactTemplate, IndexTemplate, PrivacyPolicyTemplate, TermsAndConditionsTemplate,
+	},
+};
 use crate::states::{ArcData, Certificates};
+use axum::{
+	handler::Handler,
+	routing::{self, get_service},
+	Extension, Router,
+};
+use axum_extra::routing::SpaRouter;
 use core::task::{Context, Poll};
 use futures::{ready, Future};
 use hyper::{
@@ -11,16 +22,19 @@ use hyper::{
 		accept::Accept,
 		conn::{AddrIncoming, AddrStream},
 	},
-	Server,
+	Body, Server,
 };
-use hyper_staticfile::Static;
-use std::{io, net::SocketAddr, path::Path, pin::Pin, sync::Arc};
+use std::{io, net::SocketAddr, pin::Pin, sync::Arc};
 use tokio::{
 	io::{AsyncRead, AsyncWrite, ReadBuf},
-	spawn,
-	task::JoinHandle,
+	task::{self, JoinHandle},
 };
 use tokio_rustls::rustls::ServerConfig;
+use tower::ServiceBuilder;
+use tower_http::{
+	services::{Redirect, ServeFile},
+	trace::TraceLayer,
+};
 
 /// A task handle to a server thread
 type ServerThread = JoinHandle<Result<(), hyper::Error>>;
@@ -28,9 +42,42 @@ type ServerThread = JoinHandle<Result<(), hyper::Error>>;
 /// Start the HTTP and HTTPS server in a new tokio task
 pub(crate) fn start_server(data: ArcData) -> anyhow::Result<(ServerThread, ServerThread)> {
 	// Listen on external interfaces `0.0.0.0`
-	// TODO: add different ports for http and https
 	let addr_https = SocketAddr::from(([0, 0, 0, 0], data.config.port_https));
 	let addr_http = SocketAddr::from(([0, 0, 0, 0], data.config.port_http));
+
+	let middleware = ServiceBuilder::new().layer(TraceLayer::new_for_http());
+
+	let router = Router::<Body>::new()
+		.route(
+			"/",
+			routing::get(|| async { TemplateResponse(IndexTemplate {}) }),
+		)
+		.route(
+			"/contact",
+			routing::get(|| async { TemplateResponse(ContactTemplate {}) }),
+		)
+		.route(
+			"/privacy-policy",
+			routing::get(|| async { TemplateResponse(PrivacyPolicyTemplate {}) }),
+		)
+		.route(
+			"/terms-and-conditions",
+			routing::get(|| async { TemplateResponse(TermsAndConditionsTemplate {}) }),
+		)
+		.route("/oauth2", routing::get(handle_oauth2))
+		.route(
+			"/discord",
+			Redirect::temporary(data.config.discord_invite_link.clone()),
+		)
+		.route(
+			"/favicon.ico",
+			get_service(ServeFile::new("public/favicon.ico")).handle_error(handle_error_static),
+		)
+		.merge(SpaRouter::new("/static", "public/"))
+		.fallback(fallback.into_service())
+		.layer(Extension(Arc::clone(&data)))
+		.layer(middleware.into_inner())
+		.into_make_service();
 
 	let tls_cfg = {
 		let Certificates(certs, key) = data.certificates.clone();
@@ -47,30 +94,26 @@ pub(crate) fn start_server(data: ArcData) -> anyhow::Result<(ServerThread, Serve
 		Arc::new(cfg)
 	};
 
-	// TODO: change the path to a constant or a config value
-	let static_router = Static::new(Path::new("public/"));
-	// Crate the make service to handle the requests
-	let service = MakeRequestHandler {
-		data,
-		static_router,
-	};
-
 	// Create a TCP listener for HTTPS via tokio
-	let incoming = AddrIncoming::bind(&addr_https)?;
-	let server_https = Server::builder(TlsAcceptor::new(tls_cfg, incoming)).serve(service.clone());
-	let handle_https = spawn(async move {
-		tracing::debug!("Spawning server");
+	let incoming_https = AddrIncoming::bind(&addr_https)?;
+	let server_https =
+		Server::builder(TlsAcceptor::new(tls_cfg, incoming_https)).serve(router.clone());
+	let handle_https = task::Builder::new()
+		.name("Server HTTPS")
+		.spawn(async move {
+			tracing::debug!("Spawning HTTPS server on {}", addr_https);
 
-		server_https.await
-	});
+			server_https.await
+		})?;
 
 	// Create a TCP listener for HTTP via tokio
-	let server_http = Server::bind(&addr_http).serve(service);
-	let handle_http = spawn(async move {
-		tracing::debug!("Spawning server");
+	let incoming_http = AddrIncoming::bind(&addr_http)?;
+	let server_http = Server::builder(incoming_http).serve(router);
+	let handle_http = task::Builder::new().name("Server HTTP").spawn(async move {
+		tracing::debug!("Spawning HTTP server on {}", addr_http);
 
 		server_http.await
-	});
+	})?;
 
 	Ok((handle_https, handle_http))
 }
@@ -83,11 +126,12 @@ enum State {
 	Streaming(tokio_rustls::server::TlsStream<AddrStream>),
 }
 
-// tokio_rustls::server::TlsStream doesn't expose constructor methods,
-// so we have to TlsAcceptor::accept and handshake to have access to it
-// TlsStream implements AsyncRead/AsyncWrite handshaking tokio_rustls::Accept first
 /// Represents a TLS incoming connection that is in the process of being accepted.
-pub(crate) struct TlsStream {
+///
+/// [`tokio_rustls::server::TlsStream`] doesn't expose constructor methods,
+/// so we have to [`tokio_rustls::TlsAcceptor::accept`] and handshake to have access to it.
+/// [`TlsStream`] implements `AsyncRead`/`AsyncWrite` handshaking [`tokio_rustls::Accept`] first
+pub(super) struct TlsStream {
 	/// The current state of the connection.
 	state: State,
 }
@@ -159,7 +203,7 @@ impl AsyncWrite for TlsStream {
 }
 
 /// The struct that takes care of the TLS handshake
-pub(crate) struct TlsAcceptor {
+pub(super) struct TlsAcceptor {
 	/// The [`ServerConfig`] to use for TLS handshakes.
 	config: Arc<ServerConfig>,
 	/// The address to listen on.
@@ -168,7 +212,7 @@ pub(crate) struct TlsAcceptor {
 
 impl TlsAcceptor {
 	/// Create a new [`TlsAcceptor`] from a [`ServerConfig`].
-	pub(crate) fn new(config: Arc<ServerConfig>, incoming: AddrIncoming) -> Self {
+	pub(super) fn new(config: Arc<ServerConfig>, incoming: AddrIncoming) -> Self {
 		Self { config, incoming }
 	}
 }

@@ -44,6 +44,9 @@ footer {
 	background-color: #2885ff;
 }
 footer li a {
+	display: block;
+	width: 200px;
+	text-align: center;
 	color: white;
 	text-decoration: none;
 }

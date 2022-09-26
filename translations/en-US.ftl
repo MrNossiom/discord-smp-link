@@ -81,6 +81,7 @@ error-internal-with-id = An internal error has occurred. If the error persist, p
 error-member-not-registered = L'utilisateur { $user } n'existe pas dans la base de données.
 error-process-timed-out = The process timed out.
 error-user-timeout = You took too long to answer.
+error-member-not-verified = Member { $user } isn't verified.
 
 # Buttons
 event-setup-login-button = Login
