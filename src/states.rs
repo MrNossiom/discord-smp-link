@@ -1,6 +1,6 @@
 //! Handles all the states of the bot and initial configuration
 
-use crate::{database::DatabasePool, handlers::auth::AuthLink, translation::Translations};
+use crate::{auth::AuthLink, database::DatabasePool, translation::Translations};
 use anyhow::{anyhow, Context as _};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},

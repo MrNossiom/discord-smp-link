@@ -24,12 +24,13 @@
 
 //! Discord SMP Bot
 
+mod auth;
 mod commands;
 mod constants;
 mod database;
 mod events;
-mod handlers;
 mod logging;
+mod server;
 mod states;
 mod translation;
 
@@ -37,8 +38,8 @@ use crate::{
 	commands::{command_on_error, post_command, pre_command},
 	database::run_migrations,
 	events::event_handler,
-	handlers::server::start_server,
 	logging::setup_logging,
+	server::start_server,
 	states::{Data, Framework, FrameworkBuilder},
 };
 use anyhow::{anyhow, Context};

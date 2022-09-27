@@ -1,12 +1,12 @@
 //! Command to link Discord and Google accounts together.
 
 use crate::{
-	constants::{self, AUTHENTICATION_TIMEOUT},
+	auth::AuthProcessError,
+	constants,
 	database::{
 		models::{Class, NewVerifiedMember},
 		DieselError,
 	},
-	handlers::auth::AuthProcessError,
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
@@ -55,7 +55,10 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		}
 	};
 
-	let (oauth2_url, token_response) = ctx.data.auth.process_oauth2(AUTHENTICATION_TIMEOUT);
+	let (oauth2_url, token_response) = ctx
+		.data
+		.auth
+		.process_oauth2(constants::AUTHENTICATION_TIMEOUT);
 
 	let classes_select_menu = get_guild_classes_select_menu(&member.guild_id, &mut connection)?;
 
