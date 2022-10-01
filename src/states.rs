@@ -1,6 +1,6 @@
 //! Handles all the states of the bot and initial configuration
 
-use crate::{auth::AuthLink, database::DatabasePool, translation::Translations};
+use crate::{auth::GoogleAuthentification, database::DatabasePool, translation::Translations};
 use anyhow::{anyhow, Context as _};
 use diesel::{
 	r2d2::{ConnectionManager, Pool},
@@ -168,7 +168,7 @@ pub(crate) struct Data {
 	/// An access to the database
 	pub(crate) database: DatabasePool,
 	/// A instance of the auth provider
-	pub(crate) auth: AuthLink,
+	pub(crate) auth: GoogleAuthentification,
 	/// An instance of the parsed initial config
 	pub(crate) config: Config,
 	/// The translations for the client
@@ -194,7 +194,7 @@ impl Data {
 
 		Ok(Self {
 			database,
-			auth: AuthLink::new(&config)?,
+			auth: GoogleAuthentification::new(&config)?,
 			config,
 			translations,
 			certificates: Certificates::from_certs_folder()?,

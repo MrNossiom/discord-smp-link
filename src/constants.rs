@@ -25,6 +25,10 @@ pub(crate) mod urls {
 	pub(crate) const GOOGLE_TOKEN_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v3/token";
 	/// The Google `OAuth2` revoke endpoint
 	pub(crate) const GOOGLE_REVOKE_ENDPOINT: &str = "https://oauth2.googleapis.com/revoke";
+
+	/// The Google `People API` endpoint
+	pub(crate) const GOOGLE_PEOPLE_API_ENDPOINT: &str =
+		"https://people.googleapis.com/v1/people/me";
 }
 
 /// Google `OAuth2` scopes used in the authentification process

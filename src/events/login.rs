@@ -1,7 +1,7 @@
 //! Command to link Discord and Google accounts together.
 
 use crate::{
-	auth::AuthProcessError,
+	auth::GoogleAuthentificationError,
 	constants,
 	database::{
 		models::{Class, NewVerifiedMember},
@@ -82,7 +82,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 
 	let token_response = match token_response.await {
 		Ok(response) => response,
-		Err(AuthProcessError::Timeout) => {
+		Err(GoogleAuthentificationError::Timeout) => {
 			let content = ctx.get("did-not-finish-auth-process", None);
 			ctx.shout(content).await?;
 

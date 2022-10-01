@@ -1,7 +1,7 @@
 //! `Discord` client events handlers
 
 use crate::{
-	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
+	constants::events,
 	database::{
 		models::{Guild, Member, NewGuild, NewMember},
 		schema::{guilds, members},
@@ -43,7 +43,7 @@ pub(crate) async fn event_handler(
 				.first::<Member>(&mut connection)
 			{
 				tracing::warn!(
-					id = user.discord_id,
+					guild_id = user.discord_id,
 					"User `{}` already exists in the database",
 					user.username,
 				);
@@ -55,7 +55,7 @@ pub(crate) async fn event_handler(
 				};
 
 				tracing::info!(
-					id = new_user.discord_id,
+					user_id = new_user.discord_id,
 					"Adding user `{}` to database",
 					new_user.username,
 				);
@@ -69,7 +69,7 @@ pub(crate) async fn event_handler(
 		}
 
 		Event::GuildMemberRemoval { guild_id, user, .. } => {
-			tracing::info!(id = guild_id.0, "Deleting member `{}`", user.name);
+			tracing::info!(guild_id = guild_id.0, "Deleting member `{}`", user.name);
 
 			diesel::delete(
 				members::table
@@ -89,7 +89,7 @@ pub(crate) async fn event_handler(
 				.first::<Guild>(&mut connection)
 			{
 				tracing::warn!(
-					id = guild.id,
+					guild_id = guild.id,
 					"Guild `{}` already exists in the database",
 					guild.name,
 				);
@@ -102,7 +102,11 @@ pub(crate) async fn event_handler(
 					verified_role_id: None,
 				};
 
-				tracing::info!(id = guild.id.0, "Adding guild `{}` to database", guild.name);
+				tracing::info!(
+					guild_id = guild.id.0,
+					"Adding guild `{}` to database",
+					guild.name
+				);
 
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
@@ -140,8 +144,8 @@ pub(crate) async fn event_handler(
 			);
 
 			match interaction.data.custom_id.as_str() {
-				LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
-				LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
+				events::LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
+				events::LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
 
 				_ => Ok(()),
 			}

@@ -1,8 +1,8 @@
 //! `OAuth2` flow with users
 
-use crate::constants::{scopes, urls};
+use crate::constants::{self, scopes, urls};
 use crate::states::Config;
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use futures::Future;
 use hyper::StatusCode;
 use oauth2::TokenResponse;
@@ -41,7 +41,7 @@ pub(crate) struct GoogleUserMetadata {
 
 /// A manager to get redirect urls and tokens
 #[derive(Debug)]
-pub(crate) struct AuthLink {
+pub(crate) struct GoogleAuthentification {
 	/// The inner client used to manage the flow
 	pub(crate) client: BasicClient,
 	/// A queue to wait for the user to finish the flow
@@ -50,21 +50,20 @@ pub(crate) struct AuthLink {
 	pub(crate) http: Client,
 }
 
-impl AuthLink {
+impl GoogleAuthentification {
 	/// Create a new [`AuthLink`]
 	pub(crate) fn new(config: &Config) -> anyhow::Result<Self> {
 		let auth_url = AuthUrl::new(urls::GOOGLE_AUTH_ENDPOINT.into())?;
 		let token_url = TokenUrl::new(urls::GOOGLE_TOKEN_ENDPOINT.into())?;
 
-		let (client_id, client_secret) = config.google_client.clone();
+		let redirect_url = RedirectUrl::new(format!("https://{}/oauth2", config.server_url))?;
+		let revocation_url = RevocationUrl::new(urls::GOOGLE_REVOKE_ENDPOINT.into())?;
 
+		let (client_id, client_secret) = config.google_client.clone();
 		let oauth_client =
 			BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
-				.set_redirect_uri(RedirectUrl::new(format!(
-					"https://{}/oauth2",
-					config.server_url
-				))?)
-				.set_revocation_uri(RevocationUrl::new(urls::GOOGLE_REVOKE_ENDPOINT.into())?);
+				.set_redirect_uri(redirect_url)
+				.set_revocation_uri(revocation_url);
 
 		Ok(Self {
 			client: oauth_client,
@@ -95,39 +94,47 @@ impl AuthLink {
 	pub(crate) async fn query_google_user_metadata(
 		&self,
 		token_res: &BasicTokenResponse,
-	) -> anyhow::Result<GoogleUserMetadata> {
+	) -> Result<GoogleUserMetadata, GoogleAuthentificationError> {
+		// Get this URL from a function with `fields` parameters
+		let mut url =
+			Url::parse(constants::urls::GOOGLE_PEOPLE_API_ENDPOINT).context("invalid query url")?;
+		url.set_query(Some("personFields=names,emailAddresses"));
+
 		let request = self
 			.http
-			// Get this URL from a function with `fields` parameters
-			.get("https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses")
+			.get(url)
 			.bearer_auth(token_res.access_token().secret())
-			.build()?;
+			.build()
+			.context("could not build request")?;
 
-		let response = self
-			.http
-			.execute(request)
-			.await
-			.context("failed to query Google")?;
+		let response = match self.http.execute(request).await {
+			Ok(response) => response,
+			Err(error) => return Err(GoogleAuthentificationError::Fetch(error)),
+		};
 
 		if response.status() != StatusCode::OK {
-			return Err(anyhow!("Google answered with a non Ok status code"));
+			return Err(GoogleAuthentificationError::NonOkResponse);
 		}
 
-		let body = response.bytes().await?;
-		let body = serde_json::from_slice::<Value>(&body)?;
+		let body = response
+			.bytes()
+			.await
+			.context("could not get response bytes")?;
+		let body = serde_json::from_slice::<Value>(&body)
+			.map_err(GoogleAuthentificationError::MalformedResponse)?;
 
 		let mail = body["emailAddresses"][0]["value"]
 			.as_str()
-			.context("Failed to get email address")?
+			.context("failed to get email address")?
 			.to_owned();
 
 		let first_name = body["names"][0]["givenName"]
 			.as_str()
-			.context("Failed to get first name")?
+			.context("failed to get first name")?
 			.to_owned();
 		let last_name = body["names"][0]["familyName"]
 			.as_str()
-			.context("Failed to get last name")?
+			.context("failed to get last name")?
 			.to_owned();
 
 		Ok(GoogleUserMetadata {
@@ -170,17 +177,17 @@ impl AuthProcess {
 }
 
 impl Future for AuthProcess {
-	type Output = Result<BasicTokenResponse, AuthProcessError>;
+	type Output = Result<BasicTokenResponse, GoogleAuthentificationError>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
 		let mut queue = self.queue.write().expect("RwLock is poisoned");
 
 		if Instant::now() > self.wait_until {
-			return Poll::Ready(Err(AuthProcessError::Timeout));
+			return Poll::Ready(Err(GoogleAuthentificationError::Timeout));
 		}
 
 		match queue.get(&self.csrf_state.secret().clone()) {
-			None => Poll::Ready(Err(AuthProcessError::NotQueued)),
+			None => Poll::Ready(Err(GoogleAuthentificationError::NotQueued)),
 			Some(Some(_)) => {
 				let token = queue
 					.remove(&self.csrf_state.secret().clone())
@@ -202,11 +209,25 @@ impl Future for AuthProcess {
 
 /// Errors that can happen during the authentification process
 #[derive(Error, Debug)]
-pub(crate) enum AuthProcessError {
+pub(crate) enum GoogleAuthentificationError {
 	/// The authentification process timed out
 	#[error("The authentication timeout has expired")]
 	Timeout,
 	/// The authentification process was not queued
-	#[error("The given csrf state is not queued")]
+	#[error("This CSRF state is not queued")]
 	NotQueued,
+
+	/// An error while fetching `Google`
+	#[error("Could not fetch the Google API: {0}")]
+	Fetch(reqwest::Error),
+	/// An error while fetching `Google`
+	#[error("Google answered with a non Ok status code")]
+	NonOkResponse,
+	/// The API response from `Google` does not contain required data
+	#[error("The returned response could not be parsed")]
+	MalformedResponse(serde_json::Error),
+
+	/// Other miscellaneous errors
+	#[error(transparent)]
+	Other(#[from] anyhow::Error),
 }
