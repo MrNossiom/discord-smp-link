@@ -98,6 +98,7 @@ pub(crate) async fn event_handler(
 					id: guild.id.0,
 					name: guild.name.as_str(),
 					owner_id: guild.owner_id.0,
+					verification_email_domain: None,
 					setup_message_id: None,
 					verified_role_id: None,
 				};

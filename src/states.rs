@@ -116,6 +116,7 @@ fn get_required_env_var(name: &str) -> anyhow::Result<String> {
 	}
 }
 
+// TODO: use the `figment` crate
 impl Config {
 	/// Parse the config from `.env` file
 	fn from_dotenv() -> anyhow::Result<Self> {

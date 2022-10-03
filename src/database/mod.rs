@@ -2,7 +2,7 @@
 
 use diesel::{
 	mysql::Mysql,
-	r2d2::{ConnectionManager, Pool},
+	r2d2::{ConnectionManager, Pool, PooledConnection},
 	MysqlConnection,
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -16,6 +16,9 @@ pub(crate) use diesel::result::Error as DieselError;
 
 /// The type alias for a Postgres connection pool
 pub(crate) type DatabasePool = Pool<ConnectionManager<MysqlConnection>>;
+
+/// The type alias for a Postgres connection handle
+pub(crate) type DatabasePooledConnection = PooledConnection<ConnectionManager<MysqlConnection>>;
 
 /// The migrations to apply to the database
 pub(crate) const MIGRATIONS: EmbeddedMigrations = embed_migrations!();

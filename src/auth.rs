@@ -51,7 +51,7 @@ pub(crate) struct GoogleAuthentification {
 }
 
 impl GoogleAuthentification {
-	/// Create a new [`AuthLink`]
+	/// Create a new [`GoogleAuthentification`]
 	pub(crate) fn new(config: &Config) -> anyhow::Result<Self> {
 		let auth_url = AuthUrl::new(urls::GOOGLE_AUTH_ENDPOINT.into())?;
 		let token_url = TokenUrl::new(urls::GOOGLE_TOKEN_ENDPOINT.into())?;
@@ -145,7 +145,7 @@ impl GoogleAuthentification {
 	}
 }
 
-/// Returned by [`AuthLink`] for a new authentification process
+/// Returned by [`GoogleAuthentification`] for a new authentification process
 /// Implement [`Future`] to make code more readable
 pub(crate) struct AuthProcess {
 	/// Abort the future if we passed the delay

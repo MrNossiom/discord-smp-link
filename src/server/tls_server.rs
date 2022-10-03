@@ -45,6 +45,7 @@ pub(crate) fn start_server(data: ArcData) -> anyhow::Result<(ServerThread, Serve
 	let addr_https = SocketAddr::from(([0, 0, 0, 0], data.config.port_https));
 	let addr_http = SocketAddr::from(([0, 0, 0, 0], data.config.port_http));
 
+	// TODO: find a better way to log requests
 	let middleware = ServiceBuilder::new().layer(TraceLayer::new_for_http());
 
 	let router = Router::<Body>::new()

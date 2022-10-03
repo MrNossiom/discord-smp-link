@@ -13,6 +13,7 @@ pub(crate) struct Guild {
 	pub(crate) name: String,
 	pub(crate) owner_id: u64,
 
+	pub(crate) verification_email_domain: Option<String>,
 	pub(crate) setup_message_id: Option<u64>,
 	pub(crate) verified_role_id: Option<u64>,
 }
@@ -26,6 +27,7 @@ pub(crate) struct NewGuild<'a> {
 	pub(crate) name: &'a str,
 	pub(crate) owner_id: u64,
 
+	pub(crate) verification_email_domain: Option<&'a str>,
 	pub(crate) setup_message_id: Option<u64>,
 	pub(crate) verified_role_id: Option<u64>,
 }

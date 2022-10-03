@@ -30,6 +30,7 @@ diesel::table! {
         id -> Unsigned<Bigint>,
         name -> Varchar,
         owner_id -> Unsigned<Bigint>,
+        verification_email_domain -> Nullable<Varchar>,
         setup_message_id -> Nullable<Unsigned<Bigint>>,
         verified_role_id -> Nullable<Unsigned<Bigint>>,
     }

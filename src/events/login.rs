@@ -5,25 +5,24 @@ use crate::{
 	constants,
 	database::{
 		models::{Class, NewVerifiedMember},
-		DieselError,
+		DatabasePooledConnection, DieselError,
 	},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
 use anyhow::{anyhow, Context};
-use diesel::{
-	prelude::*,
-	r2d2::{ConnectionManager, PooledConnection},
-};
+use diesel::prelude::*;
 use fluent::fluent_args;
 use poise::serenity_prelude::{
 	self as serenity, component::ButtonStyle, CollectComponentInteraction, CreateSelectMenu,
 	CreateSelectMenuOption, GuildId, RoleId,
 };
 use std::time::Duration;
+use thiserror::Error;
 use tracing::instrument;
 
 // TODO: heist all requirements and move every database or Discord call to the end
+// TODO: document steps because it becomes messy here
 /// Starts the auth process after the user clicked on the login button
 #[allow(clippy::too_many_lines)]
 #[instrument(skip_all, fields(user_id = %ctx.interaction.user.id))]
@@ -35,32 +34,36 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.as_ref()
 		.ok_or_else(|| anyhow!("used only in guild"))?;
 
-	let role = {
-		use crate::database::schema::guilds;
+	let (verified_role, mut classes, email_pattern) =
+		match get_and_check_login_components(&mut connection, &member.guild_id) {
+			Ok(v) => v,
+			Err(err) => match err {
+				CheckLoginComponentsError::Database(err) => return Err(err.into()),
+				CheckLoginComponentsError::GuildNotTotallySetup(err) => {
+					ctx.shout(err).await?;
 
-		let inner_role_id: Option<u64> = guilds::table
-			.filter(guilds::id.eq(member.guild_id.0))
-			.select(guilds::verified_role_id)
-			.first(&mut connection)?;
-
-		inner_role_id.map(RoleId)
-	};
-
-	let verified_role = match role {
-		Some(role) => role,
-		None => {
-			ctx.shout("Verified role has not been setup yet").await?;
-
-			return Ok(());
-		}
-	};
+					return Ok(());
+				}
+			},
+		};
 
 	let (oauth2_url, token_response) = ctx
 		.data
 		.auth
 		.process_oauth2(constants::AUTHENTICATION_TIMEOUT);
 
-	let classes_select_menu = get_guild_classes_select_menu(&member.guild_id, &mut connection)?;
+	let classes = classes
+		.iter_mut()
+		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id))
+		.collect::<Vec<_>>();
+
+	let mut classes_select_menu = CreateSelectMenu::default();
+
+	classes_select_menu
+		.custom_id(constants::events::AUTHENTICATION_SELECT_MENU_INTERACTION)
+		// TODO: translate
+		.placeholder("Select a class")
+		.options(|op| op.set_options(classes));
 
 	let initial_response = ctx
 		.send(|reply| {
@@ -91,11 +94,30 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		Err(error) => return Err(error.into()),
 	};
 
+	let user_data = ctx
+		.data
+		.auth
+		.query_google_user_metadata(&token_response)
+		.await
+		.context("Failed to query google user metadata")?;
+
+	let mail_domain = user_data
+		.mail
+		.split('@')
+		.last()
+		.context("email returned by google is invalid")?;
+	if mail_domain != email_pattern {
+		let content = ctx.get("error-email-not-allowed", None);
+		ctx.shout(content).await?;
+
+		return Ok(());
+	}
+
 	initial_response
 		.edit(|b| {
 			b.ephemeral(true)
 				.components(|c| c.create_action_row(|ar| ar.add_select_menu(classes_select_menu)))
-				// Empty the content
+				// Empty the previous content
 				.content("")
 		})
 		.await?;
@@ -122,13 +144,6 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 			return Ok(());
 		}
 	};
-
-	let user_data = ctx
-		.data
-		.auth
-		.query_google_user_metadata(&token_response)
-		.await
-		.context("Failed to query google user metadata")?;
 
 	let id = {
 		use crate::database::schema::members::dsl as members;
@@ -184,39 +199,79 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	}
 
 	initial_response
-		.edit(|b| b.content(ctx.get("authentication-successful", None)))
+		.edit(|b| {
+			b.content(ctx.get("authentication-successful", None))
+				.components(|c| c)
+		})
 		.await?;
 
 	Ok(())
 }
 
-/// Get a Discord Select Menu Component with all the registered classes of the guild.
-fn get_guild_classes_select_menu(
+// TODO: improve next function and remove this
+#[derive(Debug, Error)]
+enum CheckLoginComponentsError {
+	/// An error to show to the user
+	#[error("{0}")]
+	GuildNotTotallySetup(String),
+
+	/// An error from the database
+	#[error(transparent)]
+	Database(#[from] DieselError),
+}
+
+/// Extracted logic
+fn get_and_check_login_components(
+	connection: &mut DatabasePooledConnection,
 	guild_id: &GuildId,
-	connection: &mut PooledConnection<ConnectionManager<MysqlConnection>>,
-) -> anyhow::Result<CreateSelectMenu> {
-	use crate::database::schema::classes::dsl as classes;
+) -> Result<(RoleId, Vec<Class>, String), CheckLoginComponentsError> {
+	let (verified_role, email_pattern) = {
+		use crate::database::schema::guilds::dsl as guilds;
 
-	let mut classes = classes::classes
-		.filter(classes::guild_id.eq(guild_id.0))
-		.get_results::<Class>(connection)?;
+		let (inner_role_id, email_pattern): (Option<u64>, Option<String>) = guilds::guilds
+			.filter(guilds::id.eq(guild_id.0))
+			.select((guilds::verified_role_id, guilds::verification_email_domain))
+			.first(connection)?;
 
-	if classes.is_empty() {
-		// TODO: real handling
-		return Err(anyhow!("No classes found"));
-	}
+		let inner_role = match inner_role_id {
+			Some(role_id) => RoleId(role_id),
+			None => {
+				// TODO: translate
+				return Err(CheckLoginComponentsError::GuildNotTotallySetup(
+					"Verified role has not been setup yet".into(),
+				));
+			}
+		};
 
-	let classes = classes
-		.iter_mut()
-		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id))
-		.collect::<Vec<_>>();
+		let email_pattern = match email_pattern {
+			Some(role) => role,
+			None => {
+				// TODO: translate
+				return Err(CheckLoginComponentsError::GuildNotTotallySetup(
+					"Email pattern has not been setup yet".into(),
+				));
+			}
+		};
 
-	let mut sel = CreateSelectMenu::default();
+		(inner_role, email_pattern)
+	};
 
-	sel.custom_id(constants::events::AUTHENTICATION_SELECT_MENU_INTERACTION)
-		// TODO: translate
-		.placeholder("Select a class")
-		.options(|op| op.set_options(classes));
+	let classes = {
+		use crate::database::schema::classes::dsl as classes;
 
-	Ok(sel)
+		let classes = classes::classes
+			.filter(classes::guild_id.eq(guild_id.0))
+			.get_results::<Class>(connection)?;
+
+		if classes.is_empty() {
+			// TODO: translate
+			return Err(CheckLoginComponentsError::GuildNotTotallySetup(
+				"No classes found".into(),
+			));
+		}
+
+		classes
+	};
+
+	Ok((verified_role, classes, email_pattern))
 }
