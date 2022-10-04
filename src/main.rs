@@ -30,6 +30,7 @@ mod constants;
 mod database;
 mod events;
 mod logging;
+mod polyfill;
 mod server;
 mod states;
 mod translation;
