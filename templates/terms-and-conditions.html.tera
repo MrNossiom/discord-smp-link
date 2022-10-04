@@ -1,9 +1,8 @@
-{% extends "_base.jinja" %}
+{% extends "_base" %}
 
 {% block title %}Terms and Conditions{% endblock %}
-
 {% block head %}{% endblock %}
 
 {% block content %}
-		<h1>Terms and Conditions</h1>
+	<h1>Terms and Conditions</h1>
 {% endblock %}

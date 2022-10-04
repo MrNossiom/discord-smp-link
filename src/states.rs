@@ -7,7 +7,6 @@ use diesel::{
 	MysqlConnection,
 };
 use dotenvy::dotenv;
-use hyper::Uri;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
 	async_trait, send_application_reply,
@@ -17,70 +16,9 @@ use poise::{
 use secrecy::{ExposeSecret, Secret};
 use std::{
 	env::{self, VarError},
-	fs, io,
 	sync::Arc,
 };
 use unic_langid::langid;
-
-/// HTTPS Certificates for the server
-#[derive(Debug, Clone)]
-pub(crate) struct Certificates(
-	pub(crate) Vec<rustls::Certificate>,
-	pub(crate) rustls::PrivateKey,
-);
-
-impl Certificates {
-	/// Loads the certificates from the certs folder
-	fn from_certs_folder() -> anyhow::Result<Self> {
-		// TODO
-		let certs = Self::load_certs("certs/cert.pem")?;
-		let private_key = Self::load_private_key("certs/private.key")?;
-
-		Ok(Self(certs, private_key))
-	}
-
-	/// Load public certificate from file.
-	fn load_certs(filename: &str) -> io::Result<Vec<rustls::Certificate>> {
-		// Open certificate file.
-		let certificate_file = fs::File::open(filename).map_err(|e| {
-			io::Error::new(
-				io::ErrorKind::Other,
-				format!("failed to open {}: {}", filename, e),
-			)
-		})?;
-		let mut reader = io::BufReader::new(certificate_file);
-
-		// Load and return certificate.
-		let certs = rustls_pemfile::certs(&mut reader)
-			.map_err(|_| io::Error::new(io::ErrorKind::Other, "failed to load certificate"))?;
-		Ok(certs.into_iter().map(rustls::Certificate).collect())
-	}
-
-	/// Load private key from file.
-	fn load_private_key(filename: &str) -> io::Result<rustls::PrivateKey> {
-		// Open key file.
-		let key_file = fs::File::open(filename).map_err(|e| {
-			io::Error::new(
-				io::ErrorKind::Other,
-				format!("failed to open {}: {}", filename, e),
-			)
-		})?;
-		let mut reader = io::BufReader::new(key_file);
-
-		// Load and return a single private key.
-		let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)
-			.map_err(|_| io::Error::new(io::ErrorKind::Other, "failed to load private key"))?;
-
-		if keys.len() != 1 {
-			return Err(io::Error::new(
-				io::ErrorKind::Other,
-				"expected a single private key",
-			));
-		}
-
-		Ok(rustls::PrivateKey(keys[0].clone()))
-	}
-}
 
 /// App global configuration
 #[derive(Debug)]
@@ -92,14 +30,12 @@ pub(crate) struct Config {
 	/// The `Google` auth client id and secret pair
 	pub(crate) google_client: (ClientId, ClientSecret),
 	/// The `Discord` invite link to rejoin the support server
-	pub(crate) discord_invite_link: Uri,
+	pub(crate) discord_invite_code: String,
 
 	/// The url of the oauth2 callback
 	pub(crate) server_url: String,
-	/// The port to run the HTTP server on
-	pub(crate) port_http: u16,
-	/// The port to run the HTTPS server on
-	pub(crate) port_https: u16,
+	/// The port to run the server on
+	pub(crate) port: u16,
 
 	/// Whether or not to use production defaults
 	pub(crate) production: bool,
@@ -126,17 +62,9 @@ impl Config {
 		}
 
 		let discord_invite_code = get_required_env_var("DISCORD_INVITE_CODE")?;
-		let discord_invite_link = format!("https://discord.gg/{}", discord_invite_code)
-			.parse()
-			.context("DISCORD_INVITE_CODE env must be wrong")?;
 
-		let port_http = env::var("PORT")
+		let port = env::var("PORT")
 			.unwrap_or_else(|_| "80".into())
-			.parse::<u16>()
-			.map_err(|_| anyhow!("PORT environnement variable must be a `u16`"))?;
-
-		let port_https = env::var("PORT_HTTPS")
-			.unwrap_or_else(|_| "443".into())
 			.parse::<u16>()
 			.map_err(|_| anyhow!("PORT environnement variable must be a `u16`"))?;
 
@@ -152,11 +80,10 @@ impl Config {
 				ClientId::new(get_required_env_var("GOOGLE_CLIENT_ID")?),
 				ClientSecret::new(get_required_env_var("GOOGLE_CLIENT_SECRET")?),
 			),
-			discord_invite_link,
+			discord_invite_code,
 
 			server_url: get_required_env_var("SERVER_URL")?,
-			port_http,
-			port_https,
+			port,
 
 			production,
 		})
@@ -174,8 +101,6 @@ pub(crate) struct Data {
 	pub(crate) config: Config,
 	/// The translations for the client
 	pub(crate) translations: Translations,
-	/// The HTTPS certificates
-	pub(crate) certificates: Certificates,
 }
 
 impl Data {
@@ -198,7 +123,6 @@ impl Data {
 			auth: GoogleAuthentification::new(&config)?,
 			config,
 			translations,
-			certificates: Certificates::from_certs_folder()?,
 		})
 	}
 }

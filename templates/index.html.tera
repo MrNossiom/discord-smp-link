@@ -1,0 +1,10 @@
+{% extends "_base" %}
+
+{% block title %}Hi!{% endblock %}
+{% block head %}{% endblock %}
+
+{% block content %}
+	<img src="/static/images/discord-smp-link-logo.png" style="width: 200px" />
+
+	<h1>Hello, world!</h1>
+{% endblock %}

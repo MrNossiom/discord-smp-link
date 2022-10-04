@@ -1,7 +1,6 @@
-{% extends "_base.jinja" %}
+{% extends "_base" %}
 
 {% block title %}Privacy Policy{% endblock %}
-
 {% block head %}{% endblock %}
 
 {% block content %}

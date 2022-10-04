@@ -1,0 +1,12 @@
+{% extends "_base" %}
+
+{% block title %}Oups!{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+	<h1>Oups!</h1>
+	<p>
+		There was a server error: <code>{{ message }}</code>
+	</p>
+{% endblock %}
