@@ -209,6 +209,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 }
 
 // TODO: improve next function and remove this
+/// Error type for the following function
 #[derive(Debug, Error)]
 enum CheckLoginComponentsError {
 	/// An error to show to the user

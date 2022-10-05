@@ -1,3 +1,7 @@
+// TODO: remove when fixed in clippy code `https://github.com/rust-lang/rust-clippy/pull/9486`
+// ? Necessary to avoid clippy warning for `FromForm` derives
+#![allow(clippy::unnecessary_lazy_evaluations)]
+
 //! The request handlers that serves content
 
 use crate::states::ArcData;
@@ -5,9 +9,12 @@ use oauth2::{reqwest::async_http_client, AuthorizationCode};
 use rocket::{response::Redirect, FromForm, Request, State};
 use rocket_dyn_templates::{context, Template};
 
+/// The parameters for the `OAuth2` callback endpoint
 #[derive(FromForm)]
 pub(crate) struct OAuth2Params {
+	/// The code returned by the `OAuth2` provider
 	code: String,
+	/// The CSRF token to identify the request
 	state: String,
 }
 

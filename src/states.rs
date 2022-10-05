@@ -33,11 +33,8 @@ pub(crate) struct Config {
 	pub(crate) google_client: (ClientId, ClientSecret),
 	/// The `Discord` invite link to rejoin the support server
 	pub(crate) discord_invite_code: String,
-
-	/// The url of the oauth2 callback
+	/// The url of the `OAuth2` callback
 	pub(crate) server_url: String,
-	/// The port to run the server on
-	pub(crate) port: u16,
 
 	/// Whether or not to use production defaults
 	pub(crate) production: bool,
@@ -65,11 +62,6 @@ impl Config {
 
 		let discord_invite_code = get_required_env_var("DISCORD_INVITE_CODE")?;
 
-		let port = env::var("PORT")
-			.unwrap_or_else(|_| "80".into())
-			.parse::<u16>()
-			.map_err(|_| anyhow!("PORT environnement variable must be a `u16`"))?;
-
 		let production = env::var("PRODUCTION")
 			.unwrap_or_else(|_| "false".into())
 			.parse::<bool>()
@@ -83,9 +75,7 @@ impl Config {
 				ClientSecret::new(get_required_env_var("GOOGLE_CLIENT_SECRET")?),
 			),
 			discord_invite_code,
-
 			server_url: get_required_env_var("SERVER_URL")?,
-			port,
 
 			production,
 		})
