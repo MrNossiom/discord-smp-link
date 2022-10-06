@@ -25,7 +25,6 @@ RUN rm src/*.rs
 
 # Copy the source
 COPY ./src ./src
-COPY ./templates ./templates
 COPY ./migrations ./migrations
 
 # Build for release
@@ -45,10 +44,15 @@ WORKDIR /discord_smp_link/
 
 # Copy the public content
 COPY ./public ./public
+COPY ./templates ./templates
 COPY ./translations ./translations
+COPY ./Rocket.toml ./
 
 # Copy the build artifact from the build stage
 COPY --from=builder /discord_smp_link/target/release/discord_smp_link ./discord_smp_link
+
+# Expose the server port
+EXPOSE 8000
 
 # Set the startup command to run your binary
 CMD ["./discord_smp_link"]

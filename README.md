@@ -29,7 +29,7 @@ To run the local MySQL database, you can use the `docker-compose.local.yml` file
 > or
 > `just up local`
 
-You can use [`mkcert`](https://github.com/FiloSottile/mkcert) to generate a local certificate for the HTTPS server:
+You can use [`mkcert`](https://github.com/FiloSottile/mkcert) to generate a local certificate for the server in development:
 
 > `mkcert -install` and then `mkcert localhost`
 
@@ -45,3 +45,11 @@ You need to install the C library `mysql-client` before compiling the Rust code.
 -   **`MacOS (w/ Homebrew)`**
     Since the `mysql-client` package is keg-only, you need to force link it with :
     > `brew link mysql-client --force`
+
+## Run
+
+### Vector
+
+Get the config file for `Vector` with the LogTail settings:
+
+> `wget -O ->> vector.toml https://logtail.com/vector-toml/docker/<id>`

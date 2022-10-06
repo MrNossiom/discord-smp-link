@@ -1,15 +1,23 @@
 version: '3.7'
 
+networks:
+    caddy:
+    database:
+    server:
+
+
 services:
     client:
-        build: ghcr.io/mrnossiom/discord-smp-link:latest
+        # TODO: change the tag to latest
+        image: ghcr.io/mrnossiom/discord-smp-link:dev
         volumes:
             - .env.docker:/discord_smp_link/.env
         depends_on:
-            database: 
+            database:
                 condition: service_healthy
-        network_mode: "host"
+        networks: [ database, caddy ]
 
+    # MySQL database
     database:
         image: mariadb
         environment:
@@ -17,16 +25,31 @@ services:
             MARIADB_USER: server
             MARIADB_PASSWORD: server
             MARIADB_RANDOM_ROOT_PASSWORD: true
-        ports:
-            - 3306:3306
         healthcheck:
             test: mysqladmin ping -h 127.0.0.1 -u $$MARIADB_USER -p=$$MARIADB_PASSWORD
             timeout: 5s
             retries: 10
+        networks: [ database ]
 
+    # Reverse proxy for the Rocket server
+    caddy:
+        image: caddy:latest
+        restart: unless-stopped
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile
+            - ./.caddy/site:/srv
+            - ./.caddy/caddy_data:/data
+            - ./.caddy/caddy_config:/config
+        networks: [ caddy ]
+
+    # Gets logs and send them to the LogTail bucket
     logs_sink:
         image: timberio/vector:0.24.X-distroless-static
         ports:
             - 8686:8686
         volumes:
-            - ~/vector.toml:/etc/vector/vector.toml
+            - ./vector.toml:/etc/vector/vector.toml
+            - /var/run/docker.sock:/var/run/docker.sock

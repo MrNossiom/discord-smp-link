@@ -1,0 +1,7 @@
+{
+	email milomoisson@gmail.com
+}
+
+smp-link.wiro.codes {
+	reverse_proxy client:8000
+}

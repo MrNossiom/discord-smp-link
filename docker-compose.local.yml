@@ -1,13 +1,17 @@
 version: '3.9'
 
+networks:
+    database:
+
+
 services:
     database:
         image: mariadb
+        restart: unless-stopped
         environment:
             MARIADB_DATABASE: server
             MARIADB_USER: server
             MARIADB_PASSWORD: server
             MARIADB_RANDOM_ROOT_PASSWORD: true
-        ports:
-            - 3306:3306
-        network_mode: bridge
+        networks:
+            - database

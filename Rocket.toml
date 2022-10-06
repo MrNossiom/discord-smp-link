@@ -1,0 +1,10 @@
+[default]
+address = "0.0.0.0"
+
+[debug]
+port = 8443
+tls = { certs = "certs/localhost.pem", key = "certs/localhost-key.pem" }
+
+[release]
+port = 8000
+secret_key = "HSuw7vZtY2WyPc7GNjkx8dpxerfLl15hZJenOFe/6FY="

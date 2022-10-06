@@ -1,5 +1,7 @@
 # Build
 target/
+certs/
+.caddy/
 
 # Configuration
 .DS_Store
@@ -7,16 +9,13 @@ target/
 !.vscode/settings.json
 .idea/
 
-# Misc
-logs/
-certs/
-
 # Localisation support
 !.vscode/i18n-ally-custom-framework.yml
 
 # Env
 .env*
 !.env.example
+vector.toml
 
 # Terraform
 .terraform/

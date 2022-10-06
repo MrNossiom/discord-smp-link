@@ -4,10 +4,6 @@
 pub(self) mod handler;
 
 use crate::states::ArcData;
-use figment::{
-	providers::{Env, Format, Toml},
-	Figment,
-};
 use handler::{
 	catch_404, catch_500, contact, discord_redirect, handle_oauth2, index, privacy_policy,
 	terms_and_conditions,
@@ -20,19 +16,17 @@ use tokio::task::{self, JoinHandle};
 pub(crate) fn start_server(
 	data: ArcData,
 ) -> anyhow::Result<JoinHandle<Result<Rocket<Ignite>, rocket::Error>>> {
-	let figment = Figment::from(rocket::Config::default())
-		.merge(Toml::file("Config.toml").nested())
-		.merge(Env::prefixed("SMP_").global());
+	let figment = rocket::Config::figment();
 
 	let rocket = rocket::custom(figment)
 		.mount(
 			"/",
 			routes![
 				index,
-				discord_redirect,
-				privacy_policy,
 				contact,
+				privacy_policy,
 				terms_and_conditions,
+				discord_redirect,
 				handle_oauth2
 			],
 		)
