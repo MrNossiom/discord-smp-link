@@ -1,0 +1,28 @@
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+[sources.docker_logs]
+type = "docker_logs"
+
+[transforms.docker_logs_parser]
+type = "remap"
+inputs = ["docker_logs"]
+file = "/etc/vector/transform.vrl"
+
+[sinks.logtail_http_sink]
+type = "http"
+uri = "https://in.logtail.com/"
+encoding.codec = "json"
+auth.strategy = "bearer"
+auth.token = "${LOGTAIL_SINK_TOKEN:?You must set a valid `LogTail` sink token here}"
+inputs = ["docker_logs_parser"]
+
+## Debug local file sink
+# [sinks.check_file_sink]
+# type = "file"
+# path = "/tmp/vector-%Y-%m-%d.log"
+# buffer = { type = "disk", max_size = 268435488 }
+# encoding = { codec = "json" }
+# compression = "none"
+# inputs = ["docker_logs_parser"]

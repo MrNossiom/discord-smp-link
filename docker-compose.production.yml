@@ -3,7 +3,6 @@ version: '3.7'
 networks:
     caddy:
     database:
-    server:
 
 
 services:
@@ -48,8 +47,11 @@ services:
     # Gets logs and send them to the LogTail bucket
     logs_sink:
         image: timberio/vector:0.24.X-distroless-static
-        ports:
-            - 8686:8686
+        expose: [ 8686 ]
+        network_mode: bridge
+        env_file:
+            - .env.docker
         volumes:
             - ./vector.toml:/etc/vector/vector.toml
+            - ./transform.vrl:/etc/vector/transform.vrl
             - /var/run/docker.sock:/var/run/docker.sock

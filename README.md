@@ -53,3 +53,5 @@ You need to install the C library `mysql-client` before compiling the Rust code.
 Get the config file for `Vector` with the LogTail settings:
 
 > `wget -O ->> vector.toml https://logtail.com/vector-toml/docker/<id>`
+
+> `vector top --url http://<docker bridge ip>:8686/graphql`

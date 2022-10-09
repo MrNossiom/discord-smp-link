@@ -15,7 +15,6 @@ certs/
 # Env
 .env*
 !.env.example
-vector.toml
 
 # Terraform
 .terraform/

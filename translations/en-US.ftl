@@ -37,7 +37,6 @@ debug-force-logout = logout
     .user = user
     .user-description = The user to force disconnect.
 debug-force-logout-done = { $user } has been unregistered.
-debug-force-logout-not-verified = Member { $user } is not verified.
 
 debug-refresh = refresh
     .description = Loads elements in the database.
