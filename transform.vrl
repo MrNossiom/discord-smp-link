@@ -70,3 +70,7 @@ if !is_structured {
 		del(.mysql)
 	}
 }
+
+if !exists(.message) {
+	.message = message
+}
