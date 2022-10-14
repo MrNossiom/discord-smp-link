@@ -26,7 +26,7 @@ CREATE TABLE `classes`
     PRIMARY KEY (`id`),
 
     -- Guarantee that there is no name duplicates in the same Guild.
-    UNIQUE (`name`, `guild_id`),
+    UNIQUE (`name`(255), `guild_id`),
     -- Guarantee that a role isn't used for multiple groups.
     UNIQUE (`guild_id`, `role_id`),
 
