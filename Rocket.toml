@@ -4,6 +4,7 @@ address = "0.0.0.0"
 [debug]
 port = 8443
 tls = { certs = "certs/localhost.pem", key = "certs/localhost-key.pem" }
+shutdown = { ctrlc = false }
 
 [release]
 port = 8000
