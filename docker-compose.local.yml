@@ -13,5 +13,11 @@ services:
             MARIADB_USER: server
             MARIADB_PASSWORD: server
             MARIADB_RANDOM_ROOT_PASSWORD: true
+        volumes:
+            - ./.database:/var/lib/postgresql/data
+        healthcheck:
+            test: mysqladmin ping -h 127.0.0.1 -u $$MARIADB_USER -p$$MARIADB_PASSWORD
+            timeout: 2s
+            retries: 20
         networks:
             - database

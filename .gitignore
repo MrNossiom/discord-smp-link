@@ -1,7 +1,10 @@
 # Build
 target/
 certs/
+
+# Docker Local cache
 .caddy/
+.database/
 
 # Configuration
 .DS_Store

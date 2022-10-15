@@ -25,9 +25,9 @@ services:
             MARIADB_PASSWORD: server
             MARIADB_RANDOM_ROOT_PASSWORD: true
         healthcheck:
-            test: mysqladmin ping -h 127.0.0.1 -u $$MARIADB_USER -p=$$MARIADB_PASSWORD
-            timeout: 5s
-            retries: 10
+            test: mysqladmin ping -h 127.0.0.1 -u $$MARIADB_USER -p$$MARIADB_PASSWORD
+            timeout: 2s
+            retries: 20
         networks: [ database ]
 
     # Reverse proxy for the Rocket server
