@@ -1,5 +1,10 @@
 {
 	email milomoisson@gmail.com
+
+	log {
+		output stdout
+		format json
+	}
 }
 
 smp-link.wiro.codes {

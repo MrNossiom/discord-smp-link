@@ -1,10 +1,7 @@
 _default:
 	@just --list --unsorted --list-heading '' --list-prefix '—— '
 
-# Builds your current project
-build:
-	@cargo build
-# Builds your current project
+# Run your current project
 run:
 	RUST_LOG='info,_=warn,rocket=warn,discord_smp_link=trace' cargo run
 

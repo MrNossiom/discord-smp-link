@@ -9,3 +9,4 @@ shutdown = { ctrlc = false }
 [release]
 port = 8000
 secret_key = "HSuw7vZtY2WyPc7GNjkx8dpxerfLl15hZJenOFe/6FY="
+log_level = "critical"
