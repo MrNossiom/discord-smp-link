@@ -23,12 +23,10 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		.ok_or_else(|| anyhow!("used only in guild"))?;
 
 	let member_id: Option<i32> = {
-		use crate::database::schema::{
-			members::dsl as members, verified_members::dsl as verified_members,
-		};
+		use crate::database::schema::{members, verified_members};
 
-		match verified_members::verified_members
-			.inner_join(members::members)
+		match verified_members::table
+			.inner_join(members::table)
 			.filter(members::discord_id.eq(member.user.id.0))
 			.filter(members::guild_id.eq(member.guild_id.0))
 			.select(verified_members::member_id)
@@ -92,12 +90,10 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 
 /// Disconnects Discord and Google accounts together
 async fn inner_logout(ctx: MessageComponentContext<'_>, member_id: i32) -> InteractionResult {
-	use crate::database::schema::verified_members::dsl as verified_members;
+	use crate::database::schema::verified_members;
 
-	diesel::delete(
-		verified_members::verified_members.filter(verified_members::member_id.eq(member_id)),
-	)
-	.execute(&mut ctx.data.database.get()?)?;
+	diesel::delete(verified_members::table.filter(verified_members::member_id.eq(member_id)))
+		.execute(&mut ctx.data.database.get()?)?;
 
 	let get = ctx.get("event-logout-success", None);
 	ctx.shout(get).await?;

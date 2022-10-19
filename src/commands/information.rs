@@ -19,12 +19,10 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 		.ok_or_else(|| anyhow!("guild only command"))?;
 
 	let verified_member: VerifiedMember = {
-		use crate::database::schema::{
-			members::dsl as members, verified_members::dsl as verified_members,
-		};
+		use crate::database::schema::{members, verified_members};
 
-		let verified_member = verified_members::verified_members
-			.inner_join(members::members)
+		let verified_member = verified_members::table
+			.inner_join(members::table)
 			.filter(members::discord_id.eq(user.id.0))
 			.filter(members::guild_id.eq(guild_id.0))
 			.select((

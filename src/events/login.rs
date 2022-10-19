@@ -4,8 +4,8 @@ use crate::{
 	auth::GoogleAuthentificationError,
 	constants,
 	database::{
-		models::{Class, NewVerifiedMember},
-		DatabasePooledConnection, DieselError,
+		models::{Class, Guild, Member, NewVerifiedMember},
+		schema, DatabasePooledConnection, DieselError,
 	},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
@@ -145,27 +145,21 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		}
 	};
 
-	let id = {
-		use crate::database::schema::members::dsl as members;
+	let id = match Member::with_ids(&member.user.id, &member.guild_id)
+		.select(schema::members::id)
+		.first::<i32>(&mut ctx.data.database.get()?)
+	{
+		Ok(id) => id,
+		Err(DieselError::NotFound) => {
+			let content = ctx.get(
+				"error-member-not-registered",
+				Some(&fluent_args!["user" => member.user.name.as_str()]),
+			);
+			ctx.shout(content).await?;
 
-		match members::members
-			.filter(members::discord_id.eq(member.user.id.0))
-			.filter(members::guild_id.eq(member.guild_id.0))
-			.select(members::id)
-			.first::<i32>(&mut ctx.data.database.get()?)
-		{
-			Ok(id) => id,
-			Err(DieselError::NotFound) => {
-				let content = ctx.get(
-					"error-member-not-registered",
-					Some(&fluent_args!["user" => member.user.name.as_str()]),
-				);
-				ctx.shout(content).await?;
-
-				return Ok(());
-			}
-			Err(error) => return Err(error.into()),
+			return Ok(());
 		}
+		Err(error) => return Err(error.into()),
 	};
 
 	let new_verified_member = NewVerifiedMember {
@@ -176,22 +170,14 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		class_id,
 	};
 
-	{
-		use crate::database::schema::verified_members::dsl as verified_members;
-
-		diesel::insert_into(verified_members::verified_members)
-			.values(new_verified_member)
-			.execute(&mut connection)?;
-	}
+	new_verified_member.insert().execute(&mut connection)?;
 
 	match member.clone().add_role(ctx.discord, verified_role).await {
 		Ok(_) => {}
 
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
-			use crate::database::schema::guilds::dsl as guilds;
-
-			diesel::update(guilds::guilds.filter(guilds::id.eq(member.guild_id.0)))
-				.set(guilds::verified_role_id.eq::<Option<u64>>(None))
+			diesel::update(schema::guilds::table.filter(schema::guilds::id.eq(member.guild_id.0)))
+				.set(schema::guilds::verified_role_id.eq::<Option<u64>>(None))
 				.execute(&mut connection)?;
 		}
 
@@ -227,12 +213,13 @@ fn get_and_check_login_components(
 	guild_id: &GuildId,
 ) -> Result<(RoleId, Vec<Class>, String), CheckLoginComponentsError> {
 	let (verified_role, email_pattern) = {
-		use crate::database::schema::guilds::dsl as guilds;
-
-		let (inner_role_id, email_pattern): (Option<u64>, Option<String>) = guilds::guilds
-			.filter(guilds::id.eq(guild_id.0))
-			.select((guilds::verified_role_id, guilds::verification_email_domain))
-			.first(connection)?;
+		let (inner_role_id, email_pattern): (Option<u64>, Option<String>) =
+			Guild::with_id(guild_id)
+				.select((
+					schema::guilds::verified_role_id,
+					schema::guilds::verification_email_domain,
+				))
+				.first(connection)?;
 
 		let inner_role = match inner_role_id {
 			Some(role_id) => RoleId(role_id),
@@ -257,22 +244,14 @@ fn get_and_check_login_components(
 		(inner_role, email_pattern)
 	};
 
-	let classes = {
-		use crate::database::schema::classes::dsl as classes;
+	let classes = Class::all_from_guild(guild_id).get_results::<Class>(connection)?;
 
-		let classes = classes::classes
-			.filter(classes::guild_id.eq(guild_id.0))
-			.get_results::<Class>(connection)?;
-
-		if classes.is_empty() {
-			// TODO: translate
-			return Err(CheckLoginComponentsError::GuildNotTotallySetup(
-				"No classes found".into(),
-			));
-		}
-
-		classes
-	};
+	if classes.is_empty() {
+		// TODO: translate
+		return Err(CheckLoginComponentsError::GuildNotTotallySetup(
+			"No classes found".into(),
+		));
+	}
 
 	Ok((verified_role, classes, email_pattern))
 }

@@ -8,6 +8,7 @@ use diesel::{
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 pub(crate) mod models;
+pub(crate) mod query;
 /// The automatically generated schema by `Diesel`
 #[rustfmt::skip]
 pub(crate) mod schema;

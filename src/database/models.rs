@@ -3,10 +3,10 @@
 //! `Diesel` models that represent database objects
 
 use super::schema::*;
-use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable};
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 
 /// Represent a `Discord` guild
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable)]
 pub(crate) struct Guild {
 	pub(crate) id: u64,
 
@@ -33,7 +33,7 @@ pub(crate) struct NewGuild<'a> {
 }
 
 /// Represent a known user with `Discord` metadata and some other informations
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
 #[diesel(table_name = members, belongs_to(Guild))]
 pub(crate) struct Member {
 	pub(crate) id: i32,
@@ -56,7 +56,7 @@ pub(crate) struct NewMember<'a> {
 }
 
 /// Represent a registered user with `Google` metadata
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
 #[diesel(table_name = verified_members, belongs_to(Member), primary_key(member_id))]
 pub(crate) struct VerifiedMember {
 	pub(crate) member_id: i32,
@@ -82,7 +82,7 @@ pub(crate) struct NewVerifiedMember<'a> {
 }
 
 /// Represent a Class
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
 #[diesel(table_name = classes, belongs_to(Guild))]
 pub(crate) struct Class {
 	pub(crate) id: i32,
@@ -104,7 +104,7 @@ pub(crate) struct NewClass<'a> {
 }
 
 /// Represent a Group
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
 #[diesel(table_name = groups, belongs_to(Guild))]
 pub(crate) struct Group {
 	pub(crate) id: i32,
@@ -126,7 +126,7 @@ pub(crate) struct NewGroup<'a> {
 }
 
 /// Represent a relation between a [`Group`] and a [`VerifiedMember`]
-#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Associations)]
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
 #[diesel(table_name = groups_of_verified_members, belongs_to(Group), belongs_to(VerifiedMember), primary_key(verified_member_id, group_id))]
 pub(crate) struct GroupOfVerifiedMember {
 	pub(crate) verified_member_id: i32,

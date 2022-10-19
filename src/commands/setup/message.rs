@@ -2,6 +2,7 @@
 
 use crate::{
 	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
+	database::{models::Guild, schema},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
@@ -22,12 +23,10 @@ pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
 		.ok_or_else(|| anyhow!("guild only command"))?;
 
 	let verified_role_was_registered = {
-		use crate::database::schema::guilds;
 		use diesel::prelude::*;
 
-		let role: Option<u64> = guilds::table
-			.filter(guilds::id.eq(guild_id.0))
-			.select(guilds::verified_role_id)
+		let role: Option<u64> = Guild::with_id(&guild_id)
+			.select(schema::guilds::verified_role_id)
 			.first(&mut connection)?;
 
 		role.is_some()

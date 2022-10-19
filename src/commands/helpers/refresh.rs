@@ -31,14 +31,10 @@ pub(super) async fn member(
 	ctx: ApplicationContext<'_>,
 	member: serenity::Member,
 ) -> InteractionResult {
-	use crate::database::schema::members::dsl as members;
-
 	let mut connection = ctx.data.database.get()?;
 
-	if let Ok(member) = members::members
-		.filter(members::discord_id.eq(member.user.id.0))
-		.filter(members::guild_id.eq(member.guild_id.0))
-		.first::<Member>(&mut connection)
+	if let Ok(member) =
+		Member::with_ids(&member.user.id, &member.guild_id).first::<Member>(&mut connection)
 	{
 		let content = ctx.get(
 			"debug-refresh-member-already-in-database",
@@ -46,7 +42,7 @@ pub(super) async fn member(
 		);
 		ctx.shout(content).await?;
 	} else {
-		let new_user = NewMember {
+		let new_member = NewMember {
 			guild_id: member.guild_id.0,
 			username: member.user.name.as_str(),
 			discord_id: member.user.id.0,
@@ -54,13 +50,11 @@ pub(super) async fn member(
 
 		let content = ctx.get(
 			"debug-refresh-member-added",
-			Some(&fluent_args!["user" => new_user.username]),
+			Some(&fluent_args!["user" => new_member.username]),
 		);
 		ctx.shout(content).await?;
 
-		diesel::insert_into(members::members)
-			.values(&new_user)
-			.execute(&mut connection)?;
+		new_member.insert().execute(&mut connection)?;
 	}
 
 	Ok(())
@@ -70,8 +64,6 @@ pub(super) async fn member(
 /// Loads every guild member in the database
 #[command(slash_command, owners_only, hide_in_help)]
 pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
-	use crate::database::schema::members::dsl as members;
-
 	let mut connection = ctx.data.database.get()?;
 	let guild_id = ctx
 		.interaction
@@ -94,16 +86,13 @@ pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
 				continue;
 			}
 
-			let new_user = NewMember {
+			let new_member = NewMember {
 				guild_id: member.guild_id.0,
 				username: member.user.name.as_str(),
 				discord_id: member.user.id.0,
 			};
 
-			match diesel::insert_into(members::members)
-				.values(&new_user)
-				.execute(&mut connection)
-			{
+			match new_member.insert().execute(&mut connection) {
 				Ok(_) => count += 1,
 				Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => continue,
 				Err(error) => return Err(error.into()),
