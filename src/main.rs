@@ -82,6 +82,7 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 				let mut commands = vec![
 					setup(),
 					information(),
+					class(),
 					helpers::debug(),
 				];
 

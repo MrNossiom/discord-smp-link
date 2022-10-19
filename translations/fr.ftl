@@ -1,10 +1,29 @@
-## General
+## Common
 
 done = Fini!
 continue = Continuer
-
+cancel = Annuler
+and = et
 
 ## Commands
+
+# Class
+
+class = class
+
+class-add = add
+
+class-remove = remove
+
+class-list = liste
+    .description = Liste les classes de ce serveur
+    .filter = filtre
+    .filter-description = Filtre les classes avec un nom
+class-list-title = Liste des classes
+class-list-title-with-filter = Liste des classes avec le filtre `{$filter}`
+class-list-none = Il n'y a pas de classes sur ce serveur.
+class-list-none-with-filter = Il n'y a pas de classes sur ce serveur avec le filtre `{$filter}`.
+
 
 # Setup
 setup = installation

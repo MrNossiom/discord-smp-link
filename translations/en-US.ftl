@@ -1,10 +1,26 @@
-## General
+## Common
 
 done = Done!
 continue = Continue
-
+cancel = Cancel
+and = and
 
 ## Commands
+
+class = classe
+
+class-add = ajoute
+
+class-remove = retire
+
+class-list = list
+    .description = List the classes of the guild
+    .filter = filter
+    .filter-description = Filter the classes with a name
+class-list-title = List of classes
+class-list-title-with-filter = List of classes with the filter `{$filter}`
+class-list-none = There is no classes in the guild.
+class-list-none-with-filter = There is no classes in this guild with the filter `{$filter}`.
 
 # Setup
 setup = setup

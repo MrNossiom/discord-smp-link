@@ -9,9 +9,11 @@ use fluent::fluent_args;
 use poise::BoxFuture;
 use uuid::Uuid;
 
+mod class;
 mod information;
 mod setup;
 
+pub(crate) use class::class;
 pub(crate) use information::information;
 pub(crate) use setup::setup;
 pub(crate) mod helpers;
