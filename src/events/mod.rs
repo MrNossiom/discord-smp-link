@@ -4,12 +4,13 @@ use crate::{
 	constants::events,
 	database::{
 		models::{Guild, Member, NewGuild, NewMember},
+		prelude::*,
 		schema::{guilds, members},
 	},
 	states::{ArcData, FrameworkContext, MessageComponentContext},
 };
 use anyhow::Result;
-use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use poise::{
 	serenity_prelude::{Context, Interaction},
 	Event,
@@ -35,12 +36,13 @@ pub(crate) async fn event_handler(
 		}
 
 		Event::GuildMemberAddition { new_member } => {
-			let mut connection = data.database.get()?;
+			let mut connection = data.database.get().await?;
 
 			if let Ok(user) = members::table
 				.filter(members::discord_id.eq(new_member.user.id.0))
 				.filter(members::guild_id.eq(new_member.guild_id.0))
 				.first::<Member>(&mut connection)
+				.await
 			{
 				tracing::warn!(
 					guild_id = user.discord_id,
@@ -62,7 +64,8 @@ pub(crate) async fn event_handler(
 
 				diesel::insert_into(members::table)
 					.values(&new_user)
-					.execute(&mut connection)?;
+					.execute(&mut connection)
+					.await?;
 			}
 
 			Ok(())
@@ -76,17 +79,19 @@ pub(crate) async fn event_handler(
 					.filter(members::guild_id.eq(guild_id.0))
 					.filter(members::discord_id.eq(user.id.0)),
 			)
-			.execute(&mut data.database.get()?)?;
+			.execute(&mut data.database.get().await?)
+			.await?;
 
 			Ok(())
 		}
 
 		Event::GuildCreate { guild, .. } => {
-			let mut connection = data.database.get()?;
+			let mut connection = data.database.get().await?;
 
 			if let Ok(guild) = guilds::table
 				.filter(guilds::id.eq(guild.id.0))
 				.first::<Guild>(&mut connection)
+				.await
 			{
 				tracing::warn!(
 					guild_id = guild.id,
@@ -111,7 +116,8 @@ pub(crate) async fn event_handler(
 
 				diesel::insert_into(guilds::table)
 					.values(&new_guild)
-					.execute(&mut connection)?;
+					.execute(&mut connection)
+					.await?;
 			}
 
 			Ok(())
@@ -121,7 +127,8 @@ pub(crate) async fn event_handler(
 			tracing::warn!("Deleting guild ({})", incomplete.id);
 
 			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.0)))
-				.execute(&mut data.database.get()?)?;
+				.execute(&mut data.database.get().await?)
+				.await?;
 
 			Ok(())
 		}

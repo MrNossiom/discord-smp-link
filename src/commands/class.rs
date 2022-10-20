@@ -1,11 +1,12 @@
 //! Setup messages for roles interactions
 
 use crate::{
-	database::{models::Class, schema},
+	database::{models::Class, prelude::*, schema},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
 use anyhow::anyhow;
+use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::command;
 
@@ -31,12 +32,11 @@ pub(crate) async fn add(ctx: ApplicationContext<'_>, _class_name: String) -> Int
 // TODO: optimize with a cache or whatever, db query intensive
 /// The autocomplete function for the `class remove` name parameter.
 async fn autocomplete_classes<'a>(ctx: ApplicationContext<'_>, partial: &'a str) -> Vec<String> {
-	use diesel::prelude::*;
-
 	Class::all_from_guild(&ctx.interaction.guild_id().unwrap())
 		.filter(schema::classes::name.like(format!("%{}%", partial)))
 		.select(schema::classes::name)
-		.get_results::<String>(&mut ctx.data.database.get().unwrap())
+		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
+		.await
 		.unwrap()
 }
 
@@ -60,8 +60,6 @@ pub(crate) async fn list(ctx: ApplicationContext<'_>, filter: Option<String>) ->
 	// TODO: check role permissions
 
 	let classes: Vec<String> = {
-		use diesel::prelude::*;
-
 		let mut query = Class::all_from_guild(&guild_id)
 			.select(schema::classes::name)
 			.into_boxed();
@@ -70,7 +68,9 @@ pub(crate) async fn list(ctx: ApplicationContext<'_>, filter: Option<String>) ->
 			query = query.filter(schema::classes::name.like(format!("%{}%", filter)));
 		};
 
-		query.get_results::<String>(&mut ctx.data.database.get()?)?
+		query
+			.get_results::<String>(&mut ctx.data.database.get().await?)
+			.await?
 	};
 
 	if classes.is_empty() {

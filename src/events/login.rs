@@ -5,13 +5,14 @@ use crate::{
 	constants,
 	database::{
 		models::{Class, Guild, Member, NewVerifiedMember},
+		prelude::*,
 		schema, DatabasePooledConnection, DieselError,
 	},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
 use anyhow::{anyhow, Context};
-use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::serenity_prelude::{
 	self as serenity, component::ButtonStyle, CollectComponentInteraction, CreateSelectMenu,
@@ -27,7 +28,7 @@ use tracing::instrument;
 #[allow(clippy::too_many_lines)]
 #[instrument(skip_all, fields(user_id = %ctx.interaction.user.id))]
 pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult {
-	let mut connection = ctx.data.database.get()?;
+	let mut connection = ctx.data.database.get().await?;
 	let member = ctx
 		.interaction
 		.member
@@ -35,7 +36,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.ok_or_else(|| anyhow!("used only in guild"))?;
 
 	let (verified_role, mut classes, email_pattern) =
-		match get_and_check_login_components(&mut connection, &member.guild_id) {
+		match get_and_check_login_components(&mut connection, &member.guild_id).await {
 			Ok(v) => v,
 			Err(err) => match err {
 				CheckLoginComponentsError::Database(err) => return Err(err.into()),
@@ -133,7 +134,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 			interaction
 				.data
 				.values
-				.first()
+				.get(0)
 				.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
 				.parse::<i32>()?
 		}
@@ -147,7 +148,8 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 
 	let id = match Member::with_ids(&member.user.id, &member.guild_id)
 		.select(schema::members::id)
-		.first::<i32>(&mut ctx.data.database.get()?)
+		.first::<i32>(&mut ctx.data.database.get().await?)
+		.await
 	{
 		Ok(id) => id,
 		Err(DieselError::NotFound) => {
@@ -170,7 +172,10 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		class_id,
 	};
 
-	new_verified_member.insert().execute(&mut connection)?;
+	new_verified_member
+		.insert()
+		.execute(&mut connection)
+		.await?;
 
 	match member.clone().add_role(ctx.discord, verified_role).await {
 		Ok(_) => {}
@@ -178,7 +183,8 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
 			diesel::update(schema::guilds::table.filter(schema::guilds::id.eq(member.guild_id.0)))
 				.set(schema::guilds::verified_role_id.eq::<Option<u64>>(None))
-				.execute(&mut connection)?;
+				.execute(&mut connection)
+				.await?;
 		}
 
 		Err(error) => return Err(error.into()),
@@ -208,7 +214,7 @@ enum CheckLoginComponentsError {
 }
 
 /// Extracted logic
-fn get_and_check_login_components(
+async fn get_and_check_login_components(
 	connection: &mut DatabasePooledConnection,
 	guild_id: &GuildId,
 ) -> Result<(RoleId, Vec<Class>, String), CheckLoginComponentsError> {
@@ -219,7 +225,8 @@ fn get_and_check_login_components(
 					schema::guilds::verified_role_id,
 					schema::guilds::verification_email_domain,
 				))
-				.first(connection)?;
+				.first(connection)
+				.await?;
 
 		let inner_role = match inner_role_id {
 			Some(role_id) => RoleId(role_id),
@@ -244,7 +251,9 @@ fn get_and_check_login_components(
 		(inner_role, email_pattern)
 	};
 
-	let classes = Class::all_from_guild(guild_id).get_results::<Class>(connection)?;
+	let classes = Class::all_from_guild(guild_id)
+		.get_results::<Class>(connection)
+		.await?;
 
 	if classes.is_empty() {
 		// TODO: translate

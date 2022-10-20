@@ -1,11 +1,13 @@
 //! A set of commands to force actions like login or logout
 
 use crate::{
-	database::schema::{members::dsl as members, verified_members::dsl as verified_members},
+	database::{
+		prelude::*,
+		schema::{members, verified_members},
+	},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use diesel::prelude::*;
 use fluent::fluent_args;
 use poise::{command, serenity_prelude as serenity};
 
@@ -22,19 +24,19 @@ pub(super) async fn logout(
 	ctx: ApplicationContext<'_>,
 	user: serenity::Member,
 ) -> InteractionResult {
-	let mut connection = ctx.data.database.get()?;
+	let mut connection = ctx.data.database.get().await?;
 
-	if let Ok(member_id) = verified_members::verified_members
-		.inner_join(members::members)
+	if let Ok(member_id) = verified_members::table
+		.inner_join(members::table)
 		.filter(members::discord_id.eq(user.user.id.0))
 		.filter(members::guild_id.eq(user.guild_id.0))
 		.select(verified_members::member_id)
 		.first::<i32>(&mut connection)
+		.await
 	{
-		diesel::delete(
-			verified_members::verified_members.filter(verified_members::member_id.eq(member_id)),
-		)
-		.execute(&mut connection)?;
+		diesel::delete(verified_members::table.filter(verified_members::member_id.eq(member_id)))
+			.execute(&mut connection)
+			.await?;
 
 		let content = ctx.get(
 			"debug-force-logout-done",

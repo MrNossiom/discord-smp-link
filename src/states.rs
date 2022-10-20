@@ -4,9 +4,9 @@ use crate::{
 	auth::GoogleAuthentification, database::DatabasePool, polyfill, translation::Translations,
 };
 use anyhow::{anyhow, Context as _};
-use diesel::{
-	r2d2::{ConnectionManager, Pool},
-	MysqlConnection,
+use diesel_async::{
+	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
+	AsyncMysqlConnection,
 };
 use dotenvy::dotenv;
 use oauth2::{ClientId, ClientSecret};
@@ -18,6 +18,7 @@ use poise::{
 use secrecy::{ExposeSecret, Secret};
 use std::{
 	env::{self, VarError},
+	fmt,
 	sync::Arc,
 };
 use unic_langid::langid;
@@ -83,7 +84,6 @@ impl Config {
 }
 
 /// App global data
-#[derive(Debug)]
 pub(crate) struct Data {
 	/// An access to the database
 	pub(crate) database: DatabasePool,
@@ -95,15 +95,26 @@ pub(crate) struct Data {
 	pub(crate) translations: Translations,
 }
 
+impl fmt::Debug for Data {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("Data")
+			.field("auth", &&self.auth)
+			.field("config", &&self.config)
+			.field("translations", &&self.translations)
+			.finish()
+	}
+}
+
 impl Data {
 	/// Parse the bot data from
 	pub(crate) fn new() -> anyhow::Result<Self> {
 		let config = Config::from_dotenv()?;
 
-		let manager =
-			ConnectionManager::<MysqlConnection>::new(config.database_url.expose_secret());
-		let database = Pool::builder()
-			.build(manager)
+		let manager = AsyncDieselConnectionManager::<AsyncMysqlConnection>::new(
+			config.database_url.expose_secret(),
+		);
+		let database = Pool::builder(manager)
+			.build()
 			.context("failed to create database pool")?;
 
 		// TODO: make the default locale configurable

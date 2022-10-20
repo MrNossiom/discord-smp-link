@@ -1,12 +1,12 @@
 //! Context Command for informations about a verified member.
 
 use crate::{
-	database::models::VerifiedMember,
+	database::{models::VerifiedMember, prelude::*},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::{command, serenity_prelude::User};
 
@@ -32,7 +32,8 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 				verified_members::last_name,
 				verified_members::class_id,
 			))
-			.first::<VerifiedMember>(&mut ctx.data.database.get()?);
+			.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
+			.await;
 
 		match verified_member {
 			Ok(x) => x,

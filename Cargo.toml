@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.65", features = ["backtrace"] }
 console-subscriber = "0.1.8"
+diesel-async = { version = "0.1.1", features = ["mysql", "deadpool"] }
 diesel_migrations = { version = "2.0.0", features = ["mysql"] }
 dotenvy = "0.15.5"
 fluent = "0.16.0"
@@ -39,7 +40,7 @@ url = "2.3.1"
 [dependencies.diesel]
 version = "2.0.1"
 default-features = false
-features = ["mysql", "r2d2"]
+features = ["mysql"]
 
 [dependencies.reqwest]
 version = "0.11.12"

@@ -1,15 +1,15 @@
 //! A set of commands to refresh the database
 
 use crate::{
-	database::models::{Member, NewMember},
+	database::{
+		models::{Member, NewMember},
+		prelude::*,
+	},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel::{
-	prelude::*,
-	result::{DatabaseErrorKind, Error as DieselError},
-};
+use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use fluent::fluent_args;
 use poise::{command, serenity_prelude as serenity};
 
@@ -31,10 +31,11 @@ pub(super) async fn member(
 	ctx: ApplicationContext<'_>,
 	member: serenity::Member,
 ) -> InteractionResult {
-	let mut connection = ctx.data.database.get()?;
+	let mut connection = ctx.data.database.get().await?;
 
-	if let Ok(member) =
-		Member::with_ids(&member.user.id, &member.guild_id).first::<Member>(&mut connection)
+	if let Ok(member) = Member::with_ids(&member.user.id, &member.guild_id)
+		.first::<Member>(&mut connection)
+		.await
 	{
 		let content = ctx.get(
 			"debug-refresh-member-already-in-database",
@@ -54,7 +55,7 @@ pub(super) async fn member(
 		);
 		ctx.shout(content).await?;
 
-		new_member.insert().execute(&mut connection)?;
+		new_member.insert().execute(&mut connection).await?;
 	}
 
 	Ok(())
@@ -64,7 +65,7 @@ pub(super) async fn member(
 /// Loads every guild member in the database
 #[command(slash_command, owners_only, hide_in_help)]
 pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
-	let mut connection = ctx.data.database.get()?;
+	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx
 		.interaction
 		.guild_id()
@@ -92,7 +93,7 @@ pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
 				discord_id: member.user.id.0,
 			};
 
-			match new_member.insert().execute(&mut connection) {
+			match new_member.insert().execute(&mut connection).await {
 				Ok(_) => count += 1,
 				Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => continue,
 				Err(error) => return Err(error.into()),

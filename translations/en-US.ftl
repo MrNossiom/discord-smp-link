@@ -10,8 +10,10 @@ and = and
 class = classe
 
 class-add = ajoute
+    .description = Ajoute une nouvelle classe au serveur
 
 class-remove = retire
+    .description = Enlève une classe du serveur
 
 class-list = list
     .description = List the classes of the guild

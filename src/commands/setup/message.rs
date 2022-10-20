@@ -2,7 +2,7 @@
 
 use crate::{
 	constants::events::{LOGIN_BUTTON_INTERACTION, LOGOUT_BUTTON_INTERACTION},
-	database::{models::Guild, schema},
+	database::{models::Guild, prelude::*, schema},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
@@ -16,18 +16,17 @@ use poise::{command, serenity_prelude::component::ButtonStyle};
 	default_member_permissions = "ADMINISTRATOR"
 )]
 pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
-	let mut connection = ctx.data.database.get()?;
+	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx
 		.interaction
 		.guild_id()
 		.ok_or_else(|| anyhow!("guild only command"))?;
 
 	let verified_role_was_registered = {
-		use diesel::prelude::*;
-
 		let role: Option<u64> = Guild::with_id(&guild_id)
 			.select(schema::guilds::verified_role_id)
-			.first(&mut connection)?;
+			.first(&mut connection)
+			.await?;
 
 		role.is_some()
 	};
@@ -64,11 +63,11 @@ pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
 	// Update the `setup_message_id`
 	{
 		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};
-		use diesel::prelude::*;
 
 		diesel::update(guilds.find(guild_id.0))
 			.set(setup_message_id.eq(reply.id.0))
-			.execute(&mut connection)?;
+			.execute(&mut connection)
+			.await?;
 	}
 
 	Ok(())

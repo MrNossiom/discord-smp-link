@@ -1,12 +1,12 @@
 //! Command to disconnect Discord and Google accounts together.
 
 use crate::{
-	database::DieselError,
+	database::{prelude::*, DieselError},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction};
 use std::time::Duration;
 
@@ -30,7 +30,8 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 			.filter(members::discord_id.eq(member.user.id.0))
 			.filter(members::guild_id.eq(member.guild_id.0))
 			.select(verified_members::member_id)
-			.first(&mut ctx.data.database.get()?)
+			.first(&mut ctx.data.database.get().await?)
+			.await
 		{
 			Ok(x) => Some(x),
 			Err(DieselError::NotFound) => None,
@@ -93,7 +94,8 @@ async fn inner_logout(ctx: MessageComponentContext<'_>, member_id: i32) -> Inter
 	use crate::database::schema::verified_members;
 
 	diesel::delete(verified_members::table.filter(verified_members::member_id.eq(member_id)))
-		.execute(&mut ctx.data.database.get()?)?;
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
 
 	let get = ctx.get("event-logout-success", None);
 	ctx.shout(get).await?;

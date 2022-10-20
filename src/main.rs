@@ -105,8 +105,7 @@ async fn main() -> anyhow::Result<()> {
 	setup_logging(Arc::clone(&data))?;
 	let _handle = start_server(Arc::clone(&data))?;
 
-	run_migrations(&mut data.database.get().context("failed to get a connection")?)
-		.expect("failed to run migrations");
+	run_migrations(data.config.database_url.expose_secret()).context("failed to run migrations")?;
 
 	if let Err(error) = build_client(Arc::clone(&data)).run().await {
 		return Err(anyhow!("Client exited with error: {}", error));

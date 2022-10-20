@@ -5,6 +5,7 @@
 		"builtins",
 		"cooldown",
 		"csrf",
+		"deadpool",
 		"jinja",
 		"langid",
 		"libmysqlclient",
