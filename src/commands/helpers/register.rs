@@ -10,8 +10,15 @@ use poise::{
 };
 
 /// Register or unregister all slash commands either globally or in a specific guild
-#[command(slash_command, owners_only, hide_in_help)]
-pub(super) async fn register(
+#[command(
+	slash_command,
+	owners_only,
+	hide_in_help,
+	guild_only,
+	rename = "register"
+)]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(super) async fn debug_register(
 	ctx: ApplicationContext<'_>,
 	register: Option<bool>,
 	global: Option<bool>,

@@ -136,7 +136,7 @@ impl Translations {
 		parent_name: Option<String>,
 	) {
 		let full_command_name = match parent_name {
-			Some(parent_name) => format!("{}-{}", parent_name, command.name),
+			Some(parent_name) => format!("{}_{}", parent_name, command.name),
 			None => command.name.clone(),
 		};
 

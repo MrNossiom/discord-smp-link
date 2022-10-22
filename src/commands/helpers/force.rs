@@ -13,14 +13,21 @@ use poise::{command, serenity_prelude as serenity};
 
 /// A set of commands to force actions like login or logout
 #[allow(clippy::unused_async)]
-#[command(slash_command, owners_only, hide_in_help, subcommands("logout"))]
-pub(super) async fn force(_ctx: ApplicationContext<'_>) -> InteractionResult {
+#[command(
+	slash_command,
+	owners_only,
+	hide_in_help,
+	rename = "force",
+	subcommands("debug_force_logout")
+)]
+pub(super) async fn debug_force(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Force logout a member
-#[command(slash_command, owners_only, hide_in_help)]
-pub(super) async fn logout(
+#[command(slash_command, owners_only, hide_in_help, rename = "logout")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(super) async fn debug_force_logout(
 	ctx: ApplicationContext<'_>,
 	user: serenity::Member,
 ) -> InteractionResult {
@@ -39,7 +46,7 @@ pub(super) async fn logout(
 			.await?;
 
 		let content = ctx.get(
-			"debug-force-logout-done",
+			"debug_force_logout-done",
 			Some(&fluent_args!["user" => user.user.name]),
 		);
 		ctx.shout(content).await?;

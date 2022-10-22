@@ -1,15 +1,18 @@
 //! Act on discord client metadata
 
-use crate::states::{ApplicationContext, InteractionResult, PrefixContext};
-use poise::command;
+use crate::states::{ApplicationContext, Command, InteractionResult};
+use poise::{
+	command,
+	serenity_prelude::{self as serenity, CreateApplicationCommands, GuildId, Http},
+};
 
 mod force;
 mod refresh;
 mod register;
 
-use force::force;
-use refresh::refresh;
-use register::register;
+use force::debug_force;
+use refresh::debug_refresh;
+use register::debug_register;
 
 /// A set of commands restricted to owners
 /// Can be registered with [`_register`] prefix command

@@ -7,34 +7,61 @@ and = et
 
 ## Commands
 
-# Class
+# Classes
 
-class = class
+classes = classes
 
-class-add = add
-    .description = Add a new class to the guild
+classes_add = ajoute
+    .description = Ajoute une nouvelle classe au serveur
+    .class_name = nom
+    .class_name-description = Nom de la nouvelle classe à ajouter
+    .maybe_role = role
+    .maybe_role-description = Un rôle à assigner à la classe, sinon un rôle est créé
 
-class-remove = remove
-    .description = Remove a class from the guild
+classes_remove = retire
+    .description = Enlève une classe du serveur
+    .class_name = nom
+    .class_name-description = Nom de la classe à retirer
 
-class-list = liste
-    .description = Liste les classes de ce serveur
+classes_list = liste
+    .description = Liste les classes du serveur
     .filter = filtre
     .filter-description = Filtre les classes avec un nom
-class-list-title = Liste des classes
-class-list-title-with-filter = Liste des classes avec le filtre `{$filter}`
-class-list-none = Il n'y a pas de classes sur ce serveur.
-class-list-none-with-filter = Il n'y a pas de classes sur ce serveur avec le filtre `{$filter}`.
+classes_list-title = Liste des classes
+classes_list-title-with-filter = Liste des classes avec le filtre `{$filter}`
+classes_list-none = Il n'y a pas de classes sur ce serveur.
+classes_list-none-with-filter = Il n'y a pas de classes sur ce serveur avec le filtre `{$filter}`.
 
+
+# Groups
+
+groups = groupes
+
+groups_add = ajoute
+    .description = Ajoute un nouveau groupe au serveur
+    .group_name = nom
+    .group_name-description = Nom du nouveau groupe à ajouter
+    .maybe_role = role
+    .maybe_role-description = Un rôle à assigner au groupe, sinon un rôle est créé
+
+groups_remove = retire
+    .description = Enlève un groupe du serveur
+    .group_name = nom
+    .group_name-description = Nom du groupe à retirer
+
+groups_list = liste
+    .description = Liste les groupes du serveur
+    .filter = filtre
+    .filter-description = Filtre les groupes avec un nom
 
 # Setup
 setup = installation
 
-setup-message = message
+setup_message = message
     .description = Met en place le message de connexion et de déconnexion.
-setup-message-message = Connecte toi ou déconnecte toi.
+setup_message-message = Connecte toi ou déconnecte toi.
 
-setup-role = role
+setup_role = role
     .description = Met en place le rôle verifié.
     .role = role
     .role-description = Rôle verifié
@@ -48,29 +75,29 @@ information = information
 # Dev
 debug = debug
 
-debug-force = force
+debug_force = force
 
-debug-force-logout = connextion
+debug_force_logout = connextion
     .description = Force un utilisateur ·à se connecter.
     .user = utilisateur
     .user-description = L'utilisateur à forcer à se connecter.
-debug-force-logout-done = { $user } à été déconnecté.
+debug_force_logout-done = { $user } à été déconnecté.
 
-debug-refresh = recharge
+debug_refresh = recharge
     .description = Recharge des éléments dans la base de données.
 
-debug-refresh-member = membre
+debug_refresh_member = membre
     .description = Charge un membre dans la base de données.
     .member = membre
     .member-description = Le membre à charger.
-debug-refresh-member-already-in-database = { $user } est déjà dans la base de donées.
-debug-refresh-member-added = { $user } à bien été ajouté.
+debug_refresh_member-already-in-database = { $user } est déjà dans la base de donées.
+debug_refresh_member-added = { $user } à bien été ajouté.
 
-debug-refresh-members = membres
+debug_refresh_members = membres
     .description = Charge tout les membres dans la base de données.
-debug-refresh-members-added = { $count } membres ont étés ajoutés à la base de donées.
+debug_refresh_members-added = { $count } membres ont étés ajoutés à la base de donées.
 
-debug-register = enregistrer
+debug_register = enregistrer
     .description = Enregistre les commandes slash.
     .register = enregistrer
     .register-description = Enregistrer ou Supprimer ?

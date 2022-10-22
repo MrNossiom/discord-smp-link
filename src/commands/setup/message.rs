@@ -10,12 +10,9 @@ use anyhow::anyhow;
 use poise::{command, serenity_prelude::component::ButtonStyle};
 
 /// Sets the login and logout message.
-#[command(
-	slash_command,
-	guild_only,
-	default_member_permissions = "ADMINISTRATOR"
-)]
-pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
+#[command(slash_command, guild_only, rename = "message")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(crate) async fn setup_message(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx
 		.interaction

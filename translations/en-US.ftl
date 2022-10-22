@@ -7,32 +7,61 @@ and = and
 
 ## Commands
 
-class = classe
+# Classes
 
-class-add = ajoute
-    .description = Ajoute une nouvelle classe au serveur
+classes = classes
 
-class-remove = retire
-    .description = Enlève une classe du serveur
+classes_add = add
+    .description = Add a new class to the guild
+    .class_name = name
+    .class_name-description = Class name to add
+    .maybe_role = role
+    .maybe_role-description = A role to assign to this class, if not provided a role will be created
 
-class-list = list
+classes_remove = remove
+    .description = Remove a class from the guild
+    .class_name = name
+    .class_name-description = Class name to remove
+
+classes_list = list
     .description = List the classes of the guild
     .filter = filter
     .filter-description = Filter the classes with a name
-class-list-title = List of classes
-class-list-title-with-filter = List of classes with the filter `{$filter}`
-class-list-none = There is no classes in the guild.
-class-list-none-with-filter = There is no classes in this guild with the filter `{$filter}`.
+classes_list-title = List of classes
+classes_list-title-with-filter = List of classes with the filter `{$filter}`
+classes_list-none = There is no classes in the guild.
+classes_list-none-with-filter = There is no classes in this guild with the filter `{$filter}`.
+
+# Groups
+
+groups = groups
+
+groups_add = add
+    .description = Add a new group to the guild
+    .group_name = name
+    .group_name-description = Group name to add
+    .maybe_role = role
+    .maybe_role-description = A role to assign to this group, if not provided a role will be created
+
+groups_remove = remove
+    .description = Remove a group from the guild
+    .group_name = name
+    .group_name-description = Group name to remove
+
+groups_list = list
+    .description = List the groups of the guild
+    .filter = filter
+    .filter-description = Filter the groups with a name
 
 # Setup
 setup = setup
     .description = A set of commands to setup the bot.
 
-setup-message = message
+setup_message = message
     .description = Sets the login and logout message.
-setup-message-message = Login or Logout?
+setup_message-message = Login or Logout?
 
-setup-role = role
+setup_role = role
     .description = Setup the role to apply to verified members.
     .role = role
     .role-description = Which role to give
@@ -47,30 +76,30 @@ information = information
 debug = debug
     .description = Debug related commands.
 
-debug-force = force
+debug_force = force
     .description = Force an action on an other user.
 
-debug-force-logout = logout
+debug_force_logout = logout
     .description = Force disconnect a verified member.
     .user = user
     .user-description = The user to force disconnect.
-debug-force-logout-done = { $user } has been unregistered.
+debug_force_logout-done = { $user } has been unregistered.
 
-debug-refresh = refresh
+debug_refresh = refresh
     .description = Loads elements in the database.
 
-debug-refresh-member = member
+debug_refresh_member = member
     .description = Refresh a member.
     .member = member
     .member-description = The member to refresh.
-debug-refresh-member-already-in-database = { $user } is already in the database.
-debug-refresh-member-added = { $user } successfully added.
+debug_refresh_member-already-in-database = { $user } is already in the database.
+debug_refresh_member-added = { $user } successfully added.
 
-debug-refresh-members = members
+debug_refresh_members = members
     .description = Loads every members in the database.
-debug-refresh-members-added = { $count } members have been added to the database.
+debug_refresh_members-added = { $count } members have been added to the database.
 
-debug-register = register
+debug_register = register
     .description = Register slash commands to Discord.
     .register = register
     .register-description = Register or Unregister?

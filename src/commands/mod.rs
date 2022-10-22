@@ -9,11 +9,13 @@ use fluent::fluent_args;
 use poise::BoxFuture;
 use uuid::Uuid;
 
-mod class;
+mod classes;
+mod groups;
 mod information;
 mod setup;
 
-pub(crate) use class::class;
+pub(crate) use classes::classes;
+pub(crate) use groups::groups;
 pub(crate) use information::information;
 pub(crate) use setup::setup;
 pub(crate) mod helpers;
@@ -23,7 +25,7 @@ pub(crate) fn pre_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
 		tracing::info!(
 			user_id = ctx.author().id.0,
-			"{} invoked {}",
+			"{} invoked `{}`",
 			&ctx.author().name,
 			ctx.invoked_command_name(),
 		);

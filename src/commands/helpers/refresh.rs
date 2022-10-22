@@ -19,15 +19,17 @@ use poise::{command, serenity_prelude as serenity};
 	slash_command,
 	owners_only,
 	hide_in_help,
-	subcommands("member", "members")
+	rename = "refresh",
+	subcommands("debug_refresh_member", "debug_refresh_members")
 )]
-pub(super) async fn refresh(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(super) async fn debug_refresh(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Loads a guild member in the database
-#[command(slash_command, owners_only, hide_in_help)]
-pub(super) async fn member(
+#[command(slash_command, owners_only, hide_in_help, rename = "member")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(super) async fn debug_refresh_member(
 	ctx: ApplicationContext<'_>,
 	member: serenity::Member,
 ) -> InteractionResult {
@@ -38,7 +40,7 @@ pub(super) async fn member(
 		.await
 	{
 		let content = ctx.get(
-			"debug-refresh-member-already-in-database",
+			"debug_refresh_member-already-in-database",
 			Some(&fluent_args!["user" => member.username]),
 		);
 		ctx.shout(content).await?;
@@ -50,7 +52,7 @@ pub(super) async fn member(
 		};
 
 		let content = ctx.get(
-			"debug-refresh-member-added",
+			"debug_refresh_member-added",
 			Some(&fluent_args!["user" => new_member.username]),
 		);
 		ctx.shout(content).await?;
@@ -63,8 +65,9 @@ pub(super) async fn member(
 
 // Requires the `GUILD_MEMBERS` intent to fetch all members
 /// Loads every guild member in the database
-#[command(slash_command, owners_only, hide_in_help)]
-pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
+#[command(slash_command, owners_only, hide_in_help, rename = "members")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx
 		.interaction
@@ -106,7 +109,7 @@ pub(super) async fn members(ctx: ApplicationContext<'_>) -> InteractionResult {
 	}
 
 	let get = ctx.get(
-		"debug-refresh-members-added",
+		"debug_refresh_members-added",
 		Some(&fluent_args!["count" => count]),
 	);
 	ctx.shout(get).await?;

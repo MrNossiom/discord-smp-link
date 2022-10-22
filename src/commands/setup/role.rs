@@ -12,12 +12,12 @@ use poise::{
 };
 
 /// Setup the role to apply to verified members.
-#[command(
-	slash_command,
-	guild_only,
-	default_member_permissions = "ADMINISTRATOR"
-)]
-pub(crate) async fn role(ctx: ApplicationContext<'_>, role: serenity::Role) -> InteractionResult {
+#[command(slash_command, guild_only, rename = "role")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(crate) async fn setup_role(
+	ctx: ApplicationContext<'_>,
+	role: serenity::Role,
+) -> InteractionResult {
 	let guild_id = ctx
 		.interaction
 		.guild_id()

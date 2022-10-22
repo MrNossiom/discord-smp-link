@@ -1,36 +1,76 @@
 //! Setup messages for roles interactions
 
 use crate::{
-	database::{models::Class, prelude::*, schema},
+	database::{
+		models::{Class, NewClass},
+		prelude::*,
+		schema,
+	},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
 use anyhow::anyhow;
 use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
-use poise::command;
+use poise::{
+	command,
+	serenity_prelude::{self as serenity, Permissions},
+};
 
 // TODO: modify in the future
 /// Add, modify or delete a class role.
 #[allow(clippy::unused_async)]
-#[command(slash_command, subcommands("add", "remove", "list"))]
-pub(crate) async fn class(_ctx: ApplicationContext<'_>) -> InteractionResult {
+#[command(
+	slash_command,
+	subcommands("classes_add", "classes_remove", "classes_list"),
+	default_member_permissions = "MANAGE_ROLES"
+)]
+pub(crate) async fn classes(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Configure a new class role
-#[command(slash_command, guild_only, default_member_permissions = "MANAGE_ROLES")]
-pub(crate) async fn add(ctx: ApplicationContext<'_>, _class_name: String) -> InteractionResult {
-	let _command_guild_id = ctx
+#[command(slash_command, guild_only, rename = "add")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(crate) async fn classes_add(
+	ctx: ApplicationContext<'_>,
+	class_name: String,
+	maybe_role: Option<serenity::Role>,
+) -> InteractionResult {
+	let guild_id = ctx
 		.interaction
 		.guild_id()
 		.ok_or_else(|| anyhow!("guild only command"))?;
+
+	let role = if let Some(role) = maybe_role {
+		role
+	} else {
+		guild_id
+			.create_role(ctx.discord, |role| {
+				role.name(&class_name)
+					.permissions(Permissions::empty())
+					.mentionable(true)
+			})
+			.await?
+	};
+
+	let new_class = NewClass {
+		guild_id: guild_id.0,
+		role_id: role.id.0,
+		name: &class_name,
+	};
+
+	new_class
+		.insert()
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
 
 	Ok(())
 }
 
 // TODO: optimize with a cache or whatever, db query intensive
 /// The autocomplete function for the `class remove` name parameter.
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 async fn autocomplete_classes<'a>(ctx: ApplicationContext<'_>, partial: &'a str) -> Vec<String> {
 	Class::all_from_guild(&ctx.interaction.guild_id().unwrap())
 		.filter(schema::classes::name.like(format!("%{}%", partial)))
@@ -41,17 +81,22 @@ async fn autocomplete_classes<'a>(ctx: ApplicationContext<'_>, partial: &'a str)
 }
 
 /// Delete a class role
-#[command(slash_command, guild_only, default_member_permissions = "MANAGE_ROLES")]
-pub(crate) async fn remove(
+#[command(slash_command, guild_only, rename = "remove")]
+#[tracing::instrument(skip(_ctx))]
+pub(crate) async fn classes_remove(
 	_ctx: ApplicationContext<'_>,
-	#[autocomplete = "autocomplete_classes"] _class_name: String,
+	#[autocomplete = "autocomplete_classes"] class_name: String,
 ) -> InteractionResult {
 	todo!();
 }
 
 /// List all the available class roles
-#[command(slash_command, guild_only, default_member_permissions = "MANAGE_ROLES")]
-pub(crate) async fn list(ctx: ApplicationContext<'_>, filter: Option<String>) -> InteractionResult {
+#[command(slash_command, guild_only, rename = "list")]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+pub(crate) async fn classes_list(
+	ctx: ApplicationContext<'_>,
+	filter: Option<String>,
+) -> InteractionResult {
 	let guild_id = ctx
 		.interaction
 		.guild_id()
@@ -76,11 +121,11 @@ pub(crate) async fn list(ctx: ApplicationContext<'_>, filter: Option<String>) ->
 	if classes.is_empty() {
 		let get = if let Some(ref filter) = filter {
 			ctx.get(
-				"class-list-none-with-filter",
+				"classes_list-none-with-filter",
 				Some(&fluent_args!["filter" => filter.clone()]),
 			)
 		} else {
-			ctx.get("class-list-none", None)
+			ctx.get("classes_list-none", None)
 		};
 		ctx.shout(get).await?;
 
@@ -102,11 +147,11 @@ pub(crate) async fn list(ctx: ApplicationContext<'_>, filter: Option<String>) ->
 		"**{}**:\n{}",
 		if let Some(filter) = filter {
 			ctx.get(
-				"class-list-title-with-filter",
+				"classes_list-title-with-filter",
 				Some(&fluent_args!["filter" => filter]),
 			)
 		} else {
-			ctx.get("class-list-title", None)
+			ctx.get("classes_list-title", None)
 		},
 		classes_string
 	);

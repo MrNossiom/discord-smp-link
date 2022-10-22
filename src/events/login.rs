@@ -20,13 +20,12 @@ use poise::serenity_prelude::{
 };
 use std::time::Duration;
 use thiserror::Error;
-use tracing::instrument;
 
 // TODO: heist all requirements and move every database or Discord call to the end
 // TODO: document steps because it becomes messy here
 /// Starts the auth process after the user clicked on the login button
 #[allow(clippy::too_many_lines)]
-#[instrument(skip_all, fields(user_id = %ctx.interaction.user.id))]
+#[tracing::instrument(skip_all, fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 	let member = ctx
