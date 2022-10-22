@@ -61,14 +61,10 @@ pub(crate) async fn message(ctx: ApplicationContext<'_>) -> InteractionResult {
 		.await?;
 
 	// Update the `setup_message_id`
-	{
-		use crate::database::schema::guilds::dsl::{guilds, setup_message_id};
-
-		diesel::update(guilds.find(guild_id.0))
-			.set(setup_message_id.eq(reply.id.0))
-			.execute(&mut connection)
-			.await?;
-	}
+	diesel::update(schema::guilds::table.find(guild_id.0))
+		.set(schema::guilds::setup_message_id.eq(reply.id.0))
+		.execute(&mut connection)
+		.await?;
 
 	Ok(())
 }

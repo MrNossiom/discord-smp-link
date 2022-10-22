@@ -11,41 +11,28 @@ use fluent::fluent_args;
 use poise::{command, serenity_prelude::User};
 
 /// Show informations about a registered member
-#[command(context_menu_command = "Informations", guild_only)]
+#[command(slash_command, context_menu_command = "Informations", guild_only)]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
 	let guild_id = ctx
 		.interaction
 		.guild_id()
 		.ok_or_else(|| anyhow!("guild only command"))?;
 
-	let verified_member: VerifiedMember = {
-		use crate::database::schema::{members, verified_members};
+	let verified_member: VerifiedMember = match VerifiedMember::with_ids(&user.id, &guild_id)
+		.select(VerifiedMember::as_select())
+		.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
+		.await
+	{
+		Ok(x) => x,
+		Err(_) => {
+			let get = ctx.get(
+				"error-member-not-verified",
+				Some(&fluent_args!["user" => user.name]),
+			);
+			ctx.shout(get).await?;
 
-		let verified_member = verified_members::table
-			.inner_join(members::table)
-			.filter(members::discord_id.eq(user.id.0))
-			.filter(members::guild_id.eq(guild_id.0))
-			.select((
-				verified_members::member_id,
-				verified_members::mail,
-				verified_members::first_name,
-				verified_members::last_name,
-				verified_members::class_id,
-			))
-			.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
-			.await;
-
-		match verified_member {
-			Ok(x) => x,
-			Err(_) => {
-				let get = ctx.get(
-					"error-member-not-verified",
-					Some(&fluent_args!["user" => user.name]),
-				);
-				ctx.shout(get).await?;
-
-				return Ok(());
-			}
+			return Ok(());
 		}
 	};
 

@@ -12,7 +12,7 @@ use dotenvy::dotenv;
 use oauth2::{ClientId, ClientSecret};
 use poise::{
 	async_trait, send_application_reply,
-	serenity_prelude::{self as serenity},
+	serenity_prelude::{self as serenity, GuildId},
 	CreateReply, ReplyHandle,
 };
 use secrecy::{ExposeSecret, Secret};

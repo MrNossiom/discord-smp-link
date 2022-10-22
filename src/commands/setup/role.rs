@@ -1,7 +1,7 @@
 //! Setup messages for roles interactions
 
 use crate::{
-	database::prelude::*,
+	database::{prelude::*, schema},
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
@@ -26,14 +26,10 @@ pub(crate) async fn role(ctx: ApplicationContext<'_>, role: serenity::Role) -> I
 	// TODO: check role permissions
 
 	// Update the `verified_role_id`
-	{
-		use crate::database::schema::guilds::dsl::{guilds, verified_role_id};
-
-		diesel::update(guilds.find(guild_id.0))
-			.set(verified_role_id.eq(role.id.0))
-			.execute(&mut ctx.data.database.get().await?)
-			.await?;
-	}
+	diesel::update(schema::guilds::table.find(guild_id.0))
+		.set(schema::guilds::verified_role_id.eq(role.id.0))
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
 
 	let get = ctx.get("done", None);
 	ctx.shout(get).await?;

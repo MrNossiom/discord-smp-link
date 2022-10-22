@@ -1,7 +1,7 @@
 //! Command to disconnect Discord and Google accounts together.
 
 use crate::{
-	database::{prelude::*, DieselError},
+	database::{models::VerifiedMember, prelude::*, schema, DieselError},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
@@ -22,21 +22,14 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		.as_ref()
 		.ok_or_else(|| anyhow!("used only in guild"))?;
 
-	let member_id: Option<i32> = {
-		use crate::database::schema::{members, verified_members};
-
-		match verified_members::table
-			.inner_join(members::table)
-			.filter(members::discord_id.eq(member.user.id.0))
-			.filter(members::guild_id.eq(member.guild_id.0))
-			.select(verified_members::member_id)
-			.first(&mut ctx.data.database.get().await?)
-			.await
-		{
-			Ok(x) => Some(x),
-			Err(DieselError::NotFound) => None,
-			Err(error) => return Err(error.into()),
-		}
+	let member_id: Option<i32> = match VerifiedMember::with_ids(&member.user.id, &member.guild_id)
+		.select(schema::verified_members::member_id)
+		.first(&mut ctx.data.database.get().await?)
+		.await
+	{
+		Ok(x) => Some(x),
+		Err(DieselError::NotFound) => None,
+		Err(error) => return Err(error.into()),
 	};
 
 	let member_id = match member_id {
@@ -91,9 +84,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 
 /// Disconnects Discord and Google accounts together
 async fn inner_logout(ctx: MessageComponentContext<'_>, member_id: i32) -> InteractionResult {
-	use crate::database::schema::verified_members;
-
-	diesel::delete(verified_members::table.filter(verified_members::member_id.eq(member_id)))
+	diesel::delete(VerifiedMember::from_member_id(member_id))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 

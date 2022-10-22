@@ -96,8 +96,6 @@ pub(crate) struct Class {
 #[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = classes)]
 pub(crate) struct NewClass<'a> {
-	pub(crate) id: i32,
-
 	pub(crate) name: &'a str,
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
@@ -118,8 +116,6 @@ pub(crate) struct Group {
 #[derive(Debug, Insertable, AsChangeset)]
 #[diesel(table_name = groups)]
 pub(crate) struct NewGroup<'a> {
-	pub(crate) id: i32,
-
 	pub(crate) name: &'a str,
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
