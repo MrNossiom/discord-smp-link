@@ -60,7 +60,6 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 				| GatewayIntents::GUILD_VOICE_STATES
 				| GatewayIntents::DIRECT_MESSAGES
 				| GatewayIntents::GUILD_MESSAGES
-				| GatewayIntents::MESSAGE_CONTENT
 				| GatewayIntents::GUILD_MEMBERS,
 		)
 		.user_data_setup({
@@ -74,22 +73,20 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 			listener: |ctx, event, fw, data| {
 				Box::pin(async move { event_handler(ctx, event, fw, data).await })
 			},
-			prefix_options: Default::default(),
 			commands: {
 				use commands::*;
 
 				#[rustfmt::skip]
 				let mut commands = vec![
 					setup(),
+					classes(),
+					groups(),
 					information(),
-					class(),
 					helpers::debug(),
 				];
 
 				data.translations
 					.apply_translations_to_interactions(&mut commands, None);
-
-				commands.push(helpers::_register());
 
 				commands
 			},

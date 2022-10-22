@@ -28,6 +28,8 @@ use unic_langid::langid;
 pub(crate) struct Config {
 	/// The token needed to access the `Discord` Api
 	pub(crate) discord_token: Secret<String>,
+	/// The guild on witch you can access development commands
+	pub(crate) discord_development_guild: GuildId,
 	/// The `Postgres` connection uri
 	pub(crate) database_url: Secret<String>,
 	/// The `Google` auth client id and secret pair
@@ -63,6 +65,11 @@ impl Config {
 
 		let discord_invite_code = get_required_env_var("DISCORD_INVITE_CODE")?;
 
+		let discord_development_guild =
+			get_required_env_var("DISCORD_DEV_GUILD")?
+				.parse::<u64>()
+				.map_err(|_| anyhow!("DISCORD_DEV_GUILD environnement variable must be a `u64`"))?;
+
 		let production = env::var("PRODUCTION")
 			.unwrap_or_else(|_| "false".into())
 			.parse::<bool>()
@@ -70,6 +77,7 @@ impl Config {
 
 		Ok(Self {
 			discord_token: Secret::new(get_required_env_var("DISCORD_TOKEN")?),
+			discord_development_guild: GuildId(discord_development_guild),
 			database_url: Secret::new(get_required_env_var("DATABASE_URL")?),
 			google_client: (
 				ClientId::new(get_required_env_var("GOOGLE_CLIENT_ID")?),
@@ -204,7 +212,7 @@ pub(crate) type ApplicationContext<'a> = poise::ApplicationContext<'a, ArcData, 
 pub(crate) type MessageComponentContext<'a> =
 	polyfill::MessageComponentContext<'a, ArcData, anyhow::Error>;
 /// The poise [`poise::PrefixContext`] provided to each prefix command
-pub(crate) type PrefixContext<'a> = poise::PrefixContext<'a, ArcData, anyhow::Error>;
+pub(crate) type _PrefixContext<'a> = poise::PrefixContext<'a, ArcData, anyhow::Error>;
 
 /// The [`poise::Framework`] type alias
 pub(crate) type Framework = poise::Framework<ArcData, anyhow::Error>;

@@ -1,6 +1,7 @@
 //! `Discord` client events handlers
 
 use crate::{
+	commands::helpers::_register,
 	constants::events,
 	database::{
 		models::{Guild, Member, NewGuild, NewMember},
@@ -30,6 +31,13 @@ pub(crate) async fn event_handler(
 ) -> Result<()> {
 	match event {
 		Event::Ready { data_about_bot } => {
+			_register(
+				&ctx.http,
+				&data.config.discord_development_guild,
+				&framework.options.commands,
+			)
+			.await?;
+
 			tracing::info!("`{}` is ready!", data_about_bot.user.name);
 
 			Ok(())

@@ -3,7 +3,7 @@ _default:
 
 # Run your current project
 run:
-	RUST_LOG='info,_=warn,rocket=warn,discord_smp_link=trace' cargo run
+	RUST_LOG='info,_=warn,rocket=warn,discord_smp_link=debug' cargo run
 
 # Starts the docker compose file with the provided scope
 up SCOPE:

@@ -26,5 +26,6 @@
 	"vscodeFluent.replacementTemplate": "ctx.get(\"$1\", None)",
 	"i18n-ally.localesPaths": ["translations"],
 	"i18n-ally.enabledParsers": ["ftl"],
-	"i18n-ally.keystyle": "flat"
+	"i18n-ally.keystyle": "flat",
+	"i18n-ally.sourceLanguage": "en-US"
 }

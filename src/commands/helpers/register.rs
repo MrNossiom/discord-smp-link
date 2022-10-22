@@ -16,13 +16,19 @@ pub(super) async fn register(
 	register: Option<bool>,
 	global: Option<bool>,
 ) -> InteractionResult {
+	let is_in_dev_guild = ctx
+		.interaction
+		.guild_id()
+		.map(|guild_id| guild_id == ctx.data.config.discord_development_guild)
+		.unwrap_or_default();
+
 	let register = register.unwrap_or(true);
 	let global = global.unwrap_or(false);
 
 	let mut commands_builder = CreateApplicationCommands::default();
 
 	for command in &ctx.framework.options.commands {
-		if command.hide_in_help {
+		if command.hide_in_help && !is_in_dev_guild {
 			continue;
 		}
 

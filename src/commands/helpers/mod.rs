@@ -18,42 +18,36 @@ use register::register;
 	slash_command,
 	owners_only,
 	hide_in_help,
-	subcommands("force", "refresh", "register")
+	subcommands("debug_force", "debug_refresh", "debug_register")
 )]
 pub(crate) async fn debug(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Register all development slash commands
-#[command(prefix_command, guild_only, owners_only)]
-pub(crate) async fn _register(ctx: PrefixContext<'_>) -> InteractionResult {
-	let guild_id = ctx.msg.guild_id.expect("this command is guild only");
+pub(crate) async fn _register<'a>(
+	http: &'a Http,
+	guild_id: &GuildId,
+	commands: &Vec<Command>,
+) -> Result<(), serenity::Error> {
+	let mut commands_builder = CreateApplicationCommands::default();
 
-	for command in &ctx.framework.options.commands {
-		if !command.hide_in_help {
-			continue;
-		}
-
+	for command in commands {
 		if let Some(slash_command) = command.create_as_slash_command() {
-			guild_id
-				.create_application_command(ctx.discord, |c| {
-					*c = slash_command;
-					c
-				})
-				.await?;
+			commands_builder.add_application_command(slash_command);
 		}
 
 		if let Some(context_menu_command) = command.create_as_context_menu_command() {
-			guild_id
-				.create_application_command(ctx.discord, |c| {
-					*c = context_menu_command;
-					c
-				})
-				.await?;
+			commands_builder.add_application_command(context_menu_command);
 		}
 	}
 
-	ctx.msg.delete(ctx.discord).await?;
+	guild_id
+		.set_application_commands(http, |b| {
+			*b = commands_builder;
+			b
+		})
+		.await?;
 
 	Ok(())
 }
