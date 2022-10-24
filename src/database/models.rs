@@ -81,13 +81,34 @@ pub(crate) struct NewVerifiedMember<'a> {
 	pub(crate) class_id: i32,
 }
 
-/// Represent a Class
+/// Represent a Level
 #[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
-#[diesel(table_name = classes, belongs_to(Guild))]
-pub(crate) struct Class {
+#[diesel(table_name = levels, belongs_to(Guild))]
+pub(crate) struct Level {
 	pub(crate) id: i32,
 
 	pub(crate) name: String,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
+}
+
+/// Use to create a new [`Level`]
+#[derive(Debug, Insertable, AsChangeset)]
+#[diesel(table_name = levels)]
+pub(crate) struct NewLevel<'a> {
+	pub(crate) name: &'a str,
+	pub(crate) guild_id: u64,
+	pub(crate) role_id: u64,
+}
+
+/// Represent a Class
+#[derive(Debug, PartialEq, Eq, Queryable, Identifiable, Selectable, Associations)]
+#[diesel(table_name = classes, belongs_to(Guild), belongs_to(Level))]
+pub(crate) struct Class {
+	pub(crate) id: i32,
+	pub(crate) name: String,
+	pub(crate) level_id: i32,
+
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
 }
@@ -97,6 +118,8 @@ pub(crate) struct Class {
 #[diesel(table_name = classes)]
 pub(crate) struct NewClass<'a> {
 	pub(crate) name: &'a str,
+	pub(crate) level_id: i32,
+
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
 }
@@ -106,8 +129,8 @@ pub(crate) struct NewClass<'a> {
 #[diesel(table_name = groups, belongs_to(Guild))]
 pub(crate) struct Group {
 	pub(crate) id: i32,
-
 	pub(crate) name: String,
+
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
 }

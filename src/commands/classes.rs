@@ -10,7 +10,6 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::{
 	command,
@@ -55,9 +54,11 @@ pub(crate) async fn classes_add(
 	};
 
 	let new_class = NewClass {
+		name: &class_name,
+		// TODO
+		level_id: 0,
 		guild_id: guild_id.0,
 		role_id: role.id.0,
-		name: &class_name,
 	};
 
 	new_class

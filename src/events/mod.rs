@@ -11,7 +11,6 @@ use crate::{
 	states::{ArcData, FrameworkContext, MessageComponentContext},
 };
 use anyhow::Result;
-use diesel_async::RunQueryDsl;
 use poise::{
 	serenity_prelude::{Context, Interaction},
 	Event,

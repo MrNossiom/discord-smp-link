@@ -15,7 +15,7 @@ CREATE TABLE `guilds`
 );
 
 -- Represent a class group of a verified member.
-CREATE TABLE `classes`
+CREATE TABLE `levels`
 (
     `id`       INTEGER         NOT NULL AUTO_INCREMENT,
     `name`     TEXT            NOT NULL,
@@ -25,10 +25,34 @@ CREATE TABLE `classes`
 
     PRIMARY KEY (`id`),
 
-    -- Guarantee that there is no name duplicates in the same Guild.
+    -- Guarantee that there is no name duplicates in the same guild.
     UNIQUE (`name`(255), `guild_id`),
-    -- Guarantee that a role isn't used for multiple groups.
+    -- Guarantee that a role isn't used for multiple levels.
     UNIQUE (`guild_id`, `role_id`),
+
+    FOREIGN KEY (`guild_id`) REFERENCES `guilds` (`id`)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Represent a class group of a verified member.
+CREATE TABLE `classes`
+(
+    `id`       INTEGER         NOT NULL AUTO_INCREMENT,
+    `name`     TEXT            NOT NULL,
+    `level_id` INTEGER         NOT NULL,
+
+    `guild_id` BIGINT UNSIGNED NOT NULL,
+    `role_id`  BIGINT UNSIGNED NOT NULL,
+
+    PRIMARY KEY (`id`),
+
+    -- Guarantee that there is no name duplicates in the same guild.
+    UNIQUE (`name`(255), `guild_id`),
+    -- Guarantee that a role isn't used for multiple classes.
+    UNIQUE (`guild_id`, `role_id`),
+
+    FOREIGN KEY (`level_id`) REFERENCES `levels` (`id`)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
 
     FOREIGN KEY (`guild_id`) REFERENCES `guilds` (`id`)
         ON DELETE RESTRICT ON UPDATE CASCADE

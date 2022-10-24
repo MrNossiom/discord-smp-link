@@ -12,7 +12,6 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::{anyhow, Context};
-use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::serenity_prelude::{
 	self as serenity, component::ButtonStyle, CollectComponentInteraction, CreateSelectMenu,
@@ -250,7 +249,7 @@ async fn get_and_check_login_components(
 		(inner_role, email_pattern)
 	};
 
-	let classes = Class::all_from_guild(guild_id)
+	let classes: Vec<Class> = Class::all_from_guild(guild_id)
 		.get_results::<Class>(connection)
 		.await?;
 

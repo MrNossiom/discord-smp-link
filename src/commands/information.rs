@@ -6,7 +6,6 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel_async::RunQueryDsl;
 use fluent::fluent_args;
 use poise::{command, serenity_prelude::User};
 

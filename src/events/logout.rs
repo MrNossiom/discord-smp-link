@@ -6,7 +6,6 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::anyhow;
-use diesel_async::RunQueryDsl;
 use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction};
 use std::time::Duration;
 

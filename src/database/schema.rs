@@ -4,6 +4,7 @@ diesel::table! {
     classes (id) {
         id -> Integer,
         name -> Text,
+        level_id -> Integer,
         guild_id -> Unsigned<Bigint>,
         role_id -> Unsigned<Bigint>,
     }
@@ -37,6 +38,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    levels (id) {
+        id -> Integer,
+        name -> Text,
+        guild_id -> Unsigned<Bigint>,
+        role_id -> Unsigned<Bigint>,
+    }
+}
+
+diesel::table! {
     members (id) {
         id -> Integer,
         guild_id -> Unsigned<Bigint>,
@@ -58,9 +68,11 @@ diesel::table! {
 }
 
 diesel::joinable!(classes -> guilds (guild_id));
+diesel::joinable!(classes -> levels (level_id));
 diesel::joinable!(groups -> guilds (guild_id));
 diesel::joinable!(groups_of_verified_members -> groups (group_id));
 diesel::joinable!(groups_of_verified_members -> verified_members (verified_member_id));
+diesel::joinable!(levels -> guilds (guild_id));
 diesel::joinable!(members -> guilds (guild_id));
 diesel::joinable!(verified_members -> classes (class_id));
 diesel::joinable!(verified_members -> members (member_id));
@@ -70,6 +82,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     groups,
     groups_of_verified_members,
     guilds,
+    levels,
     members,
     verified_members,
 );

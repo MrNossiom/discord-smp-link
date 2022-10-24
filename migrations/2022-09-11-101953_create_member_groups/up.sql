@@ -9,7 +9,7 @@ CREATE TABLE `groups`
 
     PRIMARY KEY (`id`),
 
-    -- Guarantee that there is no name duplicates in the same Guild.
+    -- Guarantee that there is no name duplicates in the same guild.
     UNIQUE (`name`(255), `guild_id`),
     -- Guarantee that a role isn't used for multiple groups.
     UNIQUE (`guild_id`, `role_id`),
