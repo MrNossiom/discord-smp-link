@@ -1,9 +1,8 @@
 //! Setup messages for roles interactions
 
 use crate::{
-	commands::levels::autocomplete_levels,
 	database::{
-		models::{Class, Level, NewClass},
+		models::{Level, NewLevel},
 		prelude::*,
 		schema,
 	},
@@ -16,38 +15,27 @@ use poise::{
 	serenity_prelude::{self as serenity, Permissions, Role, RoleId},
 };
 
-// TODO: possibility to modify a class, show specific informations on a role
-/// Add or delete a [`Class`]
+/// TODO: possibility to modify a level
+/// Add or delete a [`Level`]
 #[allow(clippy::unused_async)]
 #[command(
 	slash_command,
-	subcommands("classes_add", "classes_remove", "classes_list"),
+	subcommands("levels_add", "levels_remove", "levels_list"),
 	default_member_permissions = "MANAGE_ROLES"
 )]
-pub(crate) async fn classes(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn levels(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
-/// Configure a new class role
+/// Configure a new level tag role
 #[command(slash_command, guild_only, rename = "add")]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
-pub(crate) async fn classes_add(
+pub(crate) async fn levels_add(
 	ctx: ApplicationContext<'_>,
 	name: String,
-	#[autocomplete = "autocomplete_levels"] level: String,
 	role: Option<Role>,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
-	let mut connection = ctx.data.database.get().await?;
-
-	let level_id: i32 = {
-		// TODO: handle no matching level
-		Level::all_from_guild(&guild_id)
-			.filter(schema::levels::name.eq(&level))
-			.select(schema::levels::id)
-			.get_result(&mut connection)
-			.await?
-	};
 
 	let role = match role {
 		Some(role) => role,
@@ -62,57 +50,58 @@ pub(crate) async fn classes_add(
 		}
 	};
 
-	let new_class = NewClass {
-		name: &name,
-		level_id,
+	let new_level = NewLevel {
 		guild_id: guild_id.0,
 		role_id: role.id.0,
+		name: &name,
 	};
 
-	new_class.insert().execute(&mut connection).await?;
+	new_level
+		.insert()
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
 
 	Ok(())
 }
 
 // TODO: allow using a result instead of unwrapping everything
-/// Autocompletes parameter for `classes` available in `Guild`.
+/// Autocompletes parameter for `levels` available in `Guild`.
 #[allow(clippy::unwrap_used)]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
-async fn autocomplete_classes<'a>(
+pub(super) async fn autocomplete_levels<'a>(
 	ctx: ApplicationContext<'_>,
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
 	// TODO: cache this per guild, db query intensive
-	let classes: Vec<_> = Class::all_from_guild(&ctx.interaction.guild_id().unwrap())
-		.select(schema::classes::name)
+	let levels: Vec<_> = Level::all_from_guild(&ctx.interaction.guild_id().unwrap())
+		.select(schema::levels::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
 		.unwrap();
 
-	classes
+	levels
 		.into_iter()
 		.filter(move |level| level.contains(partial))
 }
 
-/// Delete a class role
+/// Delete a level tag role
 #[command(slash_command, guild_only, rename = "remove")]
 #[tracing::instrument(skip(ctx))]
-pub(crate) async fn classes_remove(
+pub(crate) async fn levels_remove(
 	ctx: ApplicationContext<'_>,
-	#[autocomplete = "autocomplete_classes"] name: String,
+	#[autocomplete = "autocomplete_levels"] name: String,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
-	let mut connection = ctx.data.database.get().await?;
 
-	let (id, role_id) = match Class::all_from_guild(&guild_id)
-		.filter(schema::classes::name.eq(&name))
-		.select((schema::classes::id, schema::classes::role_id))
-		.first::<(i32, u64)>(&mut connection)
+	let (id, role_id) = match Level::all_from_guild(&guild_id)
+		.filter(schema::levels::name.eq(&name))
+		.select((schema::levels::id, schema::levels::role_id))
+		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
 		.await
 	{
 		Ok(tuple) => tuple,
 		Err(DieselError::NotFound) => {
-			let translate = ctx.translate("classes_remove-not-found", None);
+			let translate = ctx.translate("levels_remove-not-found", None);
 			ctx.shout(translate).await?;
 			return Ok(());
 		}
@@ -126,56 +115,60 @@ pub(crate) async fn classes_remove(
 		Err(error) => return Err(error.into()),
 	};
 
-	Class::delete_id(id).execute(&mut connection).await?;
+	Level::delete_id(id)
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
 
 	Ok(())
 }
 
-/// List all the available class roles
+/// List all available level tag roles
 #[command(slash_command, guild_only, rename = "list")]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
-pub(crate) async fn classes_list(
+pub(crate) async fn levels_list(
 	ctx: ApplicationContext<'_>,
-	#[autocomplete = "autocomplete_classes"] filter: Option<String>,
+	#[autocomplete = "autocomplete_levels"] filter: Option<String>,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
 	// TODO: use the cache from autocomplete context
-	let classes: Vec<String> = Class::all_from_guild(&guild_id)
-		.select(schema::classes::name)
+	let levels: Vec<String> = Level::all_from_guild(&guild_id)
+		.select(schema::levels::name)
 		.get_results::<String>(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let classes = match filter {
-		None => classes,
-		Some(ref predicate) => classes
+	let levels = match filter {
+		None => levels,
+		Some(ref predicate) => levels
 			.into_iter()
-			.filter(move |class| class.contains(predicate.as_str()))
+			.filter(move |level| level.contains(predicate.as_str()))
 			.collect(),
 	};
 
-	if classes.is_empty() {
+	if levels.is_empty() {
 		let get = if let Some(ref filter) = filter {
 			ctx.translate(
-				"classes_list-none-with-filter",
+				"levels_list-none-with-filter",
 				Some(&fluent_args!["filter" => filter.clone()]),
 			)
 		} else {
-			ctx.translate("classes_list-none", None)
+			ctx.translate("levels_list-none", None)
 		};
 		ctx.shout(get).await?;
 
 		return Ok(());
 	}
 
-	let classes_string = if classes.len() == 1 {
-		format!("`{}`", classes[0])
+	// TODO: show the classes that are under a certain level
+
+	let levels_string = if levels.len() == 1 {
+		format!("`{}`", levels[0])
 	} else {
 		format!(
 			"`{}` {} `{}`",
-			classes[..classes.len() - 1].join("`, `"),
+			levels[..levels.len() - 1].join("`, `"),
 			ctx.translate("and", None),
-			classes[classes.len() - 1]
+			levels[levels.len() - 1]
 		)
 	};
 
@@ -183,13 +176,13 @@ pub(crate) async fn classes_list(
 		"**{}**:\n{}",
 		if let Some(filter) = filter {
 			ctx.translate(
-				"classes_list-title-with-filter",
+				"levels_list-title-with-filter",
 				Some(&fluent_args!["filter" => filter]),
 			)
 		} else {
-			ctx.translate("classes_list-title", None)
+			ctx.translate("levels_list-title", None)
 		},
-		classes_string
+		levels_string
 	);
 	ctx.shout(message).await?;
 

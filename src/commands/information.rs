@@ -5,7 +5,6 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use anyhow::anyhow;
 use fluent::fluent_args;
 use poise::{command, serenity_prelude::User};
 
@@ -13,10 +12,7 @@ use poise::{command, serenity_prelude::User};
 #[command(slash_command, context_menu_command = "Informations", guild_only)]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
 	let verified_member: VerifiedMember = match VerifiedMember::with_ids(&user.id, &guild_id)
 		.select(VerifiedMember::as_select())
@@ -25,7 +21,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 	{
 		Ok(x) => x,
 		Err(_) => {
-			let get = ctx.get(
+			let get = ctx.translate(
 				"error-member-not-verified",
 				Some(&fluent_args!["user" => user.name]),
 			);

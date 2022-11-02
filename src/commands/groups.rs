@@ -9,15 +9,14 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use anyhow::anyhow;
 use fluent::fluent_args;
 use poise::{
 	command,
-	serenity_prelude::{self as serenity, Permissions},
+	serenity_prelude::{self as serenity, Permissions, Role, RoleId},
 };
 
-// TODO: modify in the future
-/// Add, modify or delete a group.
+// TODO: possibility to modify a group
+/// Add or delete a [`Group`]
 #[allow(clippy::unused_async)]
 #[command(
 	slash_command,
@@ -28,35 +27,33 @@ pub(crate) async fn groups(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
-/// Configure a new class role
+/// Configure a new group tag role
 #[command(slash_command, guild_only, rename = "add")]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(crate) async fn groups_add(
 	ctx: ApplicationContext<'_>,
-	group_name: String,
-	maybe_role: Option<serenity::Role>,
+	name: String,
+	role: Option<Role>,
 ) -> InteractionResult {
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
-	let role = if let Some(role) = maybe_role {
-		role
-	} else {
-		guild_id
-			.create_role(ctx.discord, |role| {
-				role.name(&group_name)
-					.permissions(Permissions::empty())
-					.mentionable(true)
-			})
-			.await?
+	let role = match role {
+		Some(role) => role,
+		None => {
+			guild_id
+				.create_role(ctx.discord, |role| {
+					role.name(&name)
+						.permissions(Permissions::empty())
+						.mentionable(true)
+				})
+				.await?
+		}
 	};
 
 	let new_group = NewGroup {
 		guild_id: guild_id.0,
 		role_id: role.id.0,
-		name: &group_name,
+		name: &name,
 	};
 
 	new_group
@@ -67,92 +64,123 @@ pub(crate) async fn groups_add(
 	Ok(())
 }
 
-// TODO: optimize with a cache or whatever, db query intensive
-/// The autocomplete function for the `class remove` name parameter.
+// TODO: allow using a result instead of unwrapping everything
+/// Autocompletes parameter for `groups` available in `Guild`.
+#[allow(clippy::unwrap_used)]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
-async fn autocomplete_groups<'a>(ctx: ApplicationContext<'_>, partial: &'a str) -> Vec<String> {
-	Group::all_from_guild(&ctx.interaction.guild_id().unwrap())
-		.filter(schema::groups::name.like(format!("%{}%", partial)))
+async fn autocomplete_groups<'a>(
+	ctx: ApplicationContext<'_>,
+	partial: &'a str,
+) -> impl Iterator<Item = String> + 'a {
+	// TODO: cache this per guild, db query intensive
+	let groups: Vec<_> = Group::all_from_guild(&ctx.interaction.guild_id().unwrap())
 		.select(schema::groups::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
-		.unwrap()
+		.unwrap();
+
+	groups
+		.into_iter()
+		.filter(move |group| group.contains(partial))
 }
 
-/// Delete a class role
+/// Delete a group tag role
 #[command(slash_command, guild_only, rename = "remove")]
-#[tracing::instrument(skip(_ctx))]
+#[tracing::instrument(skip(ctx))]
 pub(crate) async fn groups_remove(
-	_ctx: ApplicationContext<'_>,
-	#[autocomplete = "autocomplete_groups"] group_name: String,
+	ctx: ApplicationContext<'_>,
+	#[autocomplete = "autocomplete_groups"] name: String,
 ) -> InteractionResult {
-	todo!();
+	let guild_id = ctx.guild_only_id();
+
+	let (id, role_id) = match Group::all_from_guild(&guild_id)
+		.filter(schema::groups::name.eq(&name))
+		.select((schema::groups::id, schema::groups::role_id))
+		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
+		.await
+	{
+		Ok(tuple) => tuple,
+		Err(DieselError::NotFound) => {
+			let translate = ctx.translate("groups_remove-not-found", None);
+			ctx.shout(translate).await?;
+			return Ok(());
+		}
+		Err(err) => return Err(err.into()),
+	};
+
+	match guild_id.delete_role(ctx.discord, RoleId(role_id)).await {
+		Ok(_) => {}
+		// Ignore the error if the role is already deleted
+		Err(serenity::Error::Http(_)) => {}
+		Err(error) => return Err(error.into()),
+	};
+
+	Group::delete_id(id)
+		.execute(&mut ctx.data.database.get().await?)
+		.await?;
+
+	Ok(())
 }
 
-/// List all the available class roles
+/// List all available group tag roles
 #[command(slash_command, guild_only, rename = "list")]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(crate) async fn groups_list(
 	ctx: ApplicationContext<'_>,
-	filter: Option<String>,
+	#[autocomplete = "autocomplete_groups"] filter: Option<String>,
 ) -> InteractionResult {
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
-	// TODO: check role permissions
+	// TODO: use the cache from autocomplete context
+	let groups: Vec<String> = Group::all_from_guild(&guild_id)
+		.select(schema::groups::name)
+		.get_results::<String>(&mut ctx.data.database.get().await?)
+		.await?;
 
-	let classes: Vec<String> = {
-		let mut query = Group::all_from_guild(&guild_id)
-			.select(schema::groups::name)
-			.into_boxed();
-
-		if let Some(ref filter) = filter {
-			query = query.filter(schema::groups::name.like(format!("%{}%", filter)));
-		};
-
-		query
-			.get_results::<String>(&mut ctx.data.database.get().await?)
-			.await?
+	let groups = match filter {
+		None => groups,
+		Some(ref predicate) => groups
+			.into_iter()
+			.filter(move |group| group.contains(predicate.as_str()))
+			.collect(),
 	};
 
-	if classes.is_empty() {
+	if groups.is_empty() {
 		let get = if let Some(ref filter) = filter {
-			ctx.get(
-				"classes_list-none-with-filter",
+			ctx.translate(
+				"groups_list-none-with-filter",
 				Some(&fluent_args!["filter" => filter.clone()]),
 			)
 		} else {
-			ctx.get("classes_list-none", None)
+			ctx.translate("groups_list-none", None)
 		};
 		ctx.shout(get).await?;
 
 		return Ok(());
 	}
 
-	let classes_string = if classes.len() == 1 {
-		format!("`{}`", classes[0])
+	let groups_string = if groups.len() == 1 {
+		format!("`{}`", groups[0])
 	} else {
 		format!(
 			"`{}` {} `{}`",
-			classes[..classes.len() - 1].join("`, `"),
-			ctx.get("and", None),
-			classes[classes.len() - 1]
+			groups[..groups.len() - 1].join("`, `"),
+			ctx.translate("and", None),
+			groups[groups.len() - 1]
 		)
 	};
 
 	let message = format!(
 		"**{}**:\n{}",
 		if let Some(filter) = filter {
-			ctx.get(
-				"classes_list-title-with-filter",
+			ctx.translate(
+				"groups_list-title-with-filter",
 				Some(&fluent_args!["filter" => filter]),
 			)
 		} else {
-			ctx.get("classes_list-title", None)
+			ctx.translate("groups_list-title", None)
 		},
-		classes_string
+		groups_string
 	);
 	ctx.shout(message).await?;
 

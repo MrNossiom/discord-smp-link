@@ -92,7 +92,7 @@ impl Translations {
 	}
 
 	/// Get a translation from the given key or an error
-	pub(crate) fn get_checked<'bundle>(
+	pub(crate) fn translate_checked<'bundle>(
 		&'bundle self,
 		locale: LanguageIdentifier,
 		key: &'bundle str,
@@ -270,18 +270,18 @@ impl Translations {
 /// Trait for client internationalisation
 pub(crate) trait Translate {
 	/// Get the translation for the given message with a locale provided by self context
-	fn get_checked<'bundle>(
+	fn translate_checked<'bundle>(
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
 	) -> Result<Cow<'bundle, str>>;
 
 	/// Get a translated key of the key itself in case it is not found
-	fn get(&self, key: &str, args: Option<&FluentArgs>) -> String {
-		match self.get_checked(key, args) {
+	fn translate(&self, key: &str, args: Option<&FluentArgs>) -> String {
+		match self.translate_checked(key, args) {
 			Ok(string) => string.into(),
 			Err(error) => {
-				tracing::error!("error for key {key} with args {args:?}: {error}");
+				tracing::error!(error = ?error, "translation error for key {key} with args {args:?}");
 				key.into()
 			}
 		}
@@ -289,19 +289,19 @@ pub(crate) trait Translate {
 }
 
 impl Translate for ApplicationContext<'_> {
-	fn get_checked<'bundle>(
+	fn translate_checked<'bundle>(
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
 	) -> Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale().parse()?;
 
-		self.data.translations.get_checked(locale, key, args)
+		self.data.translations.translate_checked(locale, key, args)
 	}
 }
 
 impl Translate for Context<'_> {
-	fn get_checked<'bundle>(
+	fn translate_checked<'bundle>(
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
@@ -311,18 +311,20 @@ impl Translate for Context<'_> {
 			None => self.data().translations.fallback.clone(),
 		};
 
-		self.data().translations.get_checked(locale, key, args)
+		self.data()
+			.translations
+			.translate_checked(locale, key, args)
 	}
 }
 
 impl Translate for MessageComponentContext<'_> {
-	fn get_checked<'bundle>(
+	fn translate_checked<'bundle>(
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
 	) -> Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale.parse()?;
 
-		self.data.translations.get_checked(locale, key, args)
+		self.data.translations.translate_checked(locale, key, args)
 	}
 }

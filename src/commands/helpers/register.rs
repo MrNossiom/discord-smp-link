@@ -23,11 +23,7 @@ pub(super) async fn debug_register(
 	register: Option<bool>,
 	global: Option<bool>,
 ) -> InteractionResult {
-	let is_in_dev_guild = ctx
-		.interaction
-		.guild_id()
-		.map(|guild_id| guild_id == ctx.data.config.discord_development_guild)
-		.unwrap_or_default();
+	let is_development_guild = ctx.guild_only_id() == ctx.data.config.discord_development_guild;
 
 	let register = register.unwrap_or(true);
 	let global = global.unwrap_or(false);
@@ -35,7 +31,7 @@ pub(super) async fn debug_register(
 	let mut commands_builder = CreateApplicationCommands::default();
 
 	for command in &ctx.framework.options.commands {
-		if command.hide_in_help && !is_in_dev_guild {
+		if command.hide_in_help && !is_development_guild {
 			continue;
 		}
 
@@ -62,7 +58,7 @@ pub(super) async fn debug_register(
 		let guild_id = match ctx.interaction.guild_id() {
 			Some(x) => x,
 			None => {
-				let get = ctx.get("error-guild-only", None);
+				let get = ctx.translate("error-guild-only", None);
 				ctx.shout(get).await?;
 				return Ok(());
 			}
@@ -82,7 +78,7 @@ pub(super) async fn debug_register(
 		}
 	}
 
-	let get = ctx.get("done", None);
+	let get = ctx.translate("done", None);
 	ctx.shout(get).await?;
 
 	Ok(())

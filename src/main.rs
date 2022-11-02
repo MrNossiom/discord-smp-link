@@ -41,12 +41,11 @@ use crate::{
 	events::event_handler,
 	logging::setup_logging,
 	server::start_server,
-	states::{Data, Framework, FrameworkBuilder},
+	states::{ArcData, Data, Framework, FrameworkBuilder},
 };
 use anyhow::{anyhow, Context};
 use poise::serenity_prelude::GatewayIntents;
 use secrecy::ExposeSecret;
-use states::ArcData;
 use std::sync::Arc;
 use tracing::instrument;
 
@@ -79,6 +78,7 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 				#[rustfmt::skip]
 				let mut commands = vec![
 					setup(),
+					levels(),
 					classes(),
 					groups(),
 					information(),

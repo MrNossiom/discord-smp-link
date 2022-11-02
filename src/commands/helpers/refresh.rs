@@ -8,7 +8,6 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use anyhow::anyhow;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use fluent::fluent_args;
 use poise::{command, serenity_prelude as serenity};
@@ -39,7 +38,7 @@ pub(super) async fn debug_refresh_member(
 		.first::<Member>(&mut connection)
 		.await
 	{
-		let content = ctx.get(
+		let content = ctx.translate(
 			"debug_refresh_member-already-in-database",
 			Some(&fluent_args!["user" => member.username]),
 		);
@@ -51,7 +50,7 @@ pub(super) async fn debug_refresh_member(
 			discord_id: member.user.id.0,
 		};
 
-		let content = ctx.get(
+		let content = ctx.translate(
 			"debug_refresh_member-added",
 			Some(&fluent_args!["user" => new_member.username]),
 		);
@@ -69,10 +68,7 @@ pub(super) async fn debug_refresh_member(
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
 	let mut count = 0;
 	let mut last_member_id = None;
@@ -108,7 +104,7 @@ pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> Intera
 		}
 	}
 
-	let get = ctx.get(
+	let get = ctx.translate(
 		"debug_refresh_members-added",
 		Some(&fluent_args!["count" => count]),
 	);

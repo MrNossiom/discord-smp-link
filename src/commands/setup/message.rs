@@ -6,7 +6,6 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use anyhow::anyhow;
 use poise::{command, serenity_prelude::component::ButtonStyle};
 
 /// Sets the login and logout message.
@@ -14,10 +13,7 @@ use poise::{command, serenity_prelude::component::ButtonStyle};
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(crate) async fn setup_message(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
 	let verified_role_was_registered = {
 		let role: Option<u64> = Guild::with_id(&guild_id)
@@ -39,16 +35,16 @@ pub(crate) async fn setup_message(ctx: ApplicationContext<'_>) -> InteractionRes
 		.interaction
 		.channel_id()
 		.send_message(ctx.discord, |m| {
-			m.content(ctx.get("setup-message-message", None))
+			m.content(ctx.translate("setup-message-message", None))
 				.components(|com| {
 					com.create_action_row(|row| {
 						row.create_button(|butt| {
-							butt.label(ctx.get("event-setup-login-button", None))
+							butt.label(ctx.translate("event-setup-login-button", None))
 								.style(ButtonStyle::Success)
 								.custom_id(LOGIN_BUTTON_INTERACTION)
 						})
 						.create_button(|butt| {
-							butt.label(ctx.get("event-setup-logout-button", None))
+							butt.label(ctx.translate("event-setup-logout-button", None))
 								.style(ButtonStyle::Danger)
 								.custom_id(LOGOUT_BUTTON_INTERACTION)
 						})

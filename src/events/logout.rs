@@ -1,7 +1,7 @@
 //! Command to disconnect Discord and Google accounts together.
 
 use crate::{
-	database::{models::VerifiedMember, prelude::*, schema, DieselError},
+	database::{models::VerifiedMember, prelude::*, schema},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
@@ -44,12 +44,12 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		.send(|reply| {
 			reply
 				.ephemeral(true)
-				.content(ctx.get("event-logout-warning", None))
+				.content(ctx.translate("event-logout-warning", None))
 				.components(|components| {
 					components.create_action_row(|action_row| {
 						action_row.create_button(|button| {
 							button
-								.label(ctx.get("event-logout-disconnect-button", None))
+								.label(ctx.translate("event-logout-disconnect-button", None))
 								.custom_id(CUSTOM_ID_DISCONNECT)
 								.style(ButtonStyle::Danger)
 						})
@@ -73,7 +73,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 			};
 		}
 		None => {
-			let get = ctx.get("error-user-timeout", None);
+			let get = ctx.translate("error-user-timeout", None);
 			ctx.shout(get).await?;
 		}
 	}
@@ -87,7 +87,7 @@ async fn inner_logout(ctx: MessageComponentContext<'_>, member_id: i32) -> Inter
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let get = ctx.get("event-logout-success", None);
+	let get = ctx.translate("event-logout-success", None);
 	ctx.shout(get).await?;
 
 	Ok(())

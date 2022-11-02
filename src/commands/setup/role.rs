@@ -5,7 +5,6 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use anyhow::anyhow;
 use poise::{
 	command,
 	serenity_prelude::{self as serenity},
@@ -18,10 +17,7 @@ pub(crate) async fn setup_role(
 	ctx: ApplicationContext<'_>,
 	role: serenity::Role,
 ) -> InteractionResult {
-	let guild_id = ctx
-		.interaction
-		.guild_id()
-		.ok_or_else(|| anyhow!("guild only command"))?;
+	let guild_id = ctx.guild_only_id();
 
 	// TODO: check role permissions
 
@@ -31,7 +27,7 @@ pub(crate) async fn setup_role(
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let get = ctx.get("done", None);
+	let get = ctx.translate("done", None);
 	ctx.shout(get).await?;
 
 	Ok(())

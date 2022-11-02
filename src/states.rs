@@ -44,7 +44,7 @@ pub(crate) struct Config {
 }
 
 /// Resolve an environment variable or return an appropriate error
-fn get_required_env_var(name: &str) -> anyhow::Result<String> {
+fn required_env_var(name: &str) -> anyhow::Result<String> {
 	match env::var(name) {
 		Ok(val) => Ok(val),
 		Err(VarError::NotPresent) => Err(anyhow!("{} must be set in the environnement", name)),
@@ -63,12 +63,11 @@ impl Config {
 			return Err(anyhow!("Couldn't find `.env` file, please create one"));
 		}
 
-		let discord_invite_code = get_required_env_var("DISCORD_INVITE_CODE")?;
+		let discord_invite_code = required_env_var("DISCORD_INVITE_CODE")?;
 
-		let discord_development_guild =
-			get_required_env_var("DISCORD_DEV_GUILD")?
-				.parse::<u64>()
-				.map_err(|_| anyhow!("DISCORD_DEV_GUILD environnement variable must be a `u64`"))?;
+		let discord_development_guild = required_env_var("DISCORD_DEV_GUILD")?
+			.parse::<u64>()
+			.map_err(|_| anyhow!("DISCORD_DEV_GUILD environnement variable must be a `u64`"))?;
 
 		let production = env::var("PRODUCTION")
 			.unwrap_or_else(|_| "false".into())
@@ -76,15 +75,15 @@ impl Config {
 			.map_err(|_| anyhow!("PRODUCTION environnement variable must be a `bool`"))?;
 
 		Ok(Self {
-			discord_token: Secret::new(get_required_env_var("DISCORD_TOKEN")?),
+			discord_token: Secret::new(required_env_var("DISCORD_TOKEN")?),
 			discord_development_guild: GuildId(discord_development_guild),
-			database_url: Secret::new(get_required_env_var("DATABASE_URL")?),
+			database_url: Secret::new(required_env_var("DATABASE_URL")?),
 			google_client: (
-				ClientId::new(get_required_env_var("GOOGLE_CLIENT_ID")?),
-				ClientSecret::new(get_required_env_var("GOOGLE_CLIENT_SECRET")?),
+				ClientId::new(required_env_var("GOOGLE_CLIENT_ID")?),
+				ClientSecret::new(required_env_var("GOOGLE_CLIENT_SECRET")?),
 			),
 			discord_invite_code,
-			server_url: get_required_env_var("SERVER_URL")?,
+			server_url: required_env_var("SERVER_URL")?,
 
 			production,
 		})
@@ -141,7 +140,7 @@ impl Data {
 /// Trait for sending ephemeral messages
 #[async_trait]
 pub(crate) trait ApplicationContextPolyfill<'b>: Send + Sync {
-	/// Send an ephemeral message to the user
+	/// Send a message to the user
 	async fn send<'att>(
 		self,
 		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
@@ -152,11 +151,16 @@ pub(crate) trait ApplicationContextPolyfill<'b>: Send + Sync {
 		&self,
 		content: impl Into<String> + Send,
 	) -> Result<ReplyHandle<'_>, serenity::Error>;
+
+	/// Get a [`GuildId`] in a `guild_only` interaction context
+	///
+	/// # Panics
+	/// If used in a non `guild_only` interaction context
+	fn guild_only_id(&self) -> GuildId;
 }
 
 #[async_trait]
 impl<'b> ApplicationContextPolyfill<'b> for ApplicationContext<'b> {
-	/// Send an ephemeral message to the user
 	#[inline]
 	async fn send<'att>(
 		self,
@@ -172,6 +176,17 @@ impl<'b> ApplicationContextPolyfill<'b> for ApplicationContext<'b> {
 	) -> Result<ReplyHandle<'_>, serenity::Error> {
 		self.send(|builder| builder.content(content).ephemeral(true))
 			.await
+	}
+
+	#[inline]
+	fn guild_only_id(&self) -> GuildId {
+		if self.command.guild_only {
+			self.interaction
+				.guild_id()
+				.expect("guild_only interactions")
+		} else {
+			panic!("Should be used only in guild_only interactions")
+		}
 	}
 }
 

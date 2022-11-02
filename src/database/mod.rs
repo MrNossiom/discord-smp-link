@@ -14,7 +14,6 @@ pub(crate) mod query;
 #[rustfmt::skip]
 pub(crate) mod schema;
 
-pub(crate) use diesel::result::Error as DieselError;
 
 /// The type alias for a Postgres connection pool
 pub(crate) type DatabasePool = Pool<AsyncMysqlConnection>;
@@ -48,6 +47,8 @@ pub(crate) mod prelude {
 		QueryableByName, Selectable, SelectableExpression, SelectableHelper, Table,
 		TextExpressionMethods,
 	};
+
+	pub(crate) use diesel::result::Error as DieselError;
 
 	pub(crate) use diesel_async::{RunQueryDsl, SaveChangesDsl, UpdateAndFetchResults};
 }

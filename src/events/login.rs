@@ -6,7 +6,7 @@ use crate::{
 	database::{
 		models::{Class, Guild, Member, NewVerifiedMember},
 		prelude::*,
-		schema, DatabasePooledConnection, DieselError,
+		schema, DatabasePooledConnection,
 	},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
@@ -34,7 +34,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.ok_or_else(|| anyhow!("used only in guild"))?;
 
 	let (verified_role, mut classes, email_pattern) =
-		match get_and_check_login_components(&mut connection, &member.guild_id).await {
+		match check_login_components(&mut connection, &member.guild_id).await {
 			Ok(v) => v,
 			Err(err) => match err {
 				CheckLoginComponentsError::Database(err) => return Err(err.into()),
@@ -68,12 +68,12 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.send(|reply| {
 			reply
 				.ephemeral(true)
-				.content(ctx.get("use-google-account-to-login", None))
+				.content(ctx.translate("use-google-account-to-login", None))
 				.components(|components| {
 					components.create_action_row(|action_row| {
 						action_row.create_button(|button| {
 							button
-								.label(ctx.get("continue", None))
+								.label(ctx.translate("continue", None))
 								.style(ButtonStyle::Link)
 								.url(oauth2_url)
 						})
@@ -85,7 +85,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let token_response = match token_response.await {
 		Ok(response) => response,
 		Err(GoogleAuthentificationError::Timeout) => {
-			let content = ctx.get("did-not-finish-auth-process", None);
+			let content = ctx.translate("did-not-finish-auth-process", None);
 			ctx.shout(content).await?;
 
 			return Ok(());
@@ -106,7 +106,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.last()
 		.context("email returned by google is invalid")?;
 	if mail_domain != email_pattern {
-		let content = ctx.get("error-email-not-allowed", None);
+		let content = ctx.translate("error-email-not-allowed", None);
 		ctx.shout(content).await?;
 
 		return Ok(());
@@ -137,7 +137,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 				.parse::<i32>()?
 		}
 		None => {
-			let content = ctx.get("error-user-timeout", None);
+			let content = ctx.translate("error-user-timeout", None);
 			ctx.shout(content).await?;
 
 			return Ok(());
@@ -151,7 +151,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	{
 		Ok(id) => id,
 		Err(DieselError::NotFound) => {
-			let content = ctx.get(
+			let content = ctx.translate(
 				"error-member-not-registered",
 				Some(&fluent_args!["user" => member.user.name.as_str()]),
 			);
@@ -190,7 +190,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 
 	initial_response
 		.edit(|b| {
-			b.content(ctx.get("authentication-successful", None))
+			b.content(ctx.translate("authentication-successful", None))
 				.components(|c| c)
 		})
 		.await?;
@@ -212,7 +212,7 @@ enum CheckLoginComponentsError {
 }
 
 /// Extracted logic
-async fn get_and_check_login_components(
+async fn check_login_components(
 	connection: &mut DatabasePooledConnection,
 	guild_id: &GuildId,
 ) -> Result<(RoleId, Vec<Class>, String), CheckLoginComponentsError> {

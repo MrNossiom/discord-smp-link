@@ -3,6 +3,11 @@
 
 //! Small bits of `Diesel` queries to reuse across the project
 
+use super::{
+	models::{Level, NewLevel},
+	prelude::*,
+	schema::levels,
+};
 use crate::database::{
 	models::{
 		Class, Group, Guild, Member, NewClass, NewGroup, NewMember, NewVerifiedMember,
@@ -11,9 +16,9 @@ use crate::database::{
 	schema::{classes, groups, guilds, members, verified_members},
 };
 use diesel::{
+	dsl::delete,
 	helper_types::{Eq, Filter, InnerJoin},
-	prelude::*,
-	query_builder::InsertStatement,
+	query_builder::{DeleteStatement, InsertStatement, IntoUpdateTarget},
 };
 use poise::serenity_prelude::{GuildId, UserId};
 
@@ -23,6 +28,16 @@ impl Class {
 		guild_id: &GuildId,
 	) -> Filter<classes::table, Eq<classes::guild_id, u64>> {
 		classes::table.filter(classes::guild_id.eq(guild_id.0))
+	}
+
+	/// Delete class from his `id`
+	pub(crate) fn delete_id(
+		class_id: i32,
+	) -> Filter<
+		DeleteStatement<classes::table, <classes::table as IntoUpdateTarget>::WhereClause>,
+		Eq<classes::id, i32>,
+	> {
+		delete(classes::table).filter(classes::id.eq(class_id))
 	}
 }
 
@@ -83,6 +98,16 @@ impl Group {
 	) -> Filter<groups::table, Eq<groups::guild_id, u64>> {
 		groups::table.filter(groups::guild_id.eq(guild_id.0))
 	}
+
+	/// Delete group from his `id`
+	pub(crate) fn delete_id(
+		group_id: i32,
+	) -> Filter<
+		DeleteStatement<groups::table, <groups::table as IntoUpdateTarget>::WhereClause>,
+		Eq<groups::id, i32>,
+	> {
+		delete(groups::table).filter(groups::id.eq(group_id))
+	}
 }
 
 impl<'a> NewGroup<'a> {
@@ -91,6 +116,34 @@ impl<'a> NewGroup<'a> {
 		&'a self,
 	) -> InsertStatement<groups::table, <&'a NewGroup<'a> as Insertable<groups::table>>::Values> {
 		diesel::insert_into(groups::table).values(self)
+	}
+}
+
+impl Level {
+	/// Select groups from their [`GuildId`]
+	pub(crate) fn all_from_guild(
+		guild_id: &GuildId,
+	) -> Filter<levels::table, Eq<levels::guild_id, u64>> {
+		levels::table.filter(levels::guild_id.eq(guild_id.0))
+	}
+
+	/// Delete level from his `id`
+	pub(crate) fn delete_id(
+		level_id: i32,
+	) -> Filter<
+		DeleteStatement<levels::table, <levels::table as IntoUpdateTarget>::WhereClause>,
+		Eq<levels::id, i32>,
+	> {
+		delete(levels::table).filter(levels::id.eq(level_id))
+	}
+}
+
+impl<'a> NewLevel<'a> {
+	/// Prepare a [`NewLevel`] insert
+	pub(crate) fn insert(
+		&'a self,
+	) -> InsertStatement<levels::table, <&'a NewLevel<'a> as Insertable<levels::table>>::Values> {
+		diesel::insert_into(levels::table).values(self)
 	}
 }
 
