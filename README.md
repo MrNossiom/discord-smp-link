@@ -1,4 +1,4 @@
-# Discord SMP Link
+# Discord SMP Link [![WakaTime](https://wakatime.com/badge/github/MrNossiom/discord-smp-link.svg)](https://wakatime.com/badge/github/MrNossiom/discord-smp-link)
 
 ## Running
 
