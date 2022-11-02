@@ -22,7 +22,8 @@ use poise::{
 #[command(
 	slash_command,
 	subcommands("classes_add", "classes_remove", "classes_list"),
-	default_member_permissions = "MANAGE_ROLES"
+	default_member_permissions = "MANAGE_ROLES",
+	required_bot_permissions = "MANAGE_ROLES"
 )]
 pub(crate) async fn classes(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
@@ -40,13 +41,24 @@ pub(crate) async fn classes_add(
 	let guild_id = ctx.guild_only_id();
 	let mut connection = ctx.data.database.get().await?;
 
-	let level_id: i32 = {
-		// TODO: handle no matching level
-		Level::all_from_guild(&guild_id)
-			.filter(schema::levels::name.eq(&level))
-			.select(schema::levels::id)
-			.get_result(&mut connection)
-			.await?
+	// TODO: handle no matching level
+	let level_id: i32 = match Level::all_from_guild(&guild_id)
+		.filter(schema::levels::name.eq(&level))
+		.select(schema::levels::id)
+		.get_result(&mut connection)
+		.await
+	{
+		Ok(id) => id,
+		Err(DieselError::NotFound) => {
+			let translate = ctx.translate(
+				"classes_add-no-such-level",
+				Some(&fluent_args! { "level" => level }),
+			);
+			ctx.shout(translate).await?;
+
+			return Ok(());
+		}
+		Err(err) => return Err(err.into()),
 	};
 
 	let role = match role {
@@ -70,6 +82,12 @@ pub(crate) async fn classes_add(
 	};
 
 	new_class.insert().execute(&mut connection).await?;
+
+	let translate = ctx.translate(
+		"classes_add-success",
+		Some(&fluent_args! { "class" => name, "level" => level }),
+	);
+	ctx.shout(translate).await?;
 
 	Ok(())
 }

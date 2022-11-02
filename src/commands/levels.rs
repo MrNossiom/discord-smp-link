@@ -21,7 +21,8 @@ use poise::{
 #[command(
 	slash_command,
 	subcommands("levels_add", "levels_remove", "levels_list"),
-	default_member_permissions = "MANAGE_ROLES"
+	default_member_permissions = "MANAGE_ROLES",
+	required_bot_permissions = "MANAGE_ROLES"
 )]
 pub(crate) async fn levels(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
@@ -60,6 +61,12 @@ pub(crate) async fn levels_add(
 		.insert()
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
+
+	let translate = ctx.translate(
+		"levels_add-success",
+		Some(&fluent_args! { "level" => name }),
+	);
+	ctx.shout(translate).await?;
 
 	Ok(())
 }

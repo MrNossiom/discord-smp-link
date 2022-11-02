@@ -8,21 +8,21 @@ and = and
 ## Commands
 
 # Classes
-
 classes = classes
-
 classes_add = add
     .description = Add a new class to the guild
-    .class_name = name
-    .class_name-description = Class name to add
-    .maybe_role = role
-    .maybe_role-description = A role to assign to this class, if not provided a role will be created
-
+    .name = name
+    .name-description = Class name to add
+    .level = level
+    .level-description = Parent level of the class
+    .role = role
+    .role-description = A role to assign to this class, if not provided a role will be created
+classes_add-success = Class `{$class}` has been created in the level `{$level}`.
+classes_add-no-such-level = There is no such level with the name of `{$level}` on this guild.
 classes_remove = remove
     .description = Remove a class from the guild
-    .class_name = name
-    .class_name-description = Class name to remove
-
+    .name = name
+    .name-description = Class name to remove
 classes_list = list
     .description = List the classes of the guild
     .filter = filter
@@ -33,34 +33,47 @@ classes_list-none = There is no classes in the guild.
 classes_list-none-with-filter = There is no classes in this guild with the filter `{$filter}`.
 
 # Groups
-
 groups = groups
-
 groups_add = add
     .description = Add a new group to the guild
-    .group_name = name
-    .group_name-description = Group name to add
-    .maybe_role = role
-    .maybe_role-description = A role to assign to this group, if not provided a role will be created
-
+    .name = name
+    .name-description = Group name to add
+    .role = role
+    .role-description = A role to assign to this group, if not provided a role will be created
+groups_add-success = Group `{$group}` has been created.
 groups_remove = remove
     .description = Remove a group from the guild
-    .group_name = name
-    .group_name-description = Group name to remove
-
+    .name = name
+    .name-description = Group name to remove
 groups_list = list
     .description = List the groups of the guild
     .filter = filter
     .filter-description = Filter the groups with a name
 
+# Levels
+levels = levels
+levels_add = add
+    .description = Add a new level to the guild
+    .name = name
+    .name-description = Level name to add
+    .role = role
+    .role-description = A role to assign to this level, if not provided a role will be created
+levels_add-success = Level `{$level}` has been created.
+levels_remove = remove
+    .description = Remove a level from the guild
+    .name = name
+    .name-description = Level name to remove
+levels_list = list
+    .description = List the levels of the guild
+    .filter = filter
+    .filter-description = Filter the levels with a name
+
 # Setup
 setup = setup
     .description = A set of commands to setup the bot.
-
 setup_message = message
     .description = Sets the login and logout message.
 setup_message-message = Login or Logout?
-
 setup_role = role
     .description = Setup the role to apply to verified members.
     .role = role
@@ -75,30 +88,24 @@ information = information
 # Dev
 debug = debug
     .description = Debug related commands.
-
 debug_force = force
     .description = Force an action on an other user.
-
 debug_force_logout = logout
     .description = Force disconnect a verified member.
     .user = user
     .user-description = The user to force disconnect.
 debug_force_logout-done = { $user } has been unregistered.
-
 debug_refresh = refresh
     .description = Loads elements in the database.
-
 debug_refresh_member = member
     .description = Refresh a member.
     .member = member
     .member-description = The member to refresh.
 debug_refresh_member-already-in-database = { $user } is already in the database.
 debug_refresh_member-added = { $user } successfully added.
-
 debug_refresh_members = members
     .description = Loads every members in the database.
 debug_refresh_members-added = { $count } members have been added to the database.
-
 debug_register = register
     .description = Register slash commands to Discord.
     .register = register

@@ -21,7 +21,8 @@ use poise::{
 #[command(
 	slash_command,
 	subcommands("groups_add", "groups_remove", "groups_list"),
-	default_member_permissions = "MANAGE_ROLES"
+	default_member_permissions = "MANAGE_ROLES",
+	required_bot_permissions = "MANAGE_ROLES"
 )]
 pub(crate) async fn groups(_ctx: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
@@ -60,6 +61,12 @@ pub(crate) async fn groups_add(
 		.insert()
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
+
+	let translate = ctx.translate(
+		"groups_add-success",
+		Some(&fluent_args! { "group" => name }),
+	);
+	ctx.shout(translate).await?;
 
 	Ok(())
 }
