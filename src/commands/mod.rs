@@ -4,7 +4,7 @@ use crate::{
 	states::{Context, ContextPolyfill, FrameworkError},
 	translation::Translate,
 };
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use fluent::fluent_args;
 use poise::BoxFuture;
 use uuid::Uuid;
@@ -43,12 +43,12 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 				tracing::error!(
+					command_id = ctx.command().identifying_name,
 					user_id = ctx.author().id.0,
 					username = ctx.author().name,
 					error_id = error_identifier,
-					command_id = ctx.command().identifying_name,
-					"An error occurred in command: {:#}",
-					error
+					error = ?error,
+					"command",
 				);
 
 				let error_msg = ctx.translate(
@@ -139,9 +139,9 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					user_id = ctx.author().id.0,
 					username = ctx.author().name,
 					error_id = error_identifier,
+					error = ?error,
 					command_id = ctx.command().identifying_name,
-					"An error occurred in command check: {:#}",
-					error.unwrap_or_else(|| anyhow!("Unknown error"))
+					"command check",
 				);
 
 				let error_msg = ctx.translate(
@@ -155,8 +155,18 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					.context("Failed to send command check failed message")
 			}
 
+			FrameworkError::Listener { error, event, .. } => {
+				tracing::error!(
+					error = ?error,
+					event = ?event,
+					"event listener",
+				);
+
+				Ok(())
+			}
+
 			error => {
-				tracing::error!(error = ?error, "Framework error");
+				tracing::error!(error = ?error, "framework");
 
 				Ok(())
 			}

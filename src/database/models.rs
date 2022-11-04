@@ -1,6 +1,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 //! `Diesel` models that represent database objects
+// TODO: build a macro to reduce boilerplate and generate ids struct for each table with a `AsExpression` implementation
 
 use super::schema::*;
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};

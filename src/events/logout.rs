@@ -1,12 +1,15 @@
 //! Command to disconnect Discord and Google accounts together.
 
 use crate::{
-	database::{models::VerifiedMember, prelude::*, schema},
+	database::{
+		models::{Guild, VerifiedMember},
+		prelude::*,
+		schema,
+	},
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
-use anyhow::anyhow;
-use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction};
+use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction, Member, RoleId};
 use std::time::Duration;
 
 /// Custom ID for the disconnect button
@@ -15,11 +18,7 @@ const CUSTOM_ID_DISCONNECT: &str = "event.logout.disconnect";
 /// Starts the dissociate accounts process
 /// Function used in the login and the setup command
 pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResult {
-	let member = ctx
-		.interaction
-		.member
-		.as_ref()
-		.ok_or_else(|| anyhow!("used only in guild"))?;
+	let mut member = ctx.guild_only_member();
 
 	let member_id: Option<i32> = match VerifiedMember::with_ids(&member.user.id, &member.guild_id)
 		.select(schema::verified_members::member_id)
@@ -67,7 +66,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 			interaction.defer(ctx.discord).await?;
 
 			match &*interaction.data.custom_id {
-				CUSTOM_ID_DISCONNECT => inner_logout(ctx, member_id).await?,
+				CUSTOM_ID_DISCONNECT => inner_logout(ctx, &mut member, member_id).await?,
 
 				_ => unreachable!(),
 			};
@@ -82,10 +81,23 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 }
 
 /// Disconnects Discord and Google accounts together
-async fn inner_logout(ctx: MessageComponentContext<'_>, member_id: i32) -> InteractionResult {
+async fn inner_logout(
+	ctx: MessageComponentContext<'_>,
+	member: &mut Member,
+	member_id: i32,
+) -> InteractionResult {
 	diesel::delete(VerifiedMember::from_member_id(member_id))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
+
+	let role_id: Option<u64> = Guild::with_id(&member.guild_id)
+		.select(schema::guilds::verified_role_id)
+		.first(&mut ctx.data.database.get().await?)
+		.await?;
+
+	if let Some(role) = role_id.map(RoleId) {
+		member.remove_role(ctx.discord, role).await?;
+	}
 
 	let get = ctx.translate("event-logout-success", None);
 	ctx.shout(get).await?;

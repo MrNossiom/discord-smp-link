@@ -3,7 +3,7 @@
 //! Polyfill for the [`MessageComponentInteraction`](poise::serenity_prelude::MessageComponentInteraction) type
 
 use poise::{
-	serenity_prelude::{self as serenity, MessageComponentInteraction},
+	serenity_prelude::{self as serenity, Member, MessageComponentInteraction},
 	CreateReply,
 };
 use std::{
@@ -83,6 +83,19 @@ impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 	) -> Result<MessageComponentReplyHandle<'_>, serenity::Error> {
 		self.send(|builder| builder.content(content.into()).ephemeral(true))
 			.await
+	}
+
+	// TODO: find another way
+	/// Get the member who triggered the interaction
+	///
+	/// # Panics
+	/// Panics if used in a non-guild context
+	#[inline]
+	pub(crate) fn guild_only_member(&self) -> Member {
+		self.interaction
+			.member
+			.clone()
+			.expect("not in a guild context")
 	}
 }
 

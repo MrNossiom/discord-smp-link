@@ -64,7 +64,13 @@ pub(super) async fn debug_refresh_member(
 
 // Requires the `GUILD_MEMBERS` intent to fetch all members
 /// Loads every guild member in the database
-#[command(slash_command, owners_only, hide_in_help, rename = "members")]
+#[command(
+	slash_command,
+	owners_only,
+	hide_in_help,
+	guild_only,
+	rename = "members"
+)]
 #[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
 pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;

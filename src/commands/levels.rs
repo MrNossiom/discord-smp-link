@@ -122,7 +122,7 @@ pub(crate) async fn levels_remove(
 		Err(error) => return Err(error.into()),
 	};
 
-	Level::delete_id(id)
+	diesel::delete(Level::with_id(id))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 

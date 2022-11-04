@@ -144,7 +144,9 @@ pub(crate) async fn classes_remove(
 		Err(error) => return Err(error.into()),
 	};
 
-	Class::delete_id(id).execute(&mut connection).await?;
+	diesel::delete(Class::with_id(id))
+		.execute(&mut connection)
+		.await?;
 
 	Ok(())
 }

@@ -78,6 +78,10 @@ setup_role = role
     .description = Setup the role to apply to verified members.
     .role = role
     .role-description = Which role to give
+setup_pattern = pattern
+    .description = Sets the pattern of the autohrized domain.
+    .pattern = pattern
+    .pattern-description = The pattern of the autohrized domain
 
 # Information Context Menu
 information = information
@@ -120,9 +124,8 @@ did-not-finish-auth-process = You didn't finish the authentication process under
 authentication-successful = You successfully authenticated with Google!
 use-google-account-to-login = Use your Google account to connect yourself.
 
-## Events
+## Errors
 
-# Errors
 error-bot-missing-permissions = The bot is missing the following permissions: { $permissions }.
 error-user-missing-permissions = You are missing the following permissions: { $permissions }.
 error-user-missing-unknown-permissions = I don't have the permissions to send messages in this channel.
@@ -136,10 +139,18 @@ error-process-timed-out = The process timed out.
 error-user-timeout = You took too long to answer.
 error-member-not-verified = Member { $user } isn't verified.
 
-# Buttons
+## Events
+
+# Setup
 event-setup-login-button = Login
 event-setup-logout-button = Logout
 
+# Login
+event-login-select-level = Select your level
+event-login-select-class = Select your class
+event-login-email-domain-not-allowed = Your email is not authorized.
+
+# Logout
 event-logout-warning = After you disconnected your accounts, you will lose access to the server and have to autenticate again.
 event-logout-disconnect-button = Disconnect your account
 event-logout-success = Your account has been disconnected.

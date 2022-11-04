@@ -85,6 +85,10 @@ setup_role = role
     .description = Met en place le rôle verifié.
     .role = role
     .role-description = Rôle verifié
+setup_pattern = patterne
+    .description = Met en place le patterne du nom de domaine autorisé.
+    .pattern = patterne
+    .pattern-description = Patterne du nom de domaine autorisé
 
 # Information Context Menu
 information = information
@@ -142,10 +146,16 @@ error-member-not-verified = Le membre { $user } n'est pas vérifié.
 
 ## Events
 
-# Buttons
+# Setup
 event-setup-login-button = Connexion
 event-setup-logout-button = Déconnexion
 
+# Login
+event-login-select-level = Sélectionnez votre niveau
+event-login-select-class = Sélectionnez votre classe
+event-login-email-domain-not-allowed = Votre email n'est pas autorisé.
+
+# Logout
 event-logout-warning = Après vous être déconnecté, vous perdrez l'accès au serveur et devrez vous reconnecter.
 event-logout-disconnect-button = Déconnecter son compte
 event-logout-success = Votre compte a bien été déconnecté.

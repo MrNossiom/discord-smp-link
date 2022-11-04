@@ -16,9 +16,9 @@ use crate::database::{
 	schema::{classes, groups, guilds, members, verified_members},
 };
 use diesel::{
-	dsl::delete,
-	helper_types::{Eq, Filter, InnerJoin},
-	query_builder::{DeleteStatement, InsertStatement, IntoUpdateTarget},
+	dsl::insert_into,
+	helper_types::{Eq, Filter, Find, InnerJoin},
+	query_builder::InsertStatement,
 };
 use poise::serenity_prelude::{GuildId, UserId};
 
@@ -30,14 +30,16 @@ impl Class {
 		classes::table.filter(classes::guild_id.eq(guild_id.0))
 	}
 
-	/// Delete class from his `id`
-	pub(crate) fn delete_id(
-		class_id: i32,
-	) -> Filter<
-		DeleteStatement<classes::table, <classes::table as IntoUpdateTarget>::WhereClause>,
-		Eq<classes::id, i32>,
-	> {
-		delete(classes::table).filter(classes::id.eq(class_id))
+	/// Select classes from their [`GuildId`]
+	pub(crate) fn all_from_level(
+		level_id: i32,
+	) -> Filter<classes::table, Eq<classes::level_id, i32>> {
+		classes::table.filter(classes::level_id.eq(level_id))
+	}
+
+	/// Select class from his `id`
+	pub(crate) fn with_id(class_id: i32) -> Find<classes::table, i32> {
+		classes::table.find(class_id)
 	}
 }
 
@@ -46,14 +48,14 @@ impl<'a> NewClass<'a> {
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<classes::table, <&'a NewClass<'a> as Insertable<classes::table>>::Values> {
-		diesel::insert_into(classes::table).values(self)
+		insert_into(classes::table).values(self)
 	}
 }
 
 impl Guild {
 	/// Retrieves a guild from its ID
-	pub(crate) fn with_id(guild_id: &GuildId) -> Filter<guilds::table, Eq<guilds::id, u64>> {
-		guilds::table.filter(guilds::id.eq(guild_id.0))
+	pub(crate) fn with_id(guild_id: &GuildId) -> Find<guilds::table, u64> {
+		guilds::table.find(guild_id.0)
 	}
 }
 
@@ -75,7 +77,7 @@ impl<'a> NewMember<'a> {
 		&'a self,
 	) -> InsertStatement<members::table, <&'a NewMember<'a> as Insertable<members::table>>::Values>
 	{
-		diesel::insert_into(members::table).values(self)
+		insert_into(members::table).values(self)
 	}
 }
 
@@ -87,7 +89,7 @@ impl<'a> NewVerifiedMember<'a> {
 		verified_members::table,
 		<&'a NewVerifiedMember<'a> as Insertable<verified_members::table>>::Values,
 	> {
-		diesel::insert_into(verified_members::table).values(self)
+		insert_into(verified_members::table).values(self)
 	}
 }
 
@@ -99,14 +101,9 @@ impl Group {
 		groups::table.filter(groups::guild_id.eq(guild_id.0))
 	}
 
-	/// Delete group from his `id`
-	pub(crate) fn delete_id(
-		group_id: i32,
-	) -> Filter<
-		DeleteStatement<groups::table, <groups::table as IntoUpdateTarget>::WhereClause>,
-		Eq<groups::id, i32>,
-	> {
-		delete(groups::table).filter(groups::id.eq(group_id))
+	/// Select group from his `id`
+	pub(crate) fn with_id(group_id: i32) -> Find<groups::table, i32> {
+		groups::table.find(group_id)
 	}
 }
 
@@ -115,7 +112,7 @@ impl<'a> NewGroup<'a> {
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<groups::table, <&'a NewGroup<'a> as Insertable<groups::table>>::Values> {
-		diesel::insert_into(groups::table).values(self)
+		insert_into(groups::table).values(self)
 	}
 }
 
@@ -127,14 +124,9 @@ impl Level {
 		levels::table.filter(levels::guild_id.eq(guild_id.0))
 	}
 
-	/// Delete level from his `id`
-	pub(crate) fn delete_id(
-		level_id: i32,
-	) -> Filter<
-		DeleteStatement<levels::table, <levels::table as IntoUpdateTarget>::WhereClause>,
-		Eq<levels::id, i32>,
-	> {
-		delete(levels::table).filter(levels::id.eq(level_id))
+	/// Select level from his `id`
+	pub(crate) fn with_id(level_id: i32) -> Find<levels::table, i32> {
+		levels::table.find(level_id)
 	}
 }
 
@@ -143,7 +135,7 @@ impl<'a> NewLevel<'a> {
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<levels::table, <&'a NewLevel<'a> as Insertable<levels::table>>::Values> {
-		diesel::insert_into(levels::table).values(self)
+		insert_into(levels::table).values(self)
 	}
 }
 

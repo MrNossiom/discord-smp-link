@@ -281,7 +281,7 @@ pub(crate) trait Translate {
 		match self.translate_checked(key, args) {
 			Ok(string) => string.into(),
 			Err(error) => {
-				tracing::error!(error = ?error, "translation error for key {key} with args {args:?}");
+				tracing::error!(key = key, args = ?args, error = ?error, "translation error");
 				key.into()
 			}
 		}

@@ -122,7 +122,7 @@ pub(crate) async fn groups_remove(
 		Err(error) => return Err(error.into()),
 	};
 
-	Group::delete_id(id)
+	diesel::delete(Group::with_id(id))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
