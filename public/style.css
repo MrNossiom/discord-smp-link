@@ -20,6 +20,21 @@ code {
 	border-radius: 5px;
 }
 
+div.prose {
+	width: clamp(45ch, 50%, 75ch);
+}
+div.prose h1 {
+	margin-top: 1rem;
+	margin-bottom: 0.5rem;
+}
+div.prose h2 {
+	margin-top: 1rem;
+	margin-bottom: 0.5rem;
+}
+div.prose p {
+	margin-bottom: 1rem;
+}
+
 .logo {
 	aspect-ratio: 1;
 }

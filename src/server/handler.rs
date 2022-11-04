@@ -56,7 +56,7 @@ pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -
 		queue.insert(params.state, Some(token_response));
 	}
 
-	Template::render("auth", context! { is_success: true })
+	Template::render("auth", context! { is_success: true, username: "" })
 }
 
 /// Serve the index page
