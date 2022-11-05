@@ -168,6 +168,8 @@ pub(crate) struct AuthProcess {
 	/// The code to recognize the request
 	csrf_state: CsrfToken,
 
+	/// The delay between each check in the queue
+	/// Used to avoid locking the [`RwLock`] at each poll
 	#[pin]
 	queue_delay: Sleep,
 }
@@ -198,9 +200,9 @@ impl Future for AuthProcess {
 		}
 
 		match this.queue_delay.as_mut().poll(cx) {
-			Poll::Ready(_) => {
+			Poll::Ready(()) => {
 				this.queue_delay
-					.reset(Instant::now() + Duration::from_secs(5));
+					.reset(Instant::now() + constants::AUTHENTICATION_CHECK_DELAY);
 
 				match queue.remove(this.csrf_state.secret()) {
 					Some(token_response) => Poll::Ready(Ok(token_response)),

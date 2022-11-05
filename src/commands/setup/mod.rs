@@ -33,7 +33,6 @@ pub(crate) async fn setup(_ctx: ApplicationContext<'_>) -> InteractionResult {
 pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	// TODO: check verified role permissions
 	if role.has_permission(Permissions::ADMINISTRATOR) {
 		let translate = ctx.translate("setup_role-role-admin", None);
 		ctx.shout(translate).await?;

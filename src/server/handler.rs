@@ -1,7 +1,3 @@
-// TODO: remove when fixed in clippy code `https://github.com/rust-lang/rust-clippy/pull/9486`
-// ? Necessary to avoid clippy warning for `FromForm` derives
-#![allow(clippy::unnecessary_lazy_evaluations)]
-
 //! The request handlers that serves content
 
 use crate::states::ArcData;
