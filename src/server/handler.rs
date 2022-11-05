@@ -23,7 +23,7 @@ pub(crate) struct OAuth2Params {
 #[rocket::get("/oauth2?<params..>")]
 pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -> Template {
 	{
-		let queue = data.auth.queue.read().expect("poisoned");
+		let queue = data.auth.pending_set.read().expect("poisoned");
 
 		if queue.get(&params.state).is_none() {
 			return Template::render(
@@ -51,9 +51,9 @@ pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -
 	};
 
 	{
-		let mut queue = data.auth.queue.write().expect("poisoned");
+		let mut queue = data.auth.received_queue.write().expect("poisoned");
 
-		queue.insert(params.state, Some(token_response));
+		queue.insert(params.state, token_response);
 	}
 
 	Template::render("auth", context! { is_success: true, username: "" })

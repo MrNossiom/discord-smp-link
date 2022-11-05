@@ -14,20 +14,21 @@ use oauth2::{
 };
 use reqwest::Client;
 use serde_json::Value;
+use std::collections::HashSet;
 use std::{
 	collections::HashMap,
 	pin::Pin,
 	sync::{Arc, RwLock},
 	task::{Context, Poll},
-	time::{Duration, Instant},
 };
 use thiserror::Error;
+use tokio::time::{self, Duration, Instant, Sleep};
 
 /// The type of the `OAuth2` response
 pub(crate) type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
 
 /// The type of the auth queue
-pub(crate) type AuthQueue = HashMap<String, Option<BasicTokenResponse>>;
+pub(crate) type AuthQueue = HashMap<String, BasicTokenResponse>;
 
 /// The information returned by google
 pub(crate) struct GoogleUserMetadata {
@@ -44,8 +45,11 @@ pub(crate) struct GoogleUserMetadata {
 pub(crate) struct GoogleAuthentification {
 	/// The inner client used to manage the flow
 	pub(crate) client: BasicClient,
+	// TODO: change string to `CsrfToken` if oauth2-rs implement Eq + Hash on it
 	/// A queue to wait for the user to finish the flow
-	pub(crate) queue: Arc<RwLock<AuthQueue>>,
+	pub(crate) pending_set: Arc<RwLock<HashSet<String>>>,
+	/// A queue to wait for the user to finish the flow
+	pub(crate) received_queue: Arc<RwLock<AuthQueue>>,
 	/// A Reqwest HTTPS client to query Google OAuth2 API
 	pub(crate) http: Client,
 }
@@ -67,7 +71,8 @@ impl GoogleAuthentification {
 
 		Ok(Self {
 			client: oauth_client,
-			queue: Default::default(),
+			pending_set: Default::default(),
+			received_queue: Default::default(),
 			http: Default::default(),
 		})
 	}
@@ -84,9 +89,16 @@ impl GoogleAuthentification {
 			])
 			.url();
 
+		// Queue the newly created `csrf` state
+		{
+			let mut map = self.pending_set.write().expect("RwLock is poisoned");
+
+			map.insert(csrf_state.secret().clone());
+		}
+
 		(
 			authorize_url,
-			AuthProcess::new(max_duration, Arc::clone(&self.queue), csrf_state),
+			AuthProcess::new(max_duration, Arc::clone(&self.received_queue), csrf_state),
 		)
 	}
 
@@ -147,6 +159,7 @@ impl GoogleAuthentification {
 
 /// Returned by [`GoogleAuthentification`] for a new authentification process
 /// Implement [`Future`] to make code more readable
+#[pin_project::pin_project]
 pub(crate) struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
@@ -154,24 +167,20 @@ pub(crate) struct AuthProcess {
 	queue: Arc<RwLock<AuthQueue>>,
 	/// The code to recognize the request
 	csrf_state: CsrfToken,
+
+	#[pin]
+	queue_delay: Sleep,
 }
 
 impl AuthProcess {
 	#[must_use]
 	/// Create a new [`AuthProcess`]
 	fn new(wait: Duration, queue: Arc<RwLock<AuthQueue>>, csrf_state: CsrfToken) -> Self {
-		// Queue the newly created `csrf` state
-		{
-			let queue = queue.clone();
-			let mut map = queue.write().expect("RwLock is poisoned");
-
-			map.insert(csrf_state.secret().clone(), None);
-		}
-
 		Self {
 			wait_until: Instant::now() + wait,
 			queue,
 			csrf_state,
+			queue_delay: time::sleep(Default::default()),
 		}
 	}
 }
@@ -180,29 +189,25 @@ impl Future for AuthProcess {
 	type Output = Result<BasicTokenResponse, GoogleAuthentificationError>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-		let mut queue = self.queue.write().expect("RwLock is poisoned");
+		let mut this = self.project();
 
-		if Instant::now() > self.wait_until {
+		let mut queue = this.queue.write().expect("RwLock is poisoned");
+
+		if Instant::now() > *this.wait_until {
 			return Poll::Ready(Err(GoogleAuthentificationError::Timeout));
 		}
 
-		match queue.get(&self.csrf_state.secret().clone()) {
-			None => Poll::Ready(Err(GoogleAuthentificationError::NotQueued)),
-			Some(Some(_)) => {
-				let token = queue
-					.remove(&self.csrf_state.secret().clone())
-					.expect("entry was checked just before")
-					.expect("entry was checked just before");
+		match this.queue_delay.as_mut().poll(cx) {
+			Poll::Ready(_) => {
+				this.queue_delay
+					.reset(Instant::now() + Duration::from_secs(5));
 
-				Poll::Ready(Ok(token))
+				match queue.remove(this.csrf_state.secret()) {
+					Some(token_response) => Poll::Ready(Ok(token_response)),
+					None => Poll::Pending,
+				}
 			}
-			Some(None) => {
-				// Add a delay to avoid spamming the queue
-
-				cx.waker().clone().wake();
-
-				Poll::Pending
-			}
+			Poll::Pending => Poll::Pending,
 		}
 	}
 }
@@ -213,9 +218,6 @@ pub(crate) enum GoogleAuthentificationError {
 	/// The authentification process timed out
 	#[error("The authentication timeout has expired")]
 	Timeout,
-	/// The authentification process was not queued
-	#[error("This CSRF state is not queued")]
-	NotQueued,
 
 	/// An error while fetching `Google`
 	#[error("Could not fetch the Google API: {0}")]

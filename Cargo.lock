@@ -864,6 +864,7 @@ dependencies = [
  "hyper-rustls",
  "intl-memoizer",
  "oauth2",
+ "pin-project",
  "poise",
  "reqwest",
  "rocket",
