@@ -44,3 +44,27 @@ pub(crate) mod scopes {
 	// pub(crate) const CLASSROOM_COURSES_READONLY: &str =
 	// 	"https://www.googleapis.com/auth/classroom.courses.readonly";
 }
+
+/// Limits to certain values
+///
+/// Remember also that the `Discord API` has a limit of `250` roles per guild.
+/// <https://github.com/discord/discord-api-docs/issues/2616>
+pub(crate) mod limits {
+	/// Maximum number of levels that can be created per guild
+	///
+	/// This is mostly dictated by the Discord API limit of 25 buttons per message
+	/// <https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-menu-structure>
+	pub(crate) const MAX_LEVELS_PER_GUILD: u8 = 25;
+
+	/// The maximum number of classes that can be created per level
+	///
+	/// This is mostly dictated by the Discord API limit of 25 buttons per message
+	/// <https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-menu-structure>
+	pub(crate) const MAX_CLASSES_PER_LEVEL: u8 = 25;
+
+	/// The maximum number of groups that can be created per guild
+	///
+	/// This is mostly dictated by the Discord API limit of 25 buttons per message
+	/// <https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-menu-structure>
+	pub(crate) const MAX_GROUPS_PER_GUILD: u8 = 25;
+}

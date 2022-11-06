@@ -20,7 +20,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 		.await
 	{
 		Ok(x) => x,
-		Err(_) => {
+		Err(DieselError::NotFound) => {
 			let get = ctx.translate(
 				"error-member-not-verified",
 				Some(&fluent_args!["user" => user.name]),
@@ -29,6 +29,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 
 			return Ok(());
 		}
+		Err(err) => return Err(err.into()),
 	};
 
 	ctx.send(|builder| {

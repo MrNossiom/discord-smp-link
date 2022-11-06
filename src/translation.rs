@@ -1,7 +1,7 @@
 //! Fluent Project translation system
 
 use crate::states::{ApplicationContext, Command, Context, MessageComponentContext};
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use fluent::{bundle, FluentArgs, FluentMessage, FluentResource};
 use fluent_syntax::ast::Pattern;
 use intl_memoizer::concurrent::IntlLangMemoizer as ConcurrentIntlLangMemoizer;
@@ -35,7 +35,7 @@ impl Debug for Translations {
 }
 
 /// Reads and parses the given Fluent file
-fn read_fluent_file(path: &Path) -> Result<(LanguageIdentifier, FluentBundle)> {
+fn read_fluent_file(path: &Path) -> anyhow::Result<(LanguageIdentifier, FluentBundle)> {
 	// Extract locale from filename
 	let locale: LanguageIdentifier = path
 		.file_stem()
@@ -60,7 +60,7 @@ fn read_fluent_file(path: &Path) -> Result<(LanguageIdentifier, FluentBundle)> {
 
 impl Translations {
 	/// Load all available translations from the given directory
-	pub(crate) fn from_folder(folder: &str, fallback: LanguageIdentifier) -> Result<Self> {
+	pub(crate) fn from_folder(folder: &str, fallback: LanguageIdentifier) -> anyhow::Result<Self> {
 		let bundles: HashMap<LanguageIdentifier, FluentBundle> = read_dir(folder)?
 			.map(Result::unwrap)
 			.filter(|file| matches!(file.path().extension(), Some(ext) if ext == "ftl"))
@@ -97,7 +97,7 @@ impl Translations {
 		locale: LanguageIdentifier,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
-	) -> Result<Cow<'bundle, str>> {
+	) -> anyhow::Result<Cow<'bundle, str>> {
 		let bundle = self.bundles.get(&locale).unwrap_or_else(|| {
 			self.bundles
 				.get(&self.fallback)
@@ -274,7 +274,7 @@ pub(crate) trait Translate {
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
-	) -> Result<Cow<'bundle, str>>;
+	) -> anyhow::Result<Cow<'bundle, str>>;
 
 	/// Get a translated key of the key itself in case it is not found
 	fn translate(&self, key: &str, args: Option<&FluentArgs>) -> String {
@@ -293,7 +293,7 @@ impl Translate for ApplicationContext<'_> {
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
-	) -> Result<Cow<'bundle, str>> {
+	) -> anyhow::Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale().parse()?;
 
 		self.data.translations.translate_checked(locale, key, args)
@@ -305,7 +305,7 @@ impl Translate for Context<'_> {
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
-	) -> Result<Cow<'bundle, str>> {
+	) -> anyhow::Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = match self.locale() {
 			Some(locale) => locale.parse()?,
 			None => self.data().translations.fallback.clone(),
@@ -322,7 +322,7 @@ impl Translate for MessageComponentContext<'_> {
 		&'bundle self,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
-	) -> Result<Cow<'bundle, str>> {
+	) -> anyhow::Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale.parse()?;
 
 		self.data.translations.translate_checked(locale, key, args)

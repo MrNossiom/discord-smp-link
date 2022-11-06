@@ -1,6 +1,7 @@
 //! Setup messages for roles interactions
 
 use crate::{
+	constants,
 	database::{
 		models::{Level, NewLevel},
 		prelude::*,
@@ -137,11 +138,24 @@ pub(crate) async fn levels_list(
 	#[autocomplete = "autocomplete_levels"] filter: Option<String>,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
+	let mut connection = ctx.data.database.get().await?;
+
+	let nb_of_levels: i64 = Level::all_from_guild(&guild_id)
+		.count()
+		.get_result(&mut connection)
+		.await?;
+
+	if nb_of_levels >= constants::limits::MAX_LEVELS_PER_GUILD as i64 {
+		let translate = ctx.translate("levels_add-too-many-levels", None);
+		ctx.shout(translate).await?;
+
+		return Ok(());
+	}
 
 	// TODO: use the cache from autocomplete context
 	let levels: Vec<String> = Level::all_from_guild(&guild_id)
 		.select(schema::levels::name)
-		.get_results::<String>(&mut ctx.data.database.get().await?)
+		.get_results::<String>(&mut connection)
 		.await?;
 
 	let levels = match filter {

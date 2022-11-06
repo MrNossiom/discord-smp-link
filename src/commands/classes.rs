@@ -2,6 +2,7 @@
 
 use crate::{
 	commands::levels::autocomplete_levels,
+	constants,
 	database::{
 		models::{Class, Level, NewClass},
 		prelude::*,
@@ -60,6 +61,18 @@ pub(crate) async fn classes_add(
 		}
 		Err(err) => return Err(err.into()),
 	};
+
+	let nb_of_classes: i64 = Class::all_from_level(level_id)
+		.count()
+		.get_result(&mut connection)
+		.await?;
+
+	if nb_of_classes >= constants::limits::MAX_CLASSES_PER_LEVEL as i64 {
+		let translate = ctx.translate("classes_add-too-many-classes", None);
+		ctx.shout(translate).await?;
+
+		return Ok(());
+	}
 
 	let role = match role {
 		Some(role) => role,

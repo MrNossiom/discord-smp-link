@@ -1,6 +1,7 @@
 //! Setup messages for roles interactions
 
 use crate::{
+	constants,
 	database::{
 		models::{Group, NewGroup},
 		prelude::*,
@@ -137,11 +138,24 @@ pub(crate) async fn groups_list(
 	#[autocomplete = "autocomplete_groups"] filter: Option<String>,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
+	let mut connection = ctx.data.database.get().await?;
+
+	let nb_of_groups: i64 = Group::all_from_guild(&guild_id)
+		.count()
+		.get_result(&mut connection)
+		.await?;
+
+	if nb_of_groups >= constants::limits::MAX_GROUPS_PER_GUILD as i64 {
+		let translate = ctx.translate("groups_add-too-many-groups", None);
+		ctx.shout(translate).await?;
+
+		return Ok(());
+	}
 
 	// TODO: use the cache from autocomplete context
 	let groups: Vec<String> = Group::all_from_guild(&guild_id)
 		.select(schema::groups::name)
-		.get_results::<String>(&mut ctx.data.database.get().await?)
+		.get_results::<String>(&mut connection)
 		.await?;
 
 	let groups = match filter {
