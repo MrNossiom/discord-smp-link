@@ -71,9 +71,9 @@ impl GoogleAuthentification {
 
 		Ok(Self {
 			client: oauth_client,
-			pending_set: Default::default(),
-			received_queue: Default::default(),
-			http: Default::default(),
+			pending_set: Arc::default(),
+			received_queue: Arc::default(),
+			http: Client::default(),
 		})
 	}
 
@@ -182,7 +182,7 @@ impl AuthProcess {
 			wait_until: Instant::now() + wait,
 			queue,
 			csrf_state,
-			queue_delay: time::sleep(Default::default()),
+			queue_delay: time::sleep(Duration::default()),
 		}
 	}
 }
@@ -204,10 +204,10 @@ impl Future for AuthProcess {
 				this.queue_delay
 					.reset(Instant::now() + constants::AUTHENTICATION_CHECK_DELAY);
 
-				match queue.remove(this.csrf_state.secret()) {
-					Some(token_response) => Poll::Ready(Ok(token_response)),
-					None => Poll::Pending,
-				}
+				queue.remove(this.csrf_state.secret()).map_or_else(
+					|| Poll::Pending,
+					|token_response| Poll::Ready(Ok(token_response)),
+				)
 			}
 			Poll::Pending => Poll::Pending,
 		}

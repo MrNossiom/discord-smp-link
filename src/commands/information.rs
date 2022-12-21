@@ -14,7 +14,7 @@ use poise::{command, serenity_prelude::User};
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let verified_member: VerifiedMember = match VerifiedMember::with_ids(&user.id, &guild_id)
+	let verified_member: VerifiedMember = match VerifiedMember::with_ids(user.id, guild_id)
 		.select(VerifiedMember::as_select())
 		.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
 		.await
@@ -40,7 +40,7 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 					verified_member.first_name, verified_member.last_name
 				))
 				.field("Mail", verified_member.mail, false)
-				.color(0x00FF00)
+				.color(0x0000_FF00)
 				.footer(|footer| footer.text("Discord SMP Link © 2023"))
 		})
 	})

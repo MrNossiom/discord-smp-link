@@ -43,7 +43,7 @@ pub(crate) async fn classes_add(
 	let mut connection = ctx.data.database.get().await?;
 
 	// TODO: handle no matching level
-	let level_id: i32 = match Level::all_from_guild(&guild_id)
+	let level_id: i32 = match Level::all_from_guild(guild_id)
 		.filter(schema::levels::name.eq(&level))
 		.select(schema::levels::id)
 		.get_result(&mut connection)
@@ -67,7 +67,7 @@ pub(crate) async fn classes_add(
 		.get_result(&mut connection)
 		.await?;
 
-	if nb_of_classes >= constants::limits::MAX_CLASSES_PER_LEVEL as i64 {
+	if nb_of_classes >= i64::from(constants::limits::MAX_CLASSES_PER_LEVEL) {
 		let translate = ctx.translate("classes_add-too-many-classes", None);
 		ctx.shout(translate).await?;
 
@@ -78,7 +78,7 @@ pub(crate) async fn classes_add(
 		Some(role) => role,
 		None => {
 			guild_id
-				.create_role(ctx.discord, |role| {
+				.create_role(&ctx.serenity_context, |role| {
 					role.name(&name)
 						.permissions(Permissions::empty())
 						.mentionable(true)
@@ -114,7 +114,7 @@ async fn autocomplete_classes<'a>(
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
 	// TODO: cache this per guild, db query intensive
-	let classes: Vec<_> = Class::all_from_guild(&ctx.interaction.guild_id().unwrap())
+	let classes: Vec<_> = Class::all_from_guild(ctx.interaction.guild_id().unwrap())
 		.select(schema::classes::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
@@ -135,7 +135,7 @@ pub(crate) async fn classes_remove(
 	let guild_id = ctx.guild_only_id();
 	let mut connection = ctx.data.database.get().await?;
 
-	let (id, role_id) = match Class::all_from_guild(&guild_id)
+	let (id, role_id) = match Class::all_from_guild(guild_id)
 		.filter(schema::classes::name.eq(&name))
 		.select((schema::classes::id, schema::classes::role_id))
 		.first::<(i32, u64)>(&mut connection)
@@ -150,8 +150,11 @@ pub(crate) async fn classes_remove(
 		Err(err) => return Err(err.into()),
 	};
 
-	match guild_id.delete_role(ctx.discord, RoleId(role_id)).await {
-		Ok(_) => {}
+	match guild_id
+		.delete_role(&ctx.serenity_context, RoleId(role_id))
+		.await
+	{
+		Ok(_) |
 		// Ignore the error if the role is already deleted
 		Err(serenity::Error::Http(_)) => {}
 		Err(error) => return Err(error.into()),
@@ -174,7 +177,7 @@ pub(crate) async fn classes_list(
 	let guild_id = ctx.guild_only_id();
 
 	// TODO: use the cache from autocomplete context
-	let classes: Vec<String> = Class::all_from_guild(&guild_id)
+	let classes: Vec<String> = Class::all_from_guild(guild_id)
 		.select(schema::classes::name)
 		.get_results::<String>(&mut ctx.data.database.get().await?)
 		.await?;
@@ -188,14 +191,15 @@ pub(crate) async fn classes_list(
 	};
 
 	if classes.is_empty() {
-		let get = if let Some(ref filter) = filter {
-			ctx.translate(
-				"classes_list-none-with-filter",
-				Some(&fluent_args!["filter" => filter.clone()]),
-			)
-		} else {
-			ctx.translate("classes_list-none", None)
-		};
+		let get = filter.as_ref().map_or_else(
+			|| ctx.translate("classes_list-none", None),
+			|filter| {
+				ctx.translate(
+					"classes_list-none-with-filter",
+					Some(&fluent_args!["filter" => filter.clone()]),
+				)
+			},
+		);
 		ctx.shout(get).await?;
 
 		return Ok(());
@@ -214,14 +218,13 @@ pub(crate) async fn classes_list(
 
 	let message = format!(
 		"**{}**:\n{}",
-		if let Some(filter) = filter {
-			ctx.translate(
+		filter.map_or_else(
+			|| ctx.translate("classes_list-title", None),
+			|filter| ctx.translate(
 				"classes_list-title-with-filter",
 				Some(&fluent_args!["filter" => filter]),
 			)
-		} else {
-			ctx.translate("classes_list-title", None)
-		},
+		),
 		classes_string
 	);
 	ctx.shout(message).await?;

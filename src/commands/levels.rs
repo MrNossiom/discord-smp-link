@@ -43,7 +43,7 @@ pub(crate) async fn levels_add(
 		Some(role) => role,
 		None => {
 			guild_id
-				.create_role(ctx.discord, |role| {
+				.create_role(&ctx.serenity_context, |role| {
 					role.name(&name)
 						.permissions(Permissions::empty())
 						.mentionable(true)
@@ -81,7 +81,7 @@ pub(super) async fn autocomplete_levels<'a>(
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
 	// TODO: cache this per guild, db query intensive
-	let levels: Vec<_> = Level::all_from_guild(&ctx.interaction.guild_id().unwrap())
+	let levels: Vec<_> = Level::all_from_guild(ctx.interaction.guild_id().unwrap())
 		.select(schema::levels::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
@@ -101,7 +101,7 @@ pub(crate) async fn levels_remove(
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let (id, role_id) = match Level::all_from_guild(&guild_id)
+	let (id, role_id) = match Level::all_from_guild(guild_id)
 		.filter(schema::levels::name.eq(&name))
 		.select((schema::levels::id, schema::levels::role_id))
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
@@ -116,8 +116,11 @@ pub(crate) async fn levels_remove(
 		Err(err) => return Err(err.into()),
 	};
 
-	match guild_id.delete_role(ctx.discord, RoleId(role_id)).await {
-		Ok(_) => {}
+	match guild_id
+		.delete_role(&ctx.serenity_context, RoleId(role_id))
+		.await
+	{
+		Ok(_) |
 		// Ignore the error if the role is already deleted
 		Err(serenity::Error::Http(_)) => {}
 		Err(error) => return Err(error.into()),
@@ -140,12 +143,12 @@ pub(crate) async fn levels_list(
 	let guild_id = ctx.guild_only_id();
 	let mut connection = ctx.data.database.get().await?;
 
-	let nb_of_levels: i64 = Level::all_from_guild(&guild_id)
+	let nb_of_levels: i64 = Level::all_from_guild(guild_id)
 		.count()
 		.get_result(&mut connection)
 		.await?;
 
-	if nb_of_levels >= constants::limits::MAX_LEVELS_PER_GUILD as i64 {
+	if nb_of_levels >= i64::from(constants::limits::MAX_LEVELS_PER_GUILD) {
 		let translate = ctx.translate("levels_add-too-many-levels", None);
 		ctx.shout(translate).await?;
 
@@ -153,7 +156,7 @@ pub(crate) async fn levels_list(
 	}
 
 	// TODO: use the cache from autocomplete context
-	let levels: Vec<String> = Level::all_from_guild(&guild_id)
+	let levels: Vec<String> = Level::all_from_guild(guild_id)
 		.select(schema::levels::name)
 		.get_results::<String>(&mut connection)
 		.await?;
@@ -167,14 +170,15 @@ pub(crate) async fn levels_list(
 	};
 
 	if levels.is_empty() {
-		let get = if let Some(ref filter) = filter {
-			ctx.translate(
-				"levels_list-none-with-filter",
-				Some(&fluent_args!["filter" => filter.clone()]),
-			)
-		} else {
-			ctx.translate("levels_list-none", None)
-		};
+		let get = filter.as_ref().map_or_else(
+			|| ctx.translate("levels_list-none", None),
+			|filter| {
+				ctx.translate(
+					"levels_list-none-with-filter",
+					Some(&fluent_args!["filter" => filter.clone()]),
+				)
+			},
+		);
 		ctx.shout(get).await?;
 
 		return Ok(());
@@ -195,14 +199,13 @@ pub(crate) async fn levels_list(
 
 	let message = format!(
 		"**{}**:\n{}",
-		if let Some(filter) = filter {
-			ctx.translate(
+		filter.map_or_else(
+			|| ctx.translate("levels_list-title", None),
+			|filter| ctx.translate(
 				"levels_list-title-with-filter",
 				Some(&fluent_args!["filter" => filter]),
 			)
-		} else {
-			ctx.translate("levels_list-title", None)
-		},
+		),
 		levels_string
 	);
 	ctx.shout(message).await?;

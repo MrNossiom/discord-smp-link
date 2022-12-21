@@ -34,7 +34,7 @@ pub(super) async fn debug_refresh_member(
 ) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 
-	if let Ok(member) = Member::with_ids(&member.user.id, &member.guild_id)
+	if let Ok(member) = Member::with_ids(member.user.id, member.guild_id)
 		.first::<Member>(&mut connection)
 		.await
 	{
@@ -80,7 +80,9 @@ pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> Intera
 	let mut last_member_id = None;
 
 	loop {
-		let members = guild_id.members(ctx.discord, None, last_member_id).await?;
+		let members = guild_id
+			.members(&ctx.serenity_context, None, last_member_id)
+			.await?;
 		let len = members.len();
 
 		if let Some(member) = members.last() {

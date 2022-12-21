@@ -20,7 +20,7 @@ const CUSTOM_ID_DISCONNECT: &str = "event.logout.disconnect";
 pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut member = ctx.guild_only_member();
 
-	let member_id: Option<i32> = match VerifiedMember::with_ids(&member.user.id, &member.guild_id)
+	let member_id: Option<i32> = match VerifiedMember::with_ids(member.user.id, member.guild_id)
 		.select(schema::verified_members::member_id)
 		.first(&mut ctx.data.database.get().await?)
 		.await
@@ -30,13 +30,10 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		Err(error) => return Err(error.into()),
 	};
 
-	let member_id = match member_id {
-		Some(member_id) => member_id,
-		None => {
+	let Some(member_id) = member_id else {
 			ctx.shout("Member does not exist").await?;
 
 			return Ok(());
-		}
 	};
 
 	let reply = ctx
@@ -57,24 +54,21 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		})
 		.await?;
 
-	match CollectComponentInteraction::new(ctx.discord)
+	if let Some(interaction) = CollectComponentInteraction::new(&ctx)
 		.message_id(reply.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		Some(interaction) => {
-			interaction.defer(ctx.discord).await?;
+		interaction.defer(&ctx).await?;
 
-			match &*interaction.data.custom_id {
-				CUSTOM_ID_DISCONNECT => inner_logout(ctx, &mut member, member_id).await?,
+		match &*interaction.data.custom_id {
+			CUSTOM_ID_DISCONNECT => inner_logout(ctx, &mut member, member_id).await?,
 
-				_ => unreachable!(),
-			};
+			_ => unreachable!(),
 		}
-		None => {
-			let get = ctx.translate("error-user-timeout", None);
-			ctx.shout(get).await?;
-		}
+	} else {
+		let get = ctx.translate("error-user-timeout", None);
+		ctx.shout(get).await?;
 	}
 
 	Ok(())
@@ -90,13 +84,13 @@ async fn inner_logout(
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let role_id: Option<u64> = Guild::with_id(&member.guild_id)
+	let role_id: Option<u64> = Guild::with_id(member.guild_id)
 		.select(schema::guilds::verified_role_id)
 		.first(&mut ctx.data.database.get().await?)
 		.await?;
 
 	if let Some(role) = role_id.map(RoleId) {
-		member.remove_role(ctx.discord, role).await?;
+		member.remove_role(&ctx, role).await?;
 	}
 
 	let get = ctx.translate("event-logout-success", None);

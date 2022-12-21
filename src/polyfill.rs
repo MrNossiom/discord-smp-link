@@ -30,6 +30,36 @@ pub(crate) struct MessageComponentContext<'a, U: Send + Sync, E> {
 	pub(crate) has_sent_initial_response: &'a AtomicBool,
 }
 
+impl<U: Send + Sync, E> AsRef<serenity::Http> for MessageComponentContext<'_, U, E> {
+	fn as_ref(&self) -> &serenity::Http {
+		&self.discord.http
+	}
+}
+
+#[cfg(feature = "cache")]
+impl<U: Send + Sync, E> AsRef<serenity::Cache> for MessageComponentContext<'_, U, E> {
+	fn as_ref(&self) -> &serenity::Cache {
+		&self.discord.cache
+	}
+}
+
+impl<U: Send + Sync, E> AsRef<serenity::ShardMessenger> for MessageComponentContext<'_, U, E> {
+	fn as_ref(&self) -> &serenity::ShardMessenger {
+		&self.discord.shard
+	}
+}
+
+impl<U: Send + Sync, E> serenity::CacheHttp for MessageComponentContext<'_, U, E> {
+	fn http(&self) -> &serenity::Http {
+		&self.discord.http
+	}
+
+	#[cfg(feature = "cache")]
+	fn cache(&self) -> Option<&std::sync::Arc<serenity::Cache>> {
+		Some(&self.discord.cache)
+	}
+}
+
 impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 	/// Send a message to the user
 	pub(crate) async fn send<'a>(

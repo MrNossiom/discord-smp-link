@@ -94,13 +94,15 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				ctx,
 				missing_permissions,
 			} => {
-				let text = match missing_permissions {
-					Some(permission) => ctx.translate(
-						"error-user-missing-permissions",
-						Some(&fluent_args!["permissions" => permission.to_string()]),
-					),
-					None => ctx.translate("error-user-missing-unknown-permissions", None),
-				};
+				let text = missing_permissions.map_or_else(
+					|| ctx.translate("error-user-missing-unknown-permissions", None),
+					|permission| {
+						ctx.translate(
+							"error-user-missing-permissions",
+							Some(&fluent_args!["permissions" => permission.to_string()]),
+						)
+					},
+				);
 
 				ctx.shout(text)
 					.await
@@ -155,7 +157,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					.context("Failed to send command check failed message")
 			}
 
-			FrameworkError::Listener { error, event, .. } => {
+			FrameworkError::EventHandler { error, event, .. } => {
 				tracing::error!(
 					error = ?error,
 					event = ?event,

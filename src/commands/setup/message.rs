@@ -16,7 +16,7 @@ pub(crate) async fn setup_message(ctx: ApplicationContext<'_>) -> InteractionRes
 	let guild_id = ctx.guild_only_id();
 
 	let verified_role_was_registered = {
-		let role: Option<u64> = Guild::with_id(&guild_id)
+		let role: Option<u64> = Guild::with_id(guild_id)
 			.select(schema::guilds::verified_role_id)
 			.first(&mut connection)
 			.await?;
@@ -34,7 +34,7 @@ pub(crate) async fn setup_message(ctx: ApplicationContext<'_>) -> InteractionRes
 	let reply = ctx
 		.interaction
 		.channel_id()
-		.send_message(ctx.discord, |m| {
+		.send_message(&ctx.serenity_context, |m| {
 			m.content(ctx.translate("setup-message-message", None))
 				.components(|com| {
 					com.create_action_row(|row| {

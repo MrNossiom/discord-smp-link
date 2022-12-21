@@ -94,30 +94,32 @@ impl Translations {
 	/// Get a translation from the given key or an error
 	pub(crate) fn translate_checked<'bundle>(
 		&'bundle self,
-		locale: LanguageIdentifier,
+		locale: &LanguageIdentifier,
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
 	) -> anyhow::Result<Cow<'bundle, str>> {
-		let bundle = self.bundles.get(&locale).unwrap_or_else(|| {
+		let bundle = self.bundles.get(locale).unwrap_or_else(|| {
 			self.bundles
 				.get(&self.fallback)
 				.expect("failed to load fallback locale bundle")
 		});
 
-		match bundle.get_message(key) {
-			Some(message) => match message.value() {
-				Some(pattern) => Ok(Self::format(bundle, pattern, args)),
-				None => Err(anyhow!("message `{}` has no value", key)),
+		bundle.get_message(key).map_or_else(
+			|| Err(anyhow!("unknown fluent key `{}`", key)),
+			|message| {
+				message.value().map_or_else(
+					|| Err(anyhow!("message `{}` has no value", key)),
+					|pattern| Ok(Self::format(bundle, pattern, args)),
+				)
 			},
-			None => Err(anyhow!("unknown fluent key `{}`", key)),
-		}
+		)
 	}
 
 	/// Apply translations to the given command tree
 	pub(crate) fn apply_translations_to_interactions(
 		&self,
 		commands: &mut [Command],
-		parent_name: Option<String>,
+		parent_name: &Option<String>,
 	) {
 		for command in &mut *commands {
 			// Skip prefix commands
@@ -125,7 +127,7 @@ impl Translations {
 				continue;
 			}
 
-			self.apply_translations_to_interaction(command, parent_name.clone())
+			self.apply_translations_to_interaction(command, parent_name.clone());
 		}
 	}
 
@@ -141,17 +143,14 @@ impl Translations {
 		};
 
 		for (locale, bundle) in &self.bundles {
-			let command_translation = match bundle.get_message(&full_command_name) {
-				Some(message) => message,
-				None => {
-					tracing::error!(
-						"translation for command `{}` with locale `{}` does not exist",
-						full_command_name,
-						locale
-					);
+			let Some(command_translation) = bundle.get_message(&full_command_name) else {
+				tracing::error!(
+					"translation for command `{}` with locale `{}` does not exist",
+					full_command_name,
+					locale
+				);
 
-					continue;
-				}
+				continue;
 			};
 
 			match command_translation.value() {
@@ -180,10 +179,10 @@ impl Translations {
 				&command_translation,
 				command,
 				&full_command_name,
-			)
+			);
 		}
 
-		self.apply_translations_to_interactions(&mut command.subcommands, Some(full_command_name))
+		self.apply_translations_to_interactions(&mut command.subcommands, &Some(full_command_name));
 	}
 
 	/// Apply translations to the given slash command
@@ -296,7 +295,7 @@ impl Translate for ApplicationContext<'_> {
 	) -> anyhow::Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale().parse()?;
 
-		self.data.translations.translate_checked(locale, key, args)
+		self.data.translations.translate_checked(&locale, key, args)
 	}
 }
 
@@ -313,7 +312,7 @@ impl Translate for Context<'_> {
 
 		self.data()
 			.translations
-			.translate_checked(locale, key, args)
+			.translate_checked(&locale, key, args)
 	}
 }
 
@@ -325,6 +324,6 @@ impl Translate for MessageComponentContext<'_> {
 	) -> anyhow::Result<Cow<'bundle, str>> {
 		let locale: LanguageIdentifier = self.interaction.locale.parse()?;
 
-		self.data.translations.translate_checked(locale, key, args)
+		self.data.translations.translate_checked(&locale, key, args)
 	}
 }

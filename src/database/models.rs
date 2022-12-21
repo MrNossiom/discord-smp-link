@@ -3,7 +3,7 @@
 //! `Diesel` models that represent database objects
 // TODO: build a macro to reduce boilerplate and generate ids struct for each table with a `AsExpression` implementation
 
-use super::schema::*;
+use super::schema::{classes, groups, groups_of_verified_members, guilds, levels, members, verified_members};
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 
 /// Represent a `Discord` guild

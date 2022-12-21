@@ -5,7 +5,7 @@ use tracing::metadata::LevelFilter;
 use tracing_subscriber::{fmt::Layer, prelude::*, EnvFilter, Registry};
 
 /// Initializes the loggers adaptors and set the global logger
-pub(crate) fn setup_logging(data: ArcData) -> anyhow::Result<()> {
+pub(crate) fn setup_logging(data: &ArcData) -> anyhow::Result<()> {
 	let filter = EnvFilter::builder()
 		.with_default_directive(LevelFilter::INFO.into())
 		.from_env()?;

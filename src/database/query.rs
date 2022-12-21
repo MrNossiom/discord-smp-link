@@ -24,13 +24,15 @@ use poise::serenity_prelude::{GuildId, UserId};
 
 impl Class {
 	/// Select classes from their [`GuildId`]
+	#[inline]
 	pub(crate) fn all_from_guild(
-		guild_id: &GuildId,
+		guild_id: GuildId,
 	) -> Filter<classes::table, Eq<classes::guild_id, u64>> {
 		classes::table.filter(classes::guild_id.eq(guild_id.0))
 	}
 
 	/// Select classes from their [`GuildId`]
+	#[inline]
 	pub(crate) fn all_from_level(
 		level_id: i32,
 	) -> Filter<classes::table, Eq<classes::level_id, i32>> {
@@ -38,6 +40,7 @@ impl Class {
 	}
 
 	/// Select class from his `id`
+	#[inline]
 	pub(crate) fn with_id(class_id: i32) -> Find<classes::table, i32> {
 		classes::table.find(class_id)
 	}
@@ -45,6 +48,7 @@ impl Class {
 
 impl<'a> NewClass<'a> {
 	/// Prepare a [`NewClass`] insert
+	#[inline]
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<classes::table, <&'a NewClass<'a> as Insertable<classes::table>>::Values> {
@@ -54,16 +58,18 @@ impl<'a> NewClass<'a> {
 
 impl Guild {
 	/// Retrieves a guild from its ID
-	pub(crate) fn with_id(guild_id: &GuildId) -> Find<guilds::table, u64> {
+	#[inline]
+	pub(crate) fn with_id(guild_id: GuildId) -> Find<guilds::table, u64> {
 		guilds::table.find(guild_id.0)
 	}
 }
 
 impl Member {
 	/// Select member from his [`GuildId`] and [`UserId`]
+	#[inline]
 	pub(crate) fn with_ids(
-		user_id: &UserId,
-		guild_id: &GuildId,
+		user_id: UserId,
+		guild_id: GuildId,
 	) -> Filter<Filter<members::table, Eq<members::discord_id, u64>>, Eq<members::guild_id, u64>> {
 		members::table
 			.filter(members::discord_id.eq(user_id.0))
@@ -73,6 +79,7 @@ impl Member {
 
 impl<'a> NewMember<'a> {
 	/// Prepare a [`NewMember`] insert
+	#[inline]
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<members::table, <&'a NewMember<'a> as Insertable<members::table>>::Values>
@@ -83,6 +90,7 @@ impl<'a> NewMember<'a> {
 
 impl<'a> NewVerifiedMember<'a> {
 	/// Prepare a [`NewVerifiedMember`] insert
+	#[inline]
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<
@@ -95,13 +103,15 @@ impl<'a> NewVerifiedMember<'a> {
 
 impl Group {
 	/// Select groups from their [`GuildId`]
+	#[inline]
 	pub(crate) fn all_from_guild(
-		guild_id: &GuildId,
+		guild_id: GuildId,
 	) -> Filter<groups::table, Eq<groups::guild_id, u64>> {
 		groups::table.filter(groups::guild_id.eq(guild_id.0))
 	}
 
 	/// Select group from his `id`
+	#[inline]
 	pub(crate) fn with_id(group_id: i32) -> Find<groups::table, i32> {
 		groups::table.find(group_id)
 	}
@@ -109,6 +119,7 @@ impl Group {
 
 impl<'a> NewGroup<'a> {
 	/// Prepare a [`NewGroup`] insert
+	#[inline]
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<groups::table, <&'a NewGroup<'a> as Insertable<groups::table>>::Values> {
@@ -118,13 +129,15 @@ impl<'a> NewGroup<'a> {
 
 impl Level {
 	/// Select groups from their [`GuildId`]
+	#[inline]
 	pub(crate) fn all_from_guild(
-		guild_id: &GuildId,
+		guild_id: GuildId,
 	) -> Filter<levels::table, Eq<levels::guild_id, u64>> {
 		levels::table.filter(levels::guild_id.eq(guild_id.0))
 	}
 
 	/// Select level from his `id`
+	#[inline]
 	pub(crate) fn with_id(level_id: i32) -> Find<levels::table, i32> {
 		levels::table.find(level_id)
 	}
@@ -132,6 +145,7 @@ impl Level {
 
 impl<'a> NewLevel<'a> {
 	/// Prepare a [`NewLevel`] insert
+	#[inline]
 	pub(crate) fn insert(
 		&'a self,
 	) -> InsertStatement<levels::table, <&'a NewLevel<'a> as Insertable<levels::table>>::Values> {
@@ -141,9 +155,10 @@ impl<'a> NewLevel<'a> {
 
 impl VerifiedMember {
 	/// Select verified member from his [`GuildId`] and [`UserId`]
+	#[inline]
 	pub(crate) fn with_ids(
-		user_id: &UserId,
-		guild_id: &GuildId,
+		user_id: UserId,
+		guild_id: GuildId,
 	) -> Filter<
 		Filter<InnerJoin<verified_members::table, members::table>, Eq<members::discord_id, u64>>,
 		Eq<members::guild_id, u64>,
@@ -155,6 +170,7 @@ impl VerifiedMember {
 	}
 
 	/// Filter from the foreign key of a [`Member`]
+	#[inline]
 	pub(crate) fn from_member_id(
 		member_id: i32,
 	) -> Filter<verified_members::table, Eq<verified_members::member_id, i32>> {

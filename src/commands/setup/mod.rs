@@ -41,7 +41,7 @@ pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> Inter
 	}
 
 	// Update the verified role
-	diesel::update(Guild::with_id(&guild_id))
+	diesel::update(Guild::with_id(guild_id))
 		.set(schema::guilds::verified_role_id.eq(role.id.0))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
@@ -62,7 +62,7 @@ pub(crate) async fn setup_pattern(
 	let guild_id = ctx.guild_only_id();
 
 	// Update the verification email domain
-	diesel::update(Guild::with_id(&guild_id))
+	diesel::update(Guild::with_id(guild_id))
 		.set(schema::guilds::verification_email_domain.eq(&pattern))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;

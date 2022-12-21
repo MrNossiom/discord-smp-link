@@ -30,7 +30,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let mut member = ctx.guild_only_member();
 
 	let (verified_role, mut levels, email_pattern) =
-		match check_login_components(&mut connection, &member.guild_id).await {
+		match check_login_components(&mut connection, member.guild_id).await {
 			Ok(v) => v,
 			Err(err) => match err {
 				CheckLoginComponentsError::Database(err) => return Err(err.into()),
@@ -117,27 +117,24 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		})
 		.await?;
 
-	let level_id = match CollectComponentInteraction::new(ctx.discord)
+	let level_id = if let Some(interaction) = CollectComponentInteraction::new(&ctx)
 		.message_id(initial_response.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		Some(interaction) => {
-			interaction.defer(ctx.discord).await?;
+		interaction.defer(&ctx).await?;
 
-			interaction
-				.data
-				.values
-				.get(0)
-				.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
-				.parse::<i32>()?
-		}
-		None => {
-			let content = ctx.translate("error-user-timeout", None);
-			ctx.shout(content).await?;
+		interaction
+			.data
+			.values
+			.get(0)
+			.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
+			.parse::<i32>()?
+	} else {
+		let content = ctx.translate("error-user-timeout", None);
+		ctx.shout(content).await?;
 
-			return Ok(());
-		}
+		return Ok(());
 	};
 
 	let mut classes: Vec<Class> = Class::all_from_level(level_id)
@@ -165,30 +162,27 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		})
 		.await?;
 
-	let class_id = match CollectComponentInteraction::new(ctx.discord)
+	let class_id = if let Some(interaction) = CollectComponentInteraction::new(&ctx)
 		.message_id(initial_response.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
-		Some(interaction) => {
-			interaction.defer(ctx.discord).await?;
+		interaction.defer(&ctx).await?;
 
-			interaction
-				.data
-				.values
-				.get(0)
-				.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
-				.parse::<i32>()?
-		}
-		None => {
-			let content = ctx.translate("error-user-timeout", None);
-			ctx.shout(content).await?;
+		interaction
+			.data
+			.values
+			.get(0)
+			.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
+			.parse::<i32>()?
+	} else {
+		let content = ctx.translate("error-user-timeout", None);
+		ctx.shout(content).await?;
 
-			return Ok(());
-		}
+		return Ok(());
 	};
 
-	let id = match Member::with_ids(&member.user.id, &member.guild_id)
+	let id = match Member::with_ids(member.user.id, member.guild_id)
 		.select(schema::members::id)
 		.first::<i32>(&mut connection)
 		.await
@@ -237,10 +231,10 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		RoleId(id)
 	};
 
-	match member.add_role(ctx.discord, verified_role).await {
+	match member.add_role(&ctx, verified_role).await {
 		Ok(_) => {}
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
-			diesel::update(Guild::with_id(&member.guild_id))
+			diesel::update(Guild::with_id(member.guild_id))
 				.set(schema::guilds::verified_role_id.eq::<Option<u64>>(None))
 				.execute(&mut connection)
 				.await?;
@@ -248,13 +242,13 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		Err(error) => return Err(error.into()),
 	}
 
-	match member.add_role(ctx.discord, level_role).await {
+	match member.add_role(&ctx, level_role).await {
 		Ok(_) => {}
 		// TODO: handle role deleted
 		Err(error) => return Err(error.into()),
 	}
 
-	match member.add_role(ctx.discord, class_role).await {
+	match member.add_role(&ctx, class_role).await {
 		Ok(_) => {}
 		// TODO: handle role deleted
 		Err(error) => return Err(error.into()),
@@ -286,7 +280,7 @@ enum CheckLoginComponentsError {
 /// Extracted logic
 async fn check_login_components(
 	connection: &mut DatabasePooledConnection,
-	guild_id: &GuildId,
+	guild_id: GuildId,
 ) -> Result<(RoleId, Vec<Level>, String), CheckLoginComponentsError> {
 	let (verified_role, email_pattern) = {
 		let (inner_role_id, email_pattern): (Option<u64>, Option<String>) =
@@ -308,14 +302,11 @@ async fn check_login_components(
 			}
 		};
 
-		let email_pattern = match email_pattern {
-			Some(role) => role,
-			None => {
-				// TODO: translate
-				return Err(CheckLoginComponentsError::GuildNotTotallySetup(
-					"Email pattern has not been setup yet".into(),
-				));
-			}
+		let Some(email_pattern) = email_pattern else {
+			// TODO: translate
+			return Err(CheckLoginComponentsError::GuildNotTotallySetup(
+				"Email pattern has not been setup yet".into(),
+			));
 		};
 
 		(inner_role, email_pattern)

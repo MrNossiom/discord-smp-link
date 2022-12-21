@@ -1,3 +1,6 @@
+// Triggers in all `Rocket` macros
+#![allow(clippy::no_effect_underscore_binding)]
+
 //! Servers configs and request handlers to serve `OAuth2` callbacks and the web pages.
 //! Rocket server luncher to answer `OAuth2` Google redirects and serve the basic web pages.
 
