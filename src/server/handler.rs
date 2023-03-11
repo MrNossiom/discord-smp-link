@@ -19,12 +19,12 @@ pub(crate) struct OAuth2Params {
 #[rocket::get("/oauth2?<params..>")]
 pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -> Template {
 	{
-		let queue = data.auth.pending_set.read().expect("poisoned");
+		let mut queue = data.auth.pending_set.write().expect("poisoned");
 
-		if queue.get(&params.state).is_none() {
+		if !queue.remove(&params.state) {
 			return Template::render(
 				"auth",
-				context! { is_success: false, message: "The given 'state' wasn't queued anymore" },
+				context! { is_success: false, message: "The given 'state' wasn't queued anymore", username: "" },
 			);
 		};
 	}
@@ -52,7 +52,10 @@ pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -
 		queue.insert(params.state, token_response);
 	}
 
-	Template::render("auth", context! { is_success: true, username: "" })
+	Template::render(
+		"auth",
+		context! { is_success: true, username: "", guild_image_src: "" },
+	)
 }
 
 /// Serve the index page

@@ -50,13 +50,13 @@ pub(super) async fn debug_refresh_member(
 			discord_id: member.user.id.0,
 		};
 
+		new_member.insert().execute(&mut connection).await?;
+
 		let content = ctx.translate(
 			"debug_refresh_member-added",
 			Some(&fluent_args!["user" => new_member.username]),
 		);
 		ctx.shout(content).await?;
-
-		new_member.insert().execute(&mut connection).await?;
 	}
 
 	Ok(())

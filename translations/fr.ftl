@@ -19,7 +19,7 @@ classes_add = ajout
     .role-description = Un rôle à assigner à la classe, sinon un rôle est créé
 classes_add-success = La classe `{$class}` à bien été crée dans le niveau `{$level}`.
 classes_add-no-such-level = Il n'existe pas de niveau avec le nom `{$level}` sur ce serveur.
-classes_remove = supression
+classes_remove = suppression
     .description = Enlève une classe du serveur
     .name = nom
     .name-description = Nom de la classe à retirer
@@ -40,8 +40,10 @@ groups_add = ajout
     .name-description = Nom du nouveau groupe à ajouter
     .role = role
     .role-description = Un rôle à assigner au groupe, sinon un rôle est créé
+    .emoji = emoji
+    .emoji-description = Un émoji associé ajouté au menu de selection.
 groups_add-success = Le groupe `{$group}` à bien été crée.
-groups_remove = supression
+groups_remove = suppression
     .description = Enlève un groupe du serveur
     .name = nom
     .name-description = Nom du groupe à retirer
@@ -63,7 +65,7 @@ levels_add = ajout
     .role = role
     .role-description = Un rôle à assigner au niveau, sinon un rôle est créé
 levels_add-success = Le niveau `{$level}` à bien été crée.
-levels_remove = supression
+levels_remove = suppression
     .description = Enlève un niveau du serveur
     .name = nom
     .name-description = Nom du niveau à retirer
@@ -78,28 +80,33 @@ levels_list-none-with-filter = Il n'y a pas de niveaux sur ce serveur avec le fi
 
 # Setup
 setup = installation
-setup_message = message
+setup_login_message = connexion
     .description = Met en place le message de connexion et de déconnexion.
-setup_message-message = Connecte toi ou déconnecte toi.
+setup_login_message-message = Connecte toi ou déconnecte toi.
+setup_groups_message = groupes
+    .description = Met en place le message de sélection de groupe.
+setup_groups_message-message = Sélectionne tes groupes ici
+setup_groups_message-placeholder = Sélectionne un groupe...
+setup_groups_message-not-enough-groups = Il faut au moins un groupe pour créer le message
 setup_role = role
-    .description = Met en place le rôle verifié.
+    .description = Met en place le rôle vérifié.
     .role = role
-    .role-description = Rôle verifié
-setup_pattern = patterne
-    .description = Met en place le patterne du nom de domaine autorisé.
-    .pattern = patterne
-    .pattern-description = Patterne du nom de domaine autorisé
+    .role-description = Rôle vérifié
+setup_pattern = paterne
+    .description = Met en place le paterne du nom de domaine autorisé.
+    .pattern = paterne
+    .pattern-description = Paterne du nom de domaine autorisé
 
 # Information Context Menu
 information = information
-    .description = Donne des informations sur un membre verifié.
+    .description = Donne des informations sur un membre vérifié.
     .user = utilisateur
     .user-description = L'utilisateur dont vous voulez voir les informations.
 
 # Dev
 debug = debug
 debug_force = force
-debug_force_logout = connextion
+debug_force_logout = connexion
     .description = Force un utilisateur ·à se connecter.
     .user = utilisateur
     .user-description = L'utilisateur à forcer à se connecter.
@@ -110,11 +117,11 @@ debug_refresh_member = membre
     .description = Charge un membre dans la base de données.
     .member = membre
     .member-description = Le membre à charger.
-debug_refresh_member-already-in-database = { $user } est déjà dans la base de donées.
+debug_refresh_member-already-in-database = { $user } est déjà dans la base de données.
 debug_refresh_member-added = { $user } à bien été ajouté.
 debug_refresh_members = membres
     .description = Charge tout les membres dans la base de données.
-debug_refresh_members-added = { $count } membres ont étés ajoutés à la base de donées.
+debug_refresh_members-added = { $count } membres ont étés ajoutés à la base de données.
 debug_register = enregistrer
     .description = Enregistre les commandes slash.
     .register = enregistrer
@@ -124,7 +131,7 @@ debug_register = enregistrer
 
 ## Login
 
-did-not-finish-auth-process = Vous n'avez pas fini le processus d'autentification en moins de 5min.
+did-not-finish-auth-process = Vous n'avez pas fini le processus d’authentification en moins de 5min.
 authentication-successful = Vous vous êtes correctement authentifié.
 use-google-account-to-login = Utilisez votre compte Google pour vous connecter.
 

@@ -13,7 +13,7 @@ use crate::{
 use fluent::fluent_args;
 use poise::{
 	command,
-	serenity_prelude::{self as serenity, Permissions, Role, RoleId},
+	serenity_prelude::{self as serenity, Permissions, ReactionType, Role, RoleId},
 };
 
 // TODO: possibility to modify a group
@@ -36,8 +36,23 @@ pub(crate) async fn groups_add(
 	ctx: ApplicationContext<'_>,
 	name: String,
 	role: Option<Role>,
+	emoji: Option<String>,
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
+
+	// TODO: ugly, find a better way to do this
+	let emoji = if let Some(emoji) = emoji {
+		if let Ok(emoji) = emoji.parse::<ReactionType>() {
+			Some(emoji)
+		} else {
+			let translate = ctx.translate("groups_add-invalid-emoji", None);
+			ctx.shout(translate).await?;
+
+			return Ok(());
+		}
+	} else {
+		None
+	};
 
 	let role = match role {
 		Some(role) => role,
@@ -52,10 +67,13 @@ pub(crate) async fn groups_add(
 		}
 	};
 
+	let emoji_data = emoji.map(|rt| format!("{rt}"));
 	let new_group = NewGroup {
+		name: &name,
+		emoji: emoji_data.as_deref(),
+
 		guild_id: guild_id.0,
 		role_id: role.id.0,
-		name: &name,
 	};
 
 	new_group
@@ -101,19 +119,16 @@ pub(crate) async fn groups_remove(
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let (id, role_id) = match Group::all_from_guild(guild_id)
+	let Some((id, role_id)) =  Group::all_from_guild(guild_id)
 		.filter(schema::groups::name.eq(&name))
 		.select((schema::groups::id, schema::groups::role_id))
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
-		.await
+		.await.optional()? else
 	{
-		Ok(tuple) => tuple,
-		Err(DieselError::NotFound) => {
-			let translate = ctx.translate("groups_remove-not-found", None);
-			ctx.shout(translate).await?;
-			return Ok(());
-		}
-		Err(err) => return Err(err.into()),
+		let translate = ctx.translate("groups_remove-not-found", None);
+		ctx.shout(translate).await?;
+
+		return Ok(());
 	};
 
 	match guild_id

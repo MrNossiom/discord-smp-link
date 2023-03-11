@@ -17,23 +17,18 @@ const CUSTOM_ID_DISCONNECT: &str = "event.logout.disconnect";
 
 /// Starts the dissociate accounts process
 /// Function used in the login and the setup command
+#[tracing::instrument(skip_all, fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut member = ctx.guild_only_member();
 
-	let member_id: Option<i32> = match VerifiedMember::with_ids(member.user.id, member.guild_id)
+	let Some(member_id) =  VerifiedMember::with_ids(member.user.id, member.guild_id)
 		.select(schema::verified_members::member_id)
 		.first(&mut ctx.data.database.get().await?)
-		.await
+		.await.optional()? else
 	{
-		Ok(x) => Some(x),
-		Err(DieselError::NotFound) => None,
-		Err(error) => return Err(error.into()),
-	};
+		ctx.shout("Member does not exist").await?;
 
-	let Some(member_id) = member_id else {
-			ctx.shout("Member does not exist").await?;
-
-			return Ok(());
+		return Ok(());
 	};
 
 	let reply = ctx

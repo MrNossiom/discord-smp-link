@@ -3,7 +3,9 @@
 //! `Diesel` models that represent database objects
 // TODO: build a macro to reduce boilerplate and generate ids struct for each table with a `AsExpression` implementation
 
-use super::schema::{classes, groups, groups_of_verified_members, guilds, levels, members, verified_members};
+use super::schema::{
+	classes, groups, groups_of_verified_members, guilds, levels, members, verified_members,
+};
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 
 /// Represent a `Discord` guild
@@ -15,8 +17,10 @@ pub(crate) struct Guild {
 	pub(crate) owner_id: u64,
 
 	pub(crate) verification_email_domain: Option<String>,
-	pub(crate) setup_message_id: Option<u64>,
 	pub(crate) verified_role_id: Option<u64>,
+
+	pub(crate) login_message_id: Option<u64>,
+	pub(crate) groups_message_id: Option<u64>,
 }
 
 /// Use to create a new [`Guild`]
@@ -29,8 +33,10 @@ pub(crate) struct NewGuild<'a> {
 	pub(crate) owner_id: u64,
 
 	pub(crate) verification_email_domain: Option<&'a str>,
-	pub(crate) setup_message_id: Option<u64>,
 	pub(crate) verified_role_id: Option<u64>,
+
+	pub(crate) login_message_id: Option<u64>,
+	pub(crate) groups_message_id: Option<u64>,
 }
 
 /// Represent a known user with `Discord` metadata and some other informations
@@ -131,6 +137,7 @@ pub(crate) struct NewClass<'a> {
 pub(crate) struct Group {
 	pub(crate) id: i32,
 	pub(crate) name: String,
+	pub(crate) emoji: Option<String>,
 
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
@@ -141,6 +148,7 @@ pub(crate) struct Group {
 #[diesel(table_name = groups)]
 pub(crate) struct NewGroup<'a> {
 	pub(crate) name: &'a str,
+	pub(crate) emoji: Option<&'a str>,
 	pub(crate) guild_id: u64,
 	pub(crate) role_id: u64,
 }

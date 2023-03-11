@@ -47,8 +47,6 @@ pub(crate) mod prelude {
 		QueryableByName, Selectable, SelectableExpression, SelectableHelper, Table,
 		TextExpressionMethods,
 	};
-
 	pub(crate) use diesel::result::Error as DieselError;
-
 	pub(crate) use diesel_async::{RunQueryDsl, SaveChangesDsl, UpdateAndFetchResults};
 }

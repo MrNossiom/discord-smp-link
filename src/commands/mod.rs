@@ -1,12 +1,12 @@
 //! `Discord` client commands
 
 use crate::{
-	states::{Context, ContextPolyfill, FrameworkError},
+	states::{Context, ContextPolyfill, FrameworkError, InteractionError},
 	translation::Translate,
 };
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use fluent::fluent_args;
-use poise::BoxFuture;
+use poise::{serenity_prelude, BoxFuture};
 use uuid::Uuid;
 
 mod classes;
@@ -39,41 +39,29 @@ pub(crate) fn pre_command(ctx: Context) -> BoxFuture<()> {
 pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 	Box::pin(async move {
 		let error = match error {
-			FrameworkError::Command { error, ctx, .. } => {
-				let error_identifier = Uuid::new_v4().hyphenated().to_string();
+			FrameworkError::Command { error, ctx, .. } => handle_interaction_error(ctx, error)
+				.await
+				.context("failed to send error message"),
 
+			FrameworkError::EventHandler { error, event, .. } => {
 				tracing::error!(
-					command_id = ctx.command().identifying_name,
-					user_id = ctx.author().id.0,
-					username = ctx.author().name,
-					error_id = error_identifier,
 					error = ?error,
-					"command",
+					event = ?event,
+					"event handler",
 				);
 
-				let error_msg = ctx.translate(
-					"error-internal-with-id",
-					Some(&fluent_args!["id" => error_identifier]),
-				);
-
-				ctx.shout(error_msg)
-					.await
-					.map(|_| ())
-					.context("Failed to send internal error message")
+				Ok(())
 			}
 
-			FrameworkError::CooldownHit {
-				remaining_cooldown,
-				ctx,
-			} => {
-				let content = ctx.translate(
-					"error-cooldown",
-					Some(&fluent_args!["seconds" => remaining_cooldown.as_secs()]),
-				);
-				ctx.shout(content)
-					.await
-					.map(|_| ())
-					.context("Failed to send cooldown hit message")
+			FrameworkError::CommandCheckFailed { ctx, error } => {
+				// TODO: handle no error
+				if let Some(err) = error {
+					handle_interaction_error(ctx, err)
+						.await
+						.context("failed to send error message")
+				} else {
+					Err(anyhow!("No error provided"))
+				}
 			}
 
 			FrameworkError::MissingBotPermissions {
@@ -134,39 +122,6 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					.context("Failed to send dm only message")
 			}
 
-			FrameworkError::CommandCheckFailed { ctx, error } => {
-				let error_identifier = Uuid::new_v4().hyphenated().to_string();
-
-				tracing::error!(
-					user_id = ctx.author().id.0,
-					username = ctx.author().name,
-					error_id = error_identifier,
-					error = ?error,
-					command_id = ctx.command().identifying_name,
-					"command check",
-				);
-
-				let error_msg = ctx.translate(
-					"error-internal-with-id",
-					Some(&fluent_args!["id" => error_identifier]),
-				);
-
-				ctx.shout(error_msg)
-					.await
-					.map(|_| ())
-					.context("Failed to send command check failed message")
-			}
-
-			FrameworkError::EventHandler { error, event, .. } => {
-				tracing::error!(
-					error = ?error,
-					event = ?event,
-					"event listener",
-				);
-
-				Ok(())
-			}
-
 			error => {
 				tracing::error!(error = ?error, "framework");
 
@@ -190,4 +145,30 @@ pub(crate) fn post_command(ctx: Context) -> BoxFuture<()> {
 			"Command invocation successful",
 		);
 	})
+}
+
+/// Handle our custom command interaction error
+async fn handle_interaction_error(
+	ctx: Context<'_>,
+	error: InteractionError,
+) -> serenity_prelude::Result<()> {
+	let error_identifier = Uuid::new_v4().hyphenated().to_string();
+
+	tracing::error!(
+		user_id = ctx.author().id.0,
+		username = ctx.author().name,
+		error_id = error_identifier,
+		error = ?error,
+		command_id = ctx.command().identifying_name,
+		"command check",
+	);
+
+	let error_msg = ctx.translate(
+		"error-internal-with-id",
+		Some(&fluent_args!["id" => error_identifier]),
+	);
+
+	ctx.shout(error_msg).await?;
+
+	Ok(())
 }

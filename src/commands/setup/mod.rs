@@ -11,16 +11,23 @@ use poise::{
 	serenity_prelude::{Permissions, Role},
 };
 
-mod message;
+mod groups_message;
+mod login_message;
 
-use message::setup_message;
+use groups_message::setup_groups_message;
+use login_message::setup_login_message;
 
 /// A set of commands to setup the bot
 #[allow(clippy::unused_async)]
 #[command(
 	slash_command,
 	rename = "setup",
-	subcommands("setup_message", "setup_role", "setup_pattern"),
+	subcommands(
+		"setup_groups_message",
+		"setup_login_message",
+		"setup_role",
+		"setup_pattern"
+	),
 	default_member_permissions = "ADMINISTRATOR"
 )]
 pub(crate) async fn setup(_ctx: ApplicationContext<'_>) -> InteractionResult {

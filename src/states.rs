@@ -5,7 +5,10 @@ use crate::{
 };
 use anyhow::{anyhow, Context as _};
 use diesel_async::{
-	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
+	pooled_connection::{
+		deadpool::{Pool, PoolError},
+		AsyncDieselConnectionManager,
+	},
 	AsyncMysqlConnection,
 };
 use dotenvy::dotenv;
@@ -212,28 +215,45 @@ impl ContextPolyfill for Context<'_> {
 	}
 }
 
-/// The [`poise::Command`] type alias
-pub(crate) type Command = poise::Command<ArcData, anyhow::Error>;
-/// Common command return type
-pub(crate) type InteractionResult = anyhow::Result<()>;
 /// Common wrapper for the [`Data`]
 pub(crate) type ArcData = Arc<Data>;
+/// Common interaction or event error type
+pub(crate) type InteractionError = Error;
+/// Common interaction or event return type
+pub(crate) type InteractionResult = Result<(), InteractionError>;
 
-/// The poise [`poise::Context`] provided to each command
-pub(crate) type Context<'a> = poise::Context<'a, ArcData, anyhow::Error>;
-/// The poise [`poise::ApplicationContext`] provided to each slash command
-pub(crate) type ApplicationContext<'a> = poise::ApplicationContext<'a, ArcData, anyhow::Error>;
-/// The local [`polyfill::MessageComponentContext`] provided to each message component interaction
+/// A [`poise::Command`] type alias with our common types
+pub(crate) type Command = poise::Command<ArcData, InteractionError>;
+/// A [`poise::Context`] type alias with our common types, provided to each command
+pub(crate) type Context<'a> = poise::Context<'a, ArcData, InteractionError>;
+/// A [`poise::ApplicationContext`] type alias with our common types, provided to each command, provided to each slash command
+pub(crate) type ApplicationContext<'a> = poise::ApplicationContext<'a, ArcData, InteractionError>;
+/// A [`polyfill::MessageComponentContext`] type alias with our common types, provided to each message component interaction
 pub(crate) type MessageComponentContext<'a> =
-	polyfill::MessageComponentContext<'a, ArcData, anyhow::Error>;
-/// The poise [`poise::PrefixContext`] provided to each prefix command
-pub(crate) type _PrefixContext<'a> = poise::PrefixContext<'a, ArcData, anyhow::Error>;
+	polyfill::MessageComponentContext<'a, ArcData, InteractionError>;
 
-/// The [`poise::Framework`] type alias
-pub(crate) type Framework = poise::Framework<ArcData, anyhow::Error>;
-/// The [`poise::FrameworkContext`] type alias
-pub(crate) type FrameworkContext<'a> = poise::FrameworkContext<'a, ArcData, anyhow::Error>;
-/// The [`poise::FrameworkError`] type alias
-pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, ArcData, anyhow::Error>;
-/// The [`poise::FrameworkBuilder`] type alias
-pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<ArcData, anyhow::Error>;
+/// A [`poise::Framework`] type alias with our common types
+pub(crate) type Framework = poise::Framework<ArcData, InteractionError>;
+/// A [`poise::FrameworkContext`] type alias with our common types
+pub(crate) type FrameworkContext<'a> = poise::FrameworkContext<'a, ArcData, InteractionError>;
+/// A [`poise::FrameworkError`] type alias with our common types
+pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, ArcData, InteractionError>;
+/// A [`poise::FrameworkBuilder`] type alias with our common types
+pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<ArcData, InteractionError>;
+
+/// An error in an interaction or an event
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum Error {
+	/// A serenity error
+	#[error(transparent)]
+	Serenity(#[from] serenity::Error),
+	/// A database error
+	#[error(transparent)]
+	PoolError(#[from] PoolError),
+	/// A diesel error
+	#[error(transparent)]
+	Diesel(#[from] diesel::result::Error),
+	/// Collects any other general purpose error
+	#[error(transparent)]
+	Other(#[from] anyhow::Error),
+}

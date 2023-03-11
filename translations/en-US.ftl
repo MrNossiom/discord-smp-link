@@ -17,8 +17,8 @@ classes_add = add
     .level-description = Parent level of the class
     .role = role
     .role-description = A role to assign to this class, if not provided a role will be created
-classes_add-success = Class `{$class}` has been created in the level `{$level}`.
-classes_add-no-such-level = There is no such level with the name of `{$level}` on this guild.
+classes_add-success = Class `{ $class }` has been created in the level `{ $level }`.
+classes_add-no-such-level = There is no such level with the name of `{ $level }` on this guild.
 classes_remove = remove
     .description = Remove a class from the guild
     .name = name
@@ -28,10 +28,9 @@ classes_list = list
     .filter = filter
     .filter-description = Filter the classes with a name
 classes_list-title = List of classes
-classes_list-title-with-filter = List of classes with the filter `{$filter}`
+classes_list-title-with-filter = List of classes with the filter `{ $filter }`
 classes_list-none = There is no classes in the guild.
-classes_list-none-with-filter = There is no classes in this guild with the filter `{$filter}`.
-
+classes_list-none-with-filter = There is no classes in this guild with the filter `{ $filter }`.
 # Groups
 groups = groups
 groups_add = add
@@ -40,7 +39,9 @@ groups_add = add
     .name-description = Group name to add
     .role = role
     .role-description = A role to assign to this group, if not provided a role will be created
-groups_add-success = Group `{$group}` has been created.
+    .emoji = emoji
+    .emoji-description = An associated emoji to display in select menu
+groups_add-success = Group `{ $group }` has been created.
 groups_remove = remove
     .description = Remove a group from the guild
     .name = name
@@ -49,7 +50,6 @@ groups_list = list
     .description = List the groups of the guild
     .filter = filter
     .filter-description = Filter the groups with a name
-
 # Levels
 levels = levels
 levels_add = add
@@ -58,7 +58,7 @@ levels_add = add
     .name-description = Level name to add
     .role = role
     .role-description = A role to assign to this level, if not provided a role will be created
-levels_add-success = Level `{$level}` has been created.
+levels_add-success = Level `{ $level }` has been created.
 levels_remove = remove
     .description = Remove a level from the guild
     .name = name
@@ -67,13 +67,17 @@ levels_list = list
     .description = List the levels of the guild
     .filter = filter
     .filter-description = Filter the levels with a name
-
 # Setup
 setup = setup
     .description = A set of commands to setup the bot.
-setup_message = message
+setup_login_message = login
     .description = Sets the login and logout message.
-setup_message-message = Login or Logout?
+setup_login_message-message = Login or Logout?
+setup_groups_message = groups
+    .description = Sets the groups selection message.
+setup_groups_message-message = Select your groups here.
+setup_groups_message-placeholder = Select a group...
+setup_groups_message-not-enough-groups = You need at least one group to create the message.
 setup_role = role
     .description = Setup the role to apply to verified members.
     .role = role
@@ -82,13 +86,11 @@ setup_pattern = pattern
     .description = Sets the pattern of the autohrized domain.
     .pattern = pattern
     .pattern-description = The pattern of the autohrized domain
-
 # Information Context Menu
 information = information
     .description = Gives informations about a verified member.
     .user = user
     .user-description = The user to get informations about.
-
 # Dev
 debug = debug
     .description = Debug related commands.
@@ -117,7 +119,6 @@ debug_register = register
     .global = global
     .global-description = Guild or Global?
 
-
 ## Login
 
 did-not-finish-auth-process = You didn't finish the authentication process under 5 minutes.
@@ -144,12 +145,10 @@ error-member-not-verified = Member { $user } isn't verified.
 # Setup
 event-setup-login-button = Login
 event-setup-logout-button = Logout
-
 # Login
 event-login-select-level = Select your level
 event-login-select-class = Select your class
 event-login-email-domain-not-allowed = Your email is not authorized.
-
 # Logout
 event-logout-warning = After you disconnected your accounts, you will lose access to the server and have to autenticate again.
 event-logout-disconnect-button = Disconnect your account

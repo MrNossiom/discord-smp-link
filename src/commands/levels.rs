@@ -101,19 +101,16 @@ pub(crate) async fn levels_remove(
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let (id, role_id) = match Level::all_from_guild(guild_id)
+	let Some((id, role_id)) = Level::all_from_guild(guild_id)
 		.filter(schema::levels::name.eq(&name))
 		.select((schema::levels::id, schema::levels::role_id))
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
-		.await
+		.await.optional()? else
 	{
-		Ok(tuple) => tuple,
-		Err(DieselError::NotFound) => {
-			let translate = ctx.translate("levels_remove-not-found", None);
-			ctx.shout(translate).await?;
-			return Ok(());
-		}
-		Err(err) => return Err(err.into()),
+		let translate = ctx.translate("levels_remove-not-found", None);
+		ctx.shout(translate).await?;
+
+		return Ok(());
 	};
 
 	match guild_id

@@ -3,6 +3,7 @@ CREATE TABLE `groups`
 (
     `id`       INTEGER         NOT NULL AUTO_INCREMENT,
     `name`     TEXT            NOT NULL,
+    `emoji`    CHAR,
 
     `guild_id` BIGINT UNSIGNED NOT NULL,
     `role_id`  BIGINT UNSIGNED NOT NULL,

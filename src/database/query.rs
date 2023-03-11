@@ -4,9 +4,9 @@
 //! Small bits of `Diesel` queries to reuse across the project
 
 use super::{
-	models::{Level, NewLevel},
+	models::{GroupOfVerifiedMember, Level, NewGroupOfVerifiedMember, NewLevel},
 	prelude::*,
-	schema::levels,
+	schema::{groups_of_verified_members, levels},
 };
 use crate::database::{
 	models::{
@@ -175,5 +175,37 @@ impl VerifiedMember {
 		member_id: i32,
 	) -> Filter<verified_members::table, Eq<verified_members::member_id, i32>> {
 		verified_members::table.filter(verified_members::member_id.eq(member_id))
+	}
+}
+
+impl GroupOfVerifiedMember {
+	/// Select a group of a verified member from his [`VerifiedMember`] id and his [`Group`] id
+	#[inline]
+	pub(crate) fn with_ids(
+		verified_member_id: i32,
+		group_id: i32,
+	) -> Filter<
+		Filter<
+			groups_of_verified_members::table,
+			Eq<groups_of_verified_members::verified_member_id, i32>,
+		>,
+		Eq<groups_of_verified_members::group_id, i32>,
+	> {
+		groups_of_verified_members::table
+			.filter(groups_of_verified_members::verified_member_id.eq(verified_member_id))
+			.filter(groups_of_verified_members::group_id.eq(group_id))
+	}
+}
+
+impl NewGroupOfVerifiedMember {
+	/// Prepare a [`NewGroupOfVerifiedMember`] insert
+	#[inline]
+	pub(crate) fn insert(
+		&self,
+	) -> InsertStatement<
+		groups_of_verified_members::table,
+		<&Self as Insertable<groups_of_verified_members::table>>::Values,
+	> {
+		insert_into(groups_of_verified_members::table).values(self)
 	}
 }

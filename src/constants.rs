@@ -15,8 +15,14 @@ pub(crate) mod events {
 	pub(crate) const LOGOUT_BUTTON_INTERACTION: &str = "events.setup.button.logout";
 
 	/// The login event follow up class selection interaction
-	pub(crate) const AUTHENTICATION_SELECT_MENU_INTERACTION: &str =
+	pub(crate) const AUTHENTICATION_SELECT_MENU_CLASS_INTERACTION: &str =
 		"events.login.button.class-menu";
+	/// The login event follow up level selection interaction
+	pub(crate) const AUTHENTICATION_SELECT_MENU_LEVEL_INTERACTION: &str =
+		"events.login.button.level-menu";
+
+	/// The login event follow up class selection interaction
+	pub(crate) const GROUPS_SELECT_MENU_INTERACTION: &str = "events.setup.groups.menu";
 }
 
 /// A set of URLs used in the library

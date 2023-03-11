@@ -121,6 +121,7 @@ impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 	/// # Panics
 	/// Panics if used in a non-guild context
 	#[inline]
+	#[track_caller]
 	pub(crate) fn guild_only_member(&self) -> Member {
 		self.interaction
 			.member

@@ -8,26 +8,27 @@ use crate::{
 		prelude::*,
 		schema::{guilds, members},
 	},
-	states::{ArcData, FrameworkContext, MessageComponentContext},
+	states::{ArcData, FrameworkContext, InteractionResult, MessageComponentContext},
 };
-use anyhow::Result;
+use anyhow::Context;
 use poise::{
-	serenity_prelude::{Context, Interaction},
+	serenity_prelude::{self, Interaction},
 	Event,
 };
 use std::sync::atomic::AtomicBool;
 
+mod groups;
 mod login;
 mod logout;
 
 /// Serenity listener to react to `Discord` events
 #[allow(clippy::too_many_lines)]
 pub(crate) async fn event_handler(
-	ctx: &Context,
+	ctx: &serenity_prelude::Context,
 	event: &Event<'_>,
 	framework: FrameworkContext<'_>,
 	data: &ArcData,
-) -> Result<()> {
+) -> InteractionResult {
 	match event {
 		Event::Ready { data_about_bot } => {
 			_register(
@@ -35,7 +36,8 @@ pub(crate) async fn event_handler(
 				&data.config.discord_development_guild,
 				&framework.options.commands,
 			)
-			.await?;
+			.await
+			.context("Could not register guild commands")?;
 
 			tracing::info!("`{}` is ready!", data_about_bot.user.name);
 
@@ -111,7 +113,8 @@ pub(crate) async fn event_handler(
 					name: guild.name.as_str(),
 					owner_id: guild.owner_id.0,
 					verification_email_domain: None,
-					setup_message_id: None,
+					login_message_id: None,
+					groups_message_id: None,
 					verified_role_id: None,
 				};
 
@@ -161,6 +164,10 @@ pub(crate) async fn event_handler(
 			match interaction.data.custom_id.as_str() {
 				events::LOGIN_BUTTON_INTERACTION => login::login(ctx).await,
 				events::LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
+
+				events::GROUPS_SELECT_MENU_INTERACTION => {
+					groups::groups(ctx, &interaction.data.values).await
+				}
 
 				_ => Ok(()),
 			}

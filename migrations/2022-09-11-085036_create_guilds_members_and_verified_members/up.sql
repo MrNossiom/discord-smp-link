@@ -1,15 +1,17 @@
 -- Represent a Discord guild.
 CREATE TABLE `guilds`
 (
-    `id`                        BIGINT UNSIGNED NOT NULL,
+    `id`                         BIGINT UNSIGNED NOT NULL,
     -- A guild name is limited to 100 characters.
     -- See https://discord.com/developers/docs/resources/user#usernames-and-nicknames
-    `name`                      VARCHAR(100)    NOT NULL,
-    `owner_id`                  BIGINT UNSIGNED NOT NULL,
+    `name`                       VARCHAR(100)    NOT NULL,
+    `owner_id`                   BIGINT UNSIGNED NOT NULL,
 
-    `verification_email_domain` VARCHAR(100)    NULL,
-    `setup_message_id`          BIGINT UNSIGNED NULL,
-    `verified_role_id`          BIGINT UNSIGNED NULL,
+    `verification_email_domain`  VARCHAR(100)    NULL,
+    `verified_role_id`           BIGINT UNSIGNED NULL,
+
+    `login_message_id`           BIGINT UNSIGNED NULL,
+    `groups_message_id`          BIGINT UNSIGNED NULL,
 
     PRIMARY KEY (`id`)
 );

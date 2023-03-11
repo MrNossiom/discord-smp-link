@@ -68,3 +68,17 @@ footer li a {
 footer li a:hover {
 	text-decoration: underline;
 }
+
+.association {
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+}
+.association > img {
+	width: 200px;
+	aspect-ratio: 1/1;
+}
+.association > span {
+	font-size: 40px;
+	margin: 0 5%;
+}

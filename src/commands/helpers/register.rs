@@ -56,9 +56,9 @@ pub(super) async fn debug_register(
 		}
 	} else {
 		let Some(guild_id) = ctx.interaction.guild_id() else {
-			let get = ctx.translate("error-guild-only", None);
-			ctx.shout(get).await?;
-		
+			let translate = ctx.translate("error-guild-only", None);
+			ctx.shout(translate).await?;
+			
 			return Ok(());
 		};
 
@@ -76,8 +76,8 @@ pub(super) async fn debug_register(
 		}
 	}
 
-	let get = ctx.translate("done", None);
-	ctx.shout(get).await?;
+	let translate = ctx.translate("done", None);
+	ctx.shout(translate).await?;
 
 	Ok(())
 }

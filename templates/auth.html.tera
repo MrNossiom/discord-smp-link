@@ -1,24 +1,22 @@
 {% extends "_base" %}
 
-{% block title %} {% if is_success %}Wow!{% else
-%}Oups!{% endif %} {% endblock %}
+{% block title %} {% if is_success %}Wow!{%else%}Oups!{% endif %} {% endblock %}
 
 {% block head %}{% endblock %}
 
 {% block content %}
-	<!-- TODO: use the guild image -->
-	<div style="display: flex; align-items: center; justify-content: space-around">
-		<img src="/static/images/discord-smp-link-logo.png" style="width: 200px" />
-		<span style="font-size: 40px; margin: 0 5%">+</span>
-		<img src="/static/images/smp-logo.png" style="width: 200px" />
-	</div>
-
 	{% if is_success %}
+		<div class="association" >
+			<img src="/static/images/discord-smp-link-logo.png" />
+			<span>+</span>
+			<img src="{{ guild_image_src }}" />
+		</div>
+
 		<h1>Hi {{ username }}!</h1>
 		<p>You are logged in!</p>
-		<p>You can return to discord</p>
+		<p>You can return to discord and close this window</p>
 	{% else %}
-		<h1>Hi {{ username }}!</h1>
+		<h1>Sorry {{ username }}...</h1>
 		<p>
 			There was en error: <code>{{ error_message }}</code>
 		</p>

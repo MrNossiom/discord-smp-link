@@ -193,74 +193,51 @@ impl Translations {
 		command: &mut Command,
 		full_command_name: &String,
 	) {
-		match command_translation.get_attribute("description") {
-			Some(description) => {
-				command.description_localizations.insert(
-					locale.to_string(),
-					Self::format(bundle, description.value(), None).into(),
-				);
-			}
-			None => {
-				tracing::error!(
-					"translation for command `{}` with locale `{}` does not have a description",
-					full_command_name,
-					locale
-				);
-			}
-		}
-
-		for parameter in &mut command.parameters {
-			match command_translation.get_attribute(&parameter.name) {
-				Some(param_name) => {
-					parameter.name_localizations.insert(
-						locale.to_string(),
-						Self::format(bundle, param_name.value(), None).into(),
-					);
-				}
-				None => {
-					tracing::error!(
-						"translation for command `{}` with locale `{}` does not have a name for the parameter `{}`",
-						full_command_name,
-						locale,
-						parameter.name
-					);
-				}
-			}
-
-			match command_translation.get_attribute(&format!("{}-description", parameter.name)) {
-				Some(param_description) => {
-					parameter.description_localizations.insert(
-						locale.to_string(),
-						Self::format(bundle, param_description.value(), None).into(),
-					);
-				}
-				None => {
-					tracing::error!(
-						"translation for command `{}` with locale `{}` does not have a description for the parameter `{}`",
-						full_command_name,
-						locale,
-						parameter.name
-					);
-				}
-			}
-
-			for choice in &mut parameter.choices {
-				match command_translation.get_attribute(&format!("{}-choice", choice.name)) {
-					Some(choice_name) => {
-						parameter.description_localizations.insert(
-							locale.to_string(),
-							Self::format(bundle, choice_name.value(), None).into(),
-						);
-					}
-					None => {
+		let apply_attribute =
+			|attribute: &str, hash_map: &mut HashMap<String, String>, description: &str| {
+				command_translation.get_attribute(attribute).map_or_else(
+					|| {
 						tracing::error!(
-							"translation for command `{}` with locale `{}` does not have a translation for the choice `{}`",
+							"translation for command `{}` with locale `{}` does not have a {}",
 							full_command_name,
 							locale,
-							choice.name
+							description
 						);
-					}
-				}
+					},
+					|description| {
+						hash_map.insert(
+							locale.to_string(),
+							Self::format(bundle, description.value(), None).into(),
+						);
+					},
+				);
+			};
+
+		apply_attribute(
+			"description",
+			&mut command.description_localizations,
+			"description",
+		);
+
+		for parameter in &mut command.parameters {
+			apply_attribute(
+				&parameter.name,
+				&mut parameter.name_localizations,
+				format!("name for the parameter `{}`", parameter.name).as_str(),
+			);
+
+			apply_attribute(
+				&format!("{}-description", parameter.name),
+				&mut parameter.description_localizations,
+				&format!("description for the parameter `{}`", parameter.name),
+			);
+
+			for choice in &mut parameter.choices {
+				apply_attribute(
+					&format!("{}-choice", choice.name),
+					&mut choice.localizations,
+					&format!("translation for the choice `{}`", choice.name),
+				);
 			}
 		}
 	}

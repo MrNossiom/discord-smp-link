@@ -4,7 +4,7 @@ enabledParsers: [ftl]
 # To help with this, you can use https://www.freeformatter.com/json-escape.html
 usageMatchRegex:
   # Translation Trait
-  - "[^\\w\\d]*ctx\\.translate\\([\\n\\t ]*?['\"`]({key})['\"`]"
+  - "[^\\w\\d]*ctx\\.translate\\([\\n\\t ]*?\"({key})\""
   # Applications commands functions
   - "#\\[command\\((?:\\n?[\\t ]*)(?:slash_command|context_menu_command)(?:.|\\n)*?\\)\\]\\npub\\(.+\\) async fn (\\w+)\\("
 

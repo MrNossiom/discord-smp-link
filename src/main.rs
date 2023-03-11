@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 #![warn(
 	clippy::missing_docs_in_private_items,
 	clippy::unwrap_used,
