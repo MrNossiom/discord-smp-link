@@ -4,6 +4,9 @@ _default:
 # Run your current project
 run:
 	RUST_LOG='info,_=warn,rocket=warn,discord_smp_link=debug' cargo run
+# Start a developement tunnel to the local server
+tunnel NAME:
+	cloudflared tunnel run --url localhost:3000 {{NAME}}
 
 # Starts the docker compose file with the provided scope
 up SCOPE:
@@ -11,3 +14,6 @@ up SCOPE:
 # Stops the docker compose file with the provided scope
 down SCOPE:
 	docker compose --file docker-compose.{{SCOPE}}.yml down
+# Builds the docker image with the provided tag
+build TAG:
+	docker build . -t ghcr.io/mrnossiom/discord-smp-link:{{TAG}}

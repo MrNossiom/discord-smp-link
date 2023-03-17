@@ -40,11 +40,15 @@ pub(crate) struct Config {
 	/// The `Discord` invite link to rejoin the support server
 	pub(crate) discord_invite_code: String,
 	/// The url of the `OAuth2` callback
+	///
+	/// Example: `dev-smp-link.some.domain`
 	pub(crate) server_url: String,
 
 	/// The default locale to use
 	pub(crate) default_locale: LanguageIdentifier,
 	/// Whether or not to use production defaults
+	///
+	/// Currently only affects logging
 	pub(crate) production: bool,
 }
 
@@ -64,9 +68,7 @@ impl Config {
 	/// Parse the config from `.env` file
 	fn from_dotenv() -> anyhow::Result<Self> {
 		// Load the `.env` file ond error if not found
-		if dotenv().is_err() {
-			return Err(anyhow!("Couldn't find `.env` file, please create one"));
-		}
+		dotenv()?;
 
 		let discord_invite_code = required_env_var("DISCORD_INVITE_CODE")?;
 

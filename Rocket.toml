@@ -2,8 +2,7 @@
 address = "0.0.0.0"
 
 [debug]
-port = 8443
-tls = { certs = "certs/localhost.pem", key = "certs/localhost-key.pem" }
+port = 3000
 shutdown = { ctrlc = false }
 
 [release]
