@@ -24,7 +24,7 @@ use std::{
 	fmt,
 	sync::Arc,
 };
-use unic_langid::langid;
+use unic_langid::LanguageIdentifier;
 
 /// App global configuration
 #[derive(Debug)]
@@ -42,6 +42,8 @@ pub(crate) struct Config {
 	/// The url of the `OAuth2` callback
 	pub(crate) server_url: String,
 
+	/// The default locale to use
+	pub(crate) default_locale: LanguageIdentifier,
 	/// Whether or not to use production defaults
 	pub(crate) production: bool,
 }
@@ -57,7 +59,7 @@ fn required_env_var(name: &str) -> anyhow::Result<String> {
 	}
 }
 
-// TODO: use the `figment` crate
+// IDEA: use the `figment` crate to parse config
 impl Config {
 	/// Parse the config from `.env` file
 	fn from_dotenv() -> anyhow::Result<Self> {
@@ -77,6 +79,12 @@ impl Config {
 			.parse::<bool>()
 			.map_err(|_| anyhow!("PRODUCTION environnement variable must be a `bool`"))?;
 
+		let default_locale = required_env_var("DEFAULT_LOCALE")?
+			.parse::<LanguageIdentifier>()
+			.map_err(|_| {
+				anyhow!("DEFAULT_LOCALE environnement variable must be a `LanguageIdentifier`")
+			})?;
+
 		Ok(Self {
 			discord_token: Secret::new(required_env_var("DISCORD_TOKEN")?),
 			discord_development_guild: GuildId(discord_development_guild),
@@ -88,6 +96,7 @@ impl Config {
 			discord_invite_code,
 			server_url: required_env_var("SERVER_URL")?,
 
+			default_locale,
 			production,
 		})
 	}
@@ -127,8 +136,7 @@ impl Data {
 			.build()
 			.context("failed to create database pool")?;
 
-		// TODO: make the default locale configurable
-		let translations = Translations::from_folder("translations", langid!("fr"))
+		let translations = Translations::from_folder("translations", config.default_locale.clone())
 			.context("failed to load translations")?;
 
 		Ok(Self {

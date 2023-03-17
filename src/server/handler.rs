@@ -1,6 +1,8 @@
 //! The request handlers that serves content
 
-use crate::states::ArcData;
+use super::{AcceptLanguage, ServerError};
+use crate::{auth::PendingAuthRequest, states::ArcData};
+use anyhow::{anyhow, Context};
 use oauth2::{reqwest::async_http_client, AuthorizationCode};
 use rocket::{response::Redirect, FromForm, Request, State};
 use rocket_dyn_templates::{context, Template};
@@ -17,45 +19,43 @@ pub(crate) struct OAuth2Params {
 // TODO: show more comprehensive errors to the user
 /// Handle requests to `/oauth2` endpoints
 #[rocket::get("/oauth2?<params..>")]
-pub(super) async fn handle_oauth2(data: &State<ArcData>, params: OAuth2Params) -> Template {
-	{
-		let mut queue = data.auth.pending_set.write().expect("poisoned");
+pub(super) async fn handle_oauth2(
+	data: &State<ArcData>,
+	_lang: AcceptLanguage,
+	params: OAuth2Params,
+) -> Result<Template, ServerError> {
+	// let msg = data.translations.translate_checked(&lang, "", None)?;
 
-		if !queue.remove(&params.state) {
-			return Template::render(
-				"auth",
-				context! { is_success: false, message: "The given 'state' wasn't queued anymore", username: "" },
-			);
-		};
-	}
+	let PendingAuthRequest {
+		guild_image_source,
+		tx,
+		username,
+	} = {
+		let mut queue = data.auth.pending.write().await;
 
-	let oauth2_response = data
+		queue.remove(&params.state).ok_or(ServerError::User(
+			"The given 'state' wasn't queued anymore".into(),
+		))?
+	};
+
+	let token_response = data
 		.auth
 		.client
 		.exchange_code(AuthorizationCode::new(params.code))
 		.request_async(async_http_client)
-		.await;
+		.await
+		.context("could not get oauth2 token")?;
 
-	let token_response = match oauth2_response {
-		Ok(token_res) => token_res,
-		Err(error) => {
-			return Template::render(
-				"auth",
-				context! { is_success: false, message: error.to_string() },
-			);
-		}
-	};
+	tx.send(token_response)
+		.map_err(|_| ServerError::Other(anyhow!("the receiver was dropped")))?;
 
-	{
-		let mut queue = data.auth.received_queue.write().expect("poisoned");
-
-		queue.insert(params.state, token_response);
-	}
-
-	Template::render(
+	Ok(Template::render(
 		"auth",
-		context! { is_success: true, username: "", guild_image_src: "" },
-	)
+		context! {
+			username,
+			guild_image_source: format!("{guild_image_source}?size=2048")
+		},
+	))
 }
 
 /// Serve the index page

@@ -1,34 +1,34 @@
 //! `OAuth2` flow with users
 
-use crate::constants::{self, scopes, urls};
-use crate::states::Config;
+use crate::{
+	constants::{self, scopes, urls},
+	states::Config,
+};
 use anyhow::Context as _;
 use futures::Future;
 use hyper::StatusCode;
-use oauth2::TokenResponse;
 use oauth2::{
 	basic::{BasicClient, BasicTokenType},
 	url::Url,
 	AuthUrl, CsrfToken, EmptyExtraTokenFields, RedirectUrl, RevocationUrl, Scope,
-	StandardTokenResponse, TokenUrl,
+	StandardTokenResponse, TokenResponse, TokenUrl,
 };
 use reqwest::Client;
 use serde_json::Value;
-use std::collections::HashSet;
 use std::{
 	collections::HashMap,
 	pin::Pin,
-	sync::{Arc, RwLock},
+	sync::Arc,
 	task::{Context, Poll},
 };
 use thiserror::Error;
-use tokio::time::{self, Duration, Instant, Sleep};
+use tokio::{
+	sync::{oneshot, RwLock},
+	time::{Duration, Instant},
+};
 
 /// The type of the `OAuth2` response
 pub(crate) type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
-
-/// The type of the auth queue
-pub(crate) type AuthQueue = HashMap<String, BasicTokenResponse>;
 
 /// The information returned by google
 pub(crate) struct GoogleUserMetadata {
@@ -40,6 +40,17 @@ pub(crate) struct GoogleUserMetadata {
 	pub(crate) last_name: String,
 }
 
+/// A pending auth request
+#[derive(Debug)]
+pub(crate) struct PendingAuthRequest {
+	/// The channel to send back the connection token
+	pub(crate) tx: oneshot::Sender<BasicTokenResponse>,
+	/// The username of the person logging-in
+	pub(crate) username: String,
+	/// The image url of the guild
+	pub(crate) guild_image_source: String,
+}
+
 /// A manager to get redirect urls and tokens
 #[derive(Debug)]
 pub(crate) struct GoogleAuthentification {
@@ -47,9 +58,7 @@ pub(crate) struct GoogleAuthentification {
 	pub(crate) client: BasicClient,
 	// TODO: change string to `CsrfToken` if oauth2-rs implement Eq + Hash on it
 	/// A queue to wait for the user to finish the flow
-	pub(crate) pending_set: Arc<RwLock<HashSet<String>>>,
-	/// A queue to wait for the user to finish the flow
-	pub(crate) received_queue: Arc<RwLock<AuthQueue>>,
+	pub(crate) pending: Arc<RwLock<HashMap<String, PendingAuthRequest>>>,
 	/// A Reqwest HTTPS client to query Google OAuth2 API
 	pub(crate) http: Client,
 }
@@ -71,15 +80,17 @@ impl GoogleAuthentification {
 
 		Ok(Self {
 			client: oauth_client,
-			pending_set: Arc::default(),
-			received_queue: Arc::default(),
+			pending: Arc::default(),
 			http: Client::default(),
 		})
 	}
 
 	/// Gets a url and a future to make to user auth
-	#[must_use]
-	pub(crate) fn process_oauth2(&self, max_duration: Duration) -> (Url, AuthProcess) {
+	pub(crate) async fn process_oauth2(
+		&self,
+		username: String,
+		guild_image_source: String,
+	) -> (Url, AuthProcess) {
 		let (authorize_url, csrf_state) = self
 			.client
 			.authorize_url(CsrfToken::new_random)
@@ -89,16 +100,25 @@ impl GoogleAuthentification {
 			])
 			.url();
 
+		let (tx, rx) = oneshot::channel();
+
 		// Queue the newly created `csrf` state
 		{
-			let mut map = self.pending_set.write().expect("RwLock is poisoned");
+			let mut map = self.pending.write().await;
 
-			map.insert(csrf_state.secret().clone());
+			map.insert(
+				csrf_state.secret().clone(),
+				PendingAuthRequest {
+					tx,
+					username,
+					guild_image_source,
+				},
+			);
 		}
 
 		(
 			authorize_url,
-			AuthProcess::new(max_duration, Arc::clone(&self.received_queue), csrf_state),
+			AuthProcess::new(constants::AUTHENTICATION_TIMEOUT, rx, csrf_state),
 		)
 	}
 
@@ -164,25 +184,24 @@ pub(crate) struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
 	/// The OAuth2 queue to handle
-	queue: Arc<RwLock<AuthQueue>>,
+	#[pin]
+	rx: oneshot::Receiver<BasicTokenResponse>,
 	/// The code to recognize the request
 	csrf_state: CsrfToken,
-
-	/// The delay between each check in the queue
-	/// Used to avoid locking the [`RwLock`] at each poll
-	#[pin]
-	queue_delay: Sleep,
 }
 
 impl AuthProcess {
 	#[must_use]
 	/// Create a new [`AuthProcess`]
-	fn new(wait: Duration, queue: Arc<RwLock<AuthQueue>>, csrf_state: CsrfToken) -> Self {
+	fn new(
+		wait: Duration,
+		rx: oneshot::Receiver<BasicTokenResponse>,
+		csrf_state: CsrfToken,
+	) -> Self {
 		Self {
 			wait_until: Instant::now() + wait,
-			queue,
+			rx,
 			csrf_state,
-			queue_delay: time::sleep(Duration::default()),
 		}
 	}
 }
@@ -193,21 +212,13 @@ impl Future for AuthProcess {
 	fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
 		let mut this = self.project();
 
-		let mut queue = this.queue.write().expect("RwLock is poisoned");
-
 		if Instant::now() > *this.wait_until {
 			return Poll::Ready(Err(GoogleAuthentificationError::Timeout));
 		}
 
-		match this.queue_delay.as_mut().poll(cx) {
-			Poll::Ready(()) => {
-				this.queue_delay
-					.reset(Instant::now() + constants::AUTHENTICATION_CHECK_DELAY);
-
-				queue.remove(this.csrf_state.secret()).map_or_else(
-					|| Poll::Pending,
-					|token_response| Poll::Ready(Ok(token_response)),
-				)
+		match this.rx.as_mut().poll(cx) {
+			Poll::Ready(response) => {
+				Poll::Ready(response.map_err(|err| GoogleAuthentificationError::Other(err.into())))
 			}
 			Poll::Pending => Poll::Pending,
 		}

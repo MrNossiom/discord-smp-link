@@ -4,8 +4,6 @@ use tokio::time::Duration;
 
 /// The timeout for the authentication process
 pub(crate) const AUTHENTICATION_TIMEOUT: Duration = Duration::from_secs(60 * 5);
-/// The delay for which the queue is check
-pub(crate) const AUTHENTICATION_CHECK_DELAY: Duration = Duration::from_secs(5);
 
 /// The interaction identifiers for buttons interactions
 pub(crate) mod events {

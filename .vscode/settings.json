@@ -12,6 +12,7 @@
 		"memoizer",
 		"mkcert",
 		"Mysql",
+		"oneshot",
 		"pemfile",
 		"rustdoc",
 		"rustls",

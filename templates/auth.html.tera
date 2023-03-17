@@ -5,20 +5,13 @@
 {% block head %}{% endblock %}
 
 {% block content %}
-	{% if is_success %}
-		<div class="association" >
-			<img src="/static/images/discord-smp-link-logo.png" />
-			<span>+</span>
-			<img src="{{ guild_image_src }}" />
-		</div>
+	<div class="association" >
+		<img src="/static/images/discord-smp-link-logo.png" />
+		<span>+</span>
+		<img src="{{ guild_image_source }}" />
+	</div>
 
-		<h1>Hi {{ username }}!</h1>
-		<p>You are logged in!</p>
-		<p>You can return to discord and close this window</p>
-	{% else %}
-		<h1>Sorry {{ username }}...</h1>
-		<p>
-			There was en error: <code>{{ error_message }}</code>
-		</p>
-	{% endif %}
+	<h1>Hi {{ username }}!</h1>
+	<p>You are logged in!</p>
+	<p>You can return to discord and close this window</p>
 {% endblock %}

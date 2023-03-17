@@ -53,7 +53,16 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let (oauth2_url, token_response) = ctx
 		.data
 		.auth
-		.process_oauth2(constants::AUTHENTICATION_TIMEOUT);
+		.process_oauth2(
+			member.user.name.clone(),
+			member
+				.guild_id
+				.to_partial_guild(&ctx)
+				.await?
+				.icon_url()
+				.unwrap_or_default(),
+		)
+		.await;
 
 	let initial_response = ctx
 		.send(|reply| {
