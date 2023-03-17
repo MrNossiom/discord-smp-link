@@ -41,8 +41,8 @@ pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> Inter
 	let guild_id = ctx.guild_only_id();
 
 	if role.has_permission(Permissions::ADMINISTRATOR) {
-		let translate = ctx.translate("setup_role-role-admin", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("setup_role-role-admin", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -53,8 +53,7 @@ pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> Inter
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let get = ctx.translate("done", None);
-	ctx.shout(get).await?;
+	ctx.shout(ctx.translate("done", None)).await?;
 
 	Ok(())
 }
@@ -74,11 +73,11 @@ pub(crate) async fn setup_pattern(
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let get = ctx.translate(
+	ctx.shout(ctx.translate(
 		"setup_pattern-done",
-		Some(&fluent_args!["pattern" => pattern]),
-	);
-	ctx.shout(get).await?;
+		Some(fluent_args!["pattern" => pattern]),
+	))
+	.await?;
 
 	Ok(())
 }

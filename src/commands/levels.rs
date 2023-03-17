@@ -63,11 +63,8 @@ pub(crate) async fn levels_add(
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let translate = ctx.translate(
-		"levels_add-success",
-		Some(&fluent_args! { "level" => name }),
-	);
-	ctx.shout(translate).await?;
+	ctx.shout(ctx.translate("levels_add-success", Some(fluent_args! { "level" => name })))
+		.await?;
 
 	Ok(())
 }
@@ -107,8 +104,8 @@ pub(crate) async fn levels_remove(
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
 		.await.optional()? else
 	{
-		let translate = ctx.translate("levels_remove-not-found", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("levels_remove-not-found", None))
+			.await?;
 
 		return Ok(());
 	};
@@ -146,8 +143,8 @@ pub(crate) async fn levels_list(
 		.await?;
 
 	if nb_of_levels >= i64::from(constants::limits::MAX_LEVELS_PER_GUILD) {
-		let translate = ctx.translate("levels_add-too-many-levels", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("levels_add-too-many-levels", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -172,7 +169,7 @@ pub(crate) async fn levels_list(
 			|filter| {
 				ctx.translate(
 					"levels_list-none-with-filter",
-					Some(&fluent_args!["filter" => filter.clone()]),
+					Some(fluent_args!["filter" => filter.clone()]),
 				)
 			},
 		);
@@ -200,7 +197,7 @@ pub(crate) async fn levels_list(
 			|| ctx.translate("levels_list-title", None),
 			|filter| ctx.translate(
 				"levels_list-title-with-filter",
-				Some(&fluent_args!["filter" => filter]),
+				Some(fluent_args!["filter" => filter]),
 			)
 		),
 		levels_string

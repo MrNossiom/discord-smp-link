@@ -38,11 +38,11 @@ pub(super) async fn debug_refresh_member(
 		.first::<Member>(&mut connection)
 		.await
 	{
-		let content = ctx.translate(
+		ctx.shout(ctx.translate(
 			"debug_refresh_member-already-in-database",
-			Some(&fluent_args!["user" => member.username]),
-		);
-		ctx.shout(content).await?;
+			Some(fluent_args!["user" => member.username]),
+		))
+		.await?;
 	} else {
 		let new_member = NewMember {
 			guild_id: member.guild_id.0,
@@ -52,11 +52,11 @@ pub(super) async fn debug_refresh_member(
 
 		new_member.insert().execute(&mut connection).await?;
 
-		let content = ctx.translate(
+		ctx.shout(ctx.translate(
 			"debug_refresh_member-added",
-			Some(&fluent_args!["user" => new_member.username]),
-		);
-		ctx.shout(content).await?;
+			Some(fluent_args!["user" => new_member.username]),
+		))
+		.await?;
 	}
 
 	Ok(())
@@ -112,11 +112,11 @@ pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> Intera
 		}
 	}
 
-	let get = ctx.translate(
+	ctx.shout(ctx.translate(
 		"debug_refresh_members-added",
-		Some(&fluent_args!["count" => count]),
-	);
-	ctx.shout(get).await?;
+		Some(fluent_args!["count" => count]),
+	))
+	.await?;
 
 	Ok(())
 }

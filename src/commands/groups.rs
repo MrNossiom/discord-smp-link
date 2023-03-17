@@ -45,8 +45,8 @@ pub(crate) async fn groups_add(
 		if let Ok(emoji) = emoji.parse::<ReactionType>() {
 			Some(emoji)
 		} else {
-			let translate = ctx.translate("groups_add-invalid-emoji", None);
-			ctx.shout(translate).await?;
+			ctx.shout(ctx.translate("groups_add-invalid-emoji", None))
+				.await?;
 
 			return Ok(());
 		}
@@ -81,11 +81,8 @@ pub(crate) async fn groups_add(
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
-	let translate = ctx.translate(
-		"groups_add-success",
-		Some(&fluent_args! { "group" => name }),
-	);
-	ctx.shout(translate).await?;
+	ctx.shout(ctx.translate("groups_add-success", Some(fluent_args! { "group" => name })))
+		.await?;
 
 	Ok(())
 }
@@ -125,8 +122,7 @@ pub(crate) async fn groups_remove(
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
 		.await.optional()? else
 	{
-		let translate = ctx.translate("groups_remove-not-found", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("groups_remove-not-found", None)).await?;
 
 		return Ok(());
 	};
@@ -164,8 +160,8 @@ pub(crate) async fn groups_list(
 		.await?;
 
 	if nb_of_groups >= i64::from(constants::limits::MAX_GROUPS_PER_GUILD) {
-		let translate = ctx.translate("groups_add-too-many-groups", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("groups_add-too-many-groups", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -190,7 +186,7 @@ pub(crate) async fn groups_list(
 			|filter| {
 				ctx.translate(
 					"groups_list-none-with-filter",
-					Some(&fluent_args!["filter" => filter.clone()]),
+					Some(fluent_args!["filter" => filter.clone()]),
 				)
 			},
 		);
@@ -216,7 +212,7 @@ pub(crate) async fn groups_list(
 			|| ctx.translate("groups_list-title", None),
 			|filter| ctx.translate(
 				"groups_list-title-with-filter",
-				Some(&fluent_args!["filter" => filter]),
+				Some(fluent_args!["filter" => filter]),
 			)
 		),
 		groups_string

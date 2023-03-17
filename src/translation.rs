@@ -253,12 +253,12 @@ pub(crate) trait Translate {
 	) -> anyhow::Result<Cow<'bundle, str>>;
 
 	/// Get a translated key of the key itself in case it is not found
-	fn translate(&self, key: &str, args: Option<&FluentArgs>) -> String {
-		match self.translate_checked(key, args) {
-			Ok(string) => string.into(),
+	fn translate<'b>(&'b self, key: &'b str, args: Option<FluentArgs<'b>>) -> String {
+		match self.translate_checked(key, args.as_ref()) {
+			Ok(string) => string.into_owned(),
 			Err(error) => {
 				tracing::error!(key = key, args = ?args, error = ?error, "translation error");
-				key.into()
+				key.to_owned()
 			}
 		}
 	}

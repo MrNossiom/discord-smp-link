@@ -53,8 +53,7 @@ pub(crate) async fn groups(
 			.execute(&mut connection)
 			.await?;
 
-		let translate = ctx.translate("delete", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("delete", None)).await?;
 	} else {
 		let new_group_of_verified_member = NewGroupOfVerifiedMember {
 			verified_member_id: member_id,
@@ -66,8 +65,7 @@ pub(crate) async fn groups(
 			.execute(&mut connection)
 			.await?;
 
-		let translate = ctx.translate("insert", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("insert", None)).await?;
 	}
 
 	Ok(())

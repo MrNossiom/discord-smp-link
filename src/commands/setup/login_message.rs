@@ -62,8 +62,7 @@ pub(crate) async fn setup_login_message(ctx: ApplicationContext<'_>) -> Interact
 		.execute(&mut connection)
 		.await?;
 
-	let translate = ctx.translate("done", None);
-	ctx.shout(translate).await?;
+	ctx.shout(ctx.translate("done", None)).await?;
 
 	Ok(())
 }

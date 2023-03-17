@@ -45,39 +45,31 @@ pub(super) async fn debug_register(
 	}
 
 	if global {
-		if register {
-			Command::set_global_application_commands(&ctx.serenity_context, |b| {
+		Command::set_global_application_commands(&ctx.serenity_context, |b| {
+			if register {
 				*b = commands_builder;
-				b
-			})
-			.await?;
-		} else {
-			Command::set_global_application_commands(&ctx.serenity_context, |b| b).await?;
-		}
+			}
+			b
+		})
+		.await?;
 	} else {
 		let Some(guild_id) = ctx.interaction.guild_id() else {
-			let translate = ctx.translate("error-guild-only", None);
-			ctx.shout(translate).await?;
-			
+			ctx.shout(ctx.translate("error-guild-only", None)).await?;
+
 			return Ok(());
 		};
 
-		if register {
-			guild_id
-				.set_application_commands(&ctx.serenity_context, |b| {
+		guild_id
+			.set_application_commands(&ctx.serenity_context, |b| {
+				if register {
 					*b = commands_builder;
-					b
-				})
-				.await?;
-		} else {
-			guild_id
-				.set_application_commands(&ctx.serenity_context, |b| b)
-				.await?;
-		}
+				}
+				b
+			})
+			.await?;
 	}
 
-	let translate = ctx.translate("done", None);
-	ctx.shout(translate).await?;
+	ctx.shout(ctx.translate("done", None)).await?;
 
 	Ok(())
 }

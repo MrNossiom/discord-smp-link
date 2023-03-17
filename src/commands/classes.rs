@@ -48,11 +48,10 @@ pub(crate) async fn classes_add(
 		.select(schema::levels::id)
 		.get_result(&mut connection)
 		.await.optional()? else {
-			let translate = ctx.translate(
+			ctx.shout(ctx.translate(
 				"classes_add-no-such-level",
-				Some(&fluent_args! { "level" => level }),
-			);
-			ctx.shout(translate).await?;
+				Some(fluent_args! { "level" => level }),
+			)).await?;
 
 			return Ok(());
 	};
@@ -63,8 +62,8 @@ pub(crate) async fn classes_add(
 		.await?;
 
 	if nb_of_classes >= i64::from(constants::limits::MAX_CLASSES_PER_LEVEL) {
-		let translate = ctx.translate("classes_add-too-many-classes", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("classes_add-too-many-classes", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -91,11 +90,11 @@ pub(crate) async fn classes_add(
 
 	new_class.insert().execute(&mut connection).await?;
 
-	let translate = ctx.translate(
+	ctx.shout(ctx.translate(
 		"classes_add-success",
-		Some(&fluent_args! { "class" => name, "level" => level }),
-	);
-	ctx.shout(translate).await?;
+		Some(fluent_args! { "class" => name, "level" => level }),
+	))
+	.await?;
 
 	Ok(())
 }
@@ -135,8 +134,7 @@ pub(crate) async fn classes_remove(
 		.select((schema::classes::id, schema::classes::role_id))
 		.first::<(i32, u64)>(&mut connection)
 		.await.optional()? else {
-			let translate = ctx.translate("classes_remove-not-found", None);
-			ctx.shout(translate).await?;
+			ctx.shout(ctx.translate("classes_remove-not-found", None)).await?;
 
 			return Ok(());
 	};
@@ -187,7 +185,7 @@ pub(crate) async fn classes_list(
 			|filter| {
 				ctx.translate(
 					"classes_list-none-with-filter",
-					Some(&fluent_args!["filter" => filter.clone()]),
+					Some(fluent_args!["filter" => filter.clone()]),
 				)
 			},
 		);
@@ -213,7 +211,7 @@ pub(crate) async fn classes_list(
 			|| ctx.translate("classes_list-title", None),
 			|filter| ctx.translate(
 				"classes_list-title-with-filter",
-				Some(&fluent_args!["filter" => filter]),
+				Some(fluent_args!["filter" => filter]),
 			)
 		),
 		classes_string

@@ -115,7 +115,6 @@ impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 			.await
 	}
 
-	// TODO: find another way
 	/// Get the member who triggered the interaction
 	///
 	/// # Panics

@@ -26,8 +26,8 @@ pub(crate) async fn setup_groups_message(ctx: ApplicationContext<'_>) -> Interac
 		.await?;
 
 	if groups.is_empty() {
-		let translate = ctx.translate("setup_groups_message-not-enough-groups", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("setup_groups_message-not-enough-groups", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -71,8 +71,7 @@ pub(crate) async fn setup_groups_message(ctx: ApplicationContext<'_>) -> Interac
 		.execute(&mut connection)
 		.await?;
 
-	let translate = ctx.translate("done", None);
-	ctx.shout(translate).await?;
+	ctx.shout(ctx.translate("done", None)).await?;
 
 	Ok(())
 }

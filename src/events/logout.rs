@@ -62,8 +62,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 			_ => unreachable!(),
 		}
 	} else {
-		let get = ctx.translate("error-user-timeout", None);
-		ctx.shout(get).await?;
+		ctx.shout(ctx.translate("error-user-timeout", None)).await?;
 	}
 
 	Ok(())
@@ -88,8 +87,8 @@ async fn inner_logout(
 		member.remove_role(&ctx, role).await?;
 	}
 
-	let get = ctx.translate("event-logout-success", None);
-	ctx.shout(get).await?;
+	ctx.shout(ctx.translate("event-logout-success", None))
+		.await?;
 
 	Ok(())
 }

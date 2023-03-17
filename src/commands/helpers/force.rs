@@ -45,17 +45,17 @@ pub(super) async fn debug_force_logout(
 			.execute(&mut connection)
 			.await?;
 
-		let content = ctx.translate(
+		ctx.shout(ctx.translate(
 			"debug_force_logout-done",
-			Some(&fluent_args!["user" => user.user.name]),
-		);
-		ctx.shout(content).await?;
+			Some(fluent_args!["user" => user.user.name]),
+		))
+		.await?;
 	} else {
-		let content = ctx.translate(
+		ctx.shout(ctx.translate(
 			"error-member-not-verified",
-			Some(&fluent_args!["user" => user.user.name]),
-		);
-		ctx.shout(content).await?;
+			Some(fluent_args!["user" => user.user.name]),
+		))
+		.await?;
 	}
 
 	Ok(())

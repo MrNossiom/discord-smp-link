@@ -19,11 +19,10 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 		.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
 		.await.optional()? else
 	{
-		let get = ctx.translate(
+		ctx.shout(ctx.translate(
 			"error-member-not-verified",
-			Some(&fluent_args!["user" => user.name]),
-		);
-		ctx.shout(get).await?;
+			Some(fluent_args!["user" => user.name]),
+		)).await?;
 
 		return Ok(());
 	};

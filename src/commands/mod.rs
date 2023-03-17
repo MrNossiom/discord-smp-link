@@ -67,16 +67,14 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			FrameworkError::MissingBotPermissions {
 				ctx,
 				missing_permissions,
-			} => {
-				let content = ctx.translate(
+			} => ctx
+				.shout(ctx.translate(
 					"error-bot-missing-permissions",
-					Some(&fluent_args!["permissions" => missing_permissions.to_string()]),
-				);
-				ctx.shout(content)
-					.await
-					.map(|_| ())
-					.context("Failed to send missing bot permissions message")
-			}
+					Some(fluent_args!["permissions" => missing_permissions.to_string()]),
+				))
+				.await
+				.map(|_| ())
+				.context("Failed to send missing bot permissions message"),
 
 			FrameworkError::MissingUserPermissions {
 				ctx,
@@ -87,7 +85,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					|permission| {
 						ctx.translate(
 							"error-user-missing-permissions",
-							Some(&fluent_args!["permissions" => permission.to_string()]),
+							Some(fluent_args!["permissions" => permission.to_string()]),
 						)
 					},
 				);
@@ -98,29 +96,23 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					.context("Failed to send missing user permissions message")
 			}
 
-			FrameworkError::NotAnOwner { ctx } => {
-				let content = ctx.translate("error-not-an-owner", None);
-				ctx.shout(content)
-					.await
-					.map(|_| ())
-					.context("Failed to send not an owner message")
-			}
+			FrameworkError::NotAnOwner { ctx } => ctx
+				.shout(ctx.translate("error-not-an-owner", None))
+				.await
+				.map(|_| ())
+				.context("Failed to send not an owner message"),
 
-			FrameworkError::GuildOnly { ctx } => {
-				let content = ctx.translate("error-guild-only", None);
-				ctx.shout(content)
-					.await
-					.map(|_| ())
-					.context("Failed to send guild only message")
-			}
+			FrameworkError::GuildOnly { ctx } => ctx
+				.shout(ctx.translate("error-guild-only", None))
+				.await
+				.map(|_| ())
+				.context("Failed to send guild only message"),
 
-			FrameworkError::DmOnly { ctx } => {
-				let content = ctx.translate("error-dm-only", None);
-				ctx.shout(content)
-					.await
-					.map(|_| ())
-					.context("Failed to send dm only message")
-			}
+			FrameworkError::DmOnly { ctx } => ctx
+				.shout(ctx.translate("error-dm-only", None))
+				.await
+				.map(|_| ())
+				.context("Failed to send dm only message"),
 
 			error => {
 				tracing::error!(error = ?error, "framework");
@@ -160,15 +152,14 @@ async fn handle_interaction_error(
 		error_id = error_identifier,
 		error = ?error,
 		command_id = ctx.command().identifying_name,
-		"command check",
+		"interaction body or check",
 	);
 
-	let error_msg = ctx.translate(
+	ctx.shout(ctx.translate(
 		"error-internal-with-id",
-		Some(&fluent_args!["id" => error_identifier]),
-	);
-
-	ctx.shout(error_msg).await?;
+		Some(fluent_args!["id" => error_identifier]),
+	))
+	.await?;
 
 	Ok(())
 }

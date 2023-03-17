@@ -85,8 +85,8 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let token_response = match token_response.await {
 		Ok(response) => response,
 		Err(GoogleAuthentificationError::Timeout) => {
-			let translate = ctx.translate("did-not-finish-auth-process", None);
-			ctx.shout(translate).await?;
+			ctx.shout(ctx.translate("did-not-finish-auth-process", None))
+				.await?;
 
 			return Ok(());
 		}
@@ -106,8 +106,8 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.last()
 		.context("email returned by google is invalid")?;
 	if mail_domain != email_pattern {
-		let translate = ctx.translate("event-login-email-domain-not-allowed", None);
-		ctx.shout(translate).await?;
+		ctx.shout(ctx.translate("event-login-email-domain-not-allowed", None))
+			.await?;
 
 		return Ok(());
 	}
@@ -127,11 +127,10 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		.first::<i32>(&mut connection)
 		.await.optional()? else
 	{
-		let translate = ctx.translate(
+		ctx.shout(ctx.translate(
 			"error-member-not-registered",
-			Some(&fluent_args!["user" => member.user.name.as_str()]),
-		);
-		ctx.shout(translate).await?;
+			Some(fluent_args!["user" => member.user.name.as_str()]),
+		)).await?;
 
 		return Ok(());
 	};
@@ -218,7 +217,7 @@ async fn check_login_components(
 
 /// Ask the user to select a level and then a guild
 async fn ask_user_guild_and_levels<'a>(
-	ctx: &MessageComponentContext<'a>,
+	ctx: &'a MessageComponentContext<'a>,
 	connection: &mut database::DatabasePooledConnection,
 	initial_response: &MessageComponentReplyHandle<'a>,
 	mut levels: Vec<Level>,
@@ -233,7 +232,6 @@ async fn ask_user_guild_and_levels<'a>(
 
 	levels_select_menu
 		.custom_id(constants::events::AUTHENTICATION_SELECT_MENU_LEVEL_INTERACTION)
-		// TODO: translate
 		.placeholder(ctx.translate("event-login-select-level", None))
 		.options(|op| op.set_options(levels));
 
