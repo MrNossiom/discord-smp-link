@@ -17,3 +17,7 @@ down SCOPE:
 # Builds the docker image with the provided tag
 build TAG:
 	docker build . -t ghcr.io/mrnossiom/discord-smp-link:{{TAG}}
+
+# Retrieves the IP address of the local database
+local-db-ip:
+	@docker inspect -f {{"'{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"}} discord-smp-link-database-1

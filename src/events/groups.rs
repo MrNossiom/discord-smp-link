@@ -29,18 +29,22 @@ pub(crate) async fn groups(
 		.select(schema::verified_members::member_id)
 		.first(&mut connection)
 		.await
-		.optional()? else {
-			ctx.shout("Member does not exist".to_string()).await?;
+		.optional()?
+	else {
+		ctx.shout("Member does not exist".to_string()).await?;
 
-			return Ok(());
-		};
+		return Ok(());
+	};
 
 	let group_id = values[0]
 		.parse::<i32>()
 		.context("could not parse group id")?;
-	let Option::<Group>::Some(group) = Group::with_id(group_id).first(&mut connection).await.optional()? else {
+	let Option::<Group>::Some(group) = Group::with_id(group_id)
+		.first(&mut connection)
+		.await
+		.optional()?
+	else {
 		return Err(anyhow!("Group was in select menu even though it does not exist").into());
-
 	};
 
 	if let Option::<GroupOfVerifiedMember>::Some(group_of_verified_member) =

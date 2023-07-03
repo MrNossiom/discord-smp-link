@@ -43,17 +43,20 @@ pub(crate) async fn classes_add(
 	let mut connection = ctx.data.database.get().await?;
 
 	// TODO: handle no matching level
-	let Option::<i32>::Some(level_id) =  Level::all_from_guild(guild_id)
+	let Option::<i32>::Some(level_id) = Level::all_from_guild(guild_id)
 		.filter(schema::levels::name.eq(&level))
 		.select(schema::levels::id)
 		.get_result(&mut connection)
-		.await.optional()? else {
-			ctx.shout(ctx.translate(
-				"classes_add-no-such-level",
-				Some(fluent_args! { "level" => level }),
-			)).await?;
+		.await
+		.optional()?
+	else {
+		ctx.shout(ctx.translate(
+			"classes_add-no-such-level",
+			Some(fluent_args! { "level" => level }),
+		))
+		.await?;
 
-			return Ok(());
+		return Ok(());
 	};
 
 	let nb_of_classes: i64 = Class::all_from_level(level_id)
@@ -129,14 +132,17 @@ pub(crate) async fn classes_remove(
 	let guild_id = ctx.guild_only_id();
 	let mut connection = ctx.data.database.get().await?;
 
-	let Some((id, role_id)) =  Class::all_from_guild(guild_id)
+	let Some((id, role_id)) = Class::all_from_guild(guild_id)
 		.filter(schema::classes::name.eq(&name))
 		.select((schema::classes::id, schema::classes::role_id))
 		.first::<(i32, u64)>(&mut connection)
-		.await.optional()? else {
-			ctx.shout(ctx.translate("classes_remove-not-found", None)).await?;
+		.await
+		.optional()?
+	else {
+		ctx.shout(ctx.translate("classes_remove-not-found", None))
+			.await?;
 
-			return Ok(());
+		return Ok(());
 	};
 
 	match guild_id

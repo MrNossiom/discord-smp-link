@@ -102,8 +102,9 @@ pub(crate) async fn levels_remove(
 		.filter(schema::levels::name.eq(&name))
 		.select((schema::levels::id, schema::levels::role_id))
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
-		.await.optional()? else
-	{
+		.await
+		.optional()?
+	else {
 		ctx.shout(ctx.translate("levels_remove-not-found", None))
 			.await?;
 

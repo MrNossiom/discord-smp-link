@@ -116,13 +116,15 @@ pub(crate) async fn groups_remove(
 ) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let Some((id, role_id)) =  Group::all_from_guild(guild_id)
+	let Some((id, role_id)) = Group::all_from_guild(guild_id)
 		.filter(schema::groups::name.eq(&name))
 		.select((schema::groups::id, schema::groups::role_id))
 		.first::<(i32, u64)>(&mut ctx.data.database.get().await?)
-		.await.optional()? else
-	{
-		ctx.shout(ctx.translate("groups_remove-not-found", None)).await?;
+		.await
+		.optional()?
+	else {
+		ctx.shout(ctx.translate("groups_remove-not-found", None))
+			.await?;
 
 		return Ok(());
 	};

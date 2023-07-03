@@ -19,11 +19,12 @@ use std::time::Duration;
 pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut member = ctx.guild_only_member();
 
-	let Some(member_id) =  VerifiedMember::with_ids(member.user.id, member.guild_id)
+	let Some(member_id) = VerifiedMember::with_ids(member.user.id, member.guild_id)
 		.select(schema::verified_members::member_id)
 		.first(&mut ctx.data.database.get().await?)
-		.await.optional()? else
-	{
+		.await
+		.optional()?
+	else {
 		ctx.shout("Member does not exist").await?;
 
 		return Ok(());

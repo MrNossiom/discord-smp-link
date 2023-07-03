@@ -137,12 +137,14 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let Some(verified_member_id) = Member::with_ids(member.user.id, member.guild_id)
 		.select(schema::members::id)
 		.first::<i32>(&mut connection)
-		.await.optional()? else
-	{
+		.await
+		.optional()?
+	else {
 		ctx.shout(ctx.translate(
 			"error-member-not-registered",
 			Some(fluent_args!["user" => member.user.name.as_str()]),
-		)).await?;
+		))
+		.await?;
 
 		return Ok(());
 	};

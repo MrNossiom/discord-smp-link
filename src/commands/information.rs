@@ -14,15 +14,17 @@ use poise::{command, serenity_prelude::User};
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
-	let Some(verified_member) =  VerifiedMember::with_ids(user.id, guild_id)
+	let Some(verified_member) = VerifiedMember::with_ids(user.id, guild_id)
 		.select(VerifiedMember::as_select())
 		.first::<VerifiedMember>(&mut ctx.data.database.get().await?)
-		.await.optional()? else
-	{
+		.await
+		.optional()?
+	else {
 		ctx.shout(ctx.translate(
 			"error-member-not-verified",
 			Some(fluent_args!["user" => user.name]),
-		)).await?;
+		))
+		.await?;
 
 		return Ok(());
 	};
