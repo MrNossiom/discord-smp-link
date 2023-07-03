@@ -39,6 +39,7 @@ pub(crate) fn run_migrations(connection: &str) -> anyhow::Result<()> {
 #[allow(unused_imports)]
 /// Our own prelude for database related modules
 pub(crate) mod prelude {
+	pub(crate) use diesel::dsl as db_dsl;
 	pub(crate) use diesel::prelude::{
 		AppearsOnTable, AsChangeset, BelongingToDsl, BoolExpressionMethods, BoxableExpression,
 		Column, CombineDsl, Connection, DecoratableTarget, EscapeExpressionMethods, Expression,

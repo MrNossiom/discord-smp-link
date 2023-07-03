@@ -1,6 +1,7 @@
 //! Command to disconnect Discord and Google accounts together.
 
 use crate::{
+	constants::events,
 	database::{
 		models::{Guild, VerifiedMember},
 		prelude::*,
@@ -9,11 +10,8 @@ use crate::{
 	states::{InteractionResult, MessageComponentContext},
 	translation::Translate,
 };
-use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction, Member, RoleId};
+use poise::serenity_prelude::{ButtonStyle, CollectComponentInteraction, RoleId};
 use std::time::Duration;
-
-/// Custom ID for the disconnect button
-const CUSTOM_ID_DISCONNECT: &str = "event.logout.disconnect";
 
 /// Starts the dissociate accounts process
 /// Function used in the login and the setup command
@@ -41,7 +39,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 						action_row.create_button(|button| {
 							button
 								.label(ctx.translate("event-logout-disconnect-button", None))
-								.custom_id(CUSTOM_ID_DISCONNECT)
+								.custom_id(events::LOGOUT_OK_BUTTON_INTERACTION)
 								.style(ButtonStyle::Danger)
 						})
 					})
@@ -57,7 +55,8 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		interaction.defer(&ctx).await?;
 
 		match &*interaction.data.custom_id {
-			CUSTOM_ID_DISCONNECT => inner_logout(ctx, &mut member, member_id).await?,
+			events::LOGOUT_OK_BUTTON_INTERACTION => {}
+			events::LOGOUT_CANCEL_BUTTON_INTERACTION => {}
 
 			_ => unreachable!(),
 		}
@@ -65,16 +64,7 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 		ctx.shout(ctx.translate("error-user-timeout", None)).await?;
 	}
 
-	Ok(())
-}
-
-/// Disconnects Discord and Google accounts together
-async fn inner_logout(
-	ctx: MessageComponentContext<'_>,
-	member: &mut Member,
-	member_id: i32,
-) -> InteractionResult {
-	diesel::delete(VerifiedMember::from_member_id(member_id))
+	db_dsl::delete(VerifiedMember::from_member_id(member_id))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
@@ -87,7 +77,11 @@ async fn inner_logout(
 		member.remove_role(&ctx, role).await?;
 	}
 
-	ctx.shout(ctx.translate("event-logout-success", None))
+	reply
+		.edit(|msg| {
+			msg.ephemeral(true)
+				.content(ctx.translate("event-logout-success", None))
+		})
 		.await?;
 
 	Ok(())

@@ -1,6 +1,6 @@
 {% extends "_base" %}
 
-{% block title %} {% if is_success %}Wow!{%else%}Oups!{% endif %} {% endblock %}
+{% block title %}Wow!{% endblock %}
 
 {% block head %}{% endblock %}
 

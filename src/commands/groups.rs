@@ -151,6 +151,7 @@ pub(crate) async fn groups_list(
 	ctx: ApplicationContext<'_>,
 	#[autocomplete = "autocomplete_groups"] filter: Option<String>,
 ) -> InteractionResult {
+	// TODO: cache this per guild, db query intensive, use <https://docs.rs/cached/latest/cached/macros/index.html>
 	let guild_id = ctx.guild_only_id();
 	let mut connection = ctx.data.database.get().await?;
 

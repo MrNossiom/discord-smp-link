@@ -107,7 +107,7 @@ async fn autocomplete_classes<'a>(
 	ctx: ApplicationContext<'_>,
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
-	// TODO: cache this per guild, db query intensive
+	// TODO: cache this per guild, db query intensive, use <https://docs.rs/cached/latest/cached/macros/index.html>
 	let classes: Vec<_> = Class::all_from_guild(ctx.interaction.guild_id().unwrap())
 		.select(schema::classes::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())

@@ -50,7 +50,7 @@ pub(crate) fn start_server(
 	// Create a TCP listener for HTTP via tokio
 	let handle = task::Builder::new()
 		.name("Rocket Server")
-		.spawn(async move { rocket.launch().await })?;
+		.spawn(rocket.launch())?;
 
 	Ok(handle)
 }

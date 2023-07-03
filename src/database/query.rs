@@ -4,16 +4,14 @@
 //! Small bits of `Diesel` queries to reuse across the project
 
 use super::{
-	models::{GroupOfVerifiedMember, Level, NewGroupOfVerifiedMember, NewLevel},
-	prelude::*,
-	schema::{groups_of_verified_members, levels},
-};
-use crate::database::{
 	models::{
-		Class, Group, Guild, Member, NewClass, NewGroup, NewMember, NewVerifiedMember,
-		VerifiedMember,
+		Class, Group, GroupOfVerifiedMember, Guild, Level, Member, NewClass, NewGroup,
+		NewGroupOfVerifiedMember, NewLevel, NewMember, NewVerifiedMember, VerifiedMember,
 	},
-	schema::{classes, groups, guilds, members, verified_members},
+	prelude::*,
+	schema::{
+		classes, groups, groups_of_verified_members, guilds, levels, members, verified_members,
+	},
 };
 use diesel::{
 	dsl::insert_into,

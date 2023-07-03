@@ -3,7 +3,7 @@
 use tokio::time::Duration;
 
 /// The timeout for the authentication process
-pub(crate) const AUTHENTICATION_TIMEOUT: Duration = Duration::from_secs(60 * 5);
+pub(crate) const AUTHENTICATION_TIMEOUT: Duration = Duration::from_secs(60 * 10);
 
 /// The interaction identifiers for buttons interactions
 pub(crate) mod events {
@@ -11,6 +11,11 @@ pub(crate) mod events {
 	pub(crate) const LOGIN_BUTTON_INTERACTION: &str = "events.setup.button.login";
 	/// The setup message button logout interaction
 	pub(crate) const LOGOUT_BUTTON_INTERACTION: &str = "events.setup.button.logout";
+
+	/// Custom ID for the ok button in logout interaction
+	pub(crate) const LOGOUT_OK_BUTTON_INTERACTION: &str = "events.setup.button.logout.ok";
+	/// Custom ID for the cancel button in logout interaction
+	pub(crate) const LOGOUT_CANCEL_BUTTON_INTERACTION: &str = "events.setup.button.logout.cancel";
 
 	/// The login event follow up class selection interaction
 	pub(crate) const AUTHENTICATION_SELECT_MENU_CLASS_INTERACTION: &str =
@@ -51,7 +56,7 @@ pub(crate) mod scopes {
 
 /// Limits to certain values
 ///
-/// Remember also that the `Discord API` has a limit of `250` roles per guild.
+/// Remember also that the Discord API has a limit of 250 roles per guild.
 /// <https://github.com/discord/discord-api-docs/issues/2616>
 pub(crate) mod limits {
 	/// Maximum number of levels that can be created per guild

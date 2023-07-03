@@ -56,9 +56,7 @@ fn build_client(data: ArcData) -> FrameworkBuilder {
 			pre_command,
 			on_error: command_on_error,
 			post_command,
-			event_handler: |ctx, event, fw, data| {
-				Box::pin(async move { event_handler(ctx, event, fw, data).await })
-			},
+			event_handler: |ctx, event, fw, data| Box::pin(event_handler(ctx, event, fw, data)),
 			commands: {
 				use commands::{classes, groups, helpers, information, levels, setup};
 

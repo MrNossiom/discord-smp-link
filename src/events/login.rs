@@ -6,7 +6,7 @@ use crate::{
 	constants,
 	database::{
 		self,
-		models::{Class, Guild, Level, Member, NewVerifiedMember},
+		models::{Class, Guild, Level, Member, NewVerifiedMember, VerifiedMember},
 		prelude::*,
 		schema, DatabasePooledConnection,
 	},
@@ -15,6 +15,7 @@ use crate::{
 	translation::Translate,
 };
 use anyhow::{anyhow, Context};
+use diesel::dsl;
 use fluent::fluent_args;
 use poise::serenity_prelude::{
 	self as serenity, component::ButtonStyle, CollectComponentInteraction, CreateSelectMenu,
@@ -31,7 +32,18 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	let mut connection = ctx.data.database.get().await?;
 	let mut member = ctx.guild_only_member();
 
-	// TODO: check that the member is not already verified
+	if dsl::select(dsl::exists(VerifiedMember::with_ids(
+		member.user.id,
+		member.guild_id,
+	)))
+	.get_result(&mut connection)
+	.await?
+	{
+		ctx.shout(ctx.translate("login.already-verified", None))
+			.await?;
+
+		return Ok(());
+	};
 
 	let (verified_role, levels, email_pattern) =
 		match check_login_components(&mut connection, member.guild_id).await {

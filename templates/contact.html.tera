@@ -4,5 +4,5 @@
 {% block head %}{% endblock %}
 
 {% block content %}
-	<p>You can contact me on Discord at <code>WiroWorld#3995</code> or by mail at <a href="mailto:discord.link@icloud.com">discord.link@icloud.com</a></p>
+	<p>You can contact <code>WiroWorld#3995</code> on Discord or mail me at <a href="mailto:discord.link@icloud.com">discord.link@icloud.com</a></p>
 {% endblock %}

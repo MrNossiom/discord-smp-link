@@ -77,7 +77,7 @@ pub(super) async fn autocomplete_levels<'a>(
 	ctx: ApplicationContext<'_>,
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
-	// TODO: cache this per guild, db query intensive
+	// TODO: cache this per guild, db query intensive, use <https://docs.rs/cached/latest/cached/macros/index.html>
 	let levels: Vec<_> = Level::all_from_guild(ctx.interaction.guild_id().unwrap())
 		.select(schema::levels::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
