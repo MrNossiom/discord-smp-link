@@ -55,9 +55,9 @@ pub(crate) async fn logout(ctx: MessageComponentContext<'_>) -> InteractionResul
 	{
 		interaction.defer(&ctx).await?;
 
+		// TODO
 		match &*interaction.data.custom_id {
-			events::LOGOUT_OK_BUTTON_INTERACTION => {}
-			events::LOGOUT_CANCEL_BUTTON_INTERACTION => {}
+			events::LOGOUT_OK_BUTTON_INTERACTION | events::LOGOUT_CANCEL_BUTTON_INTERACTION => {}
 
 			_ => unreachable!(),
 		}

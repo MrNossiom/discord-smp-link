@@ -122,7 +122,7 @@ impl fmt::Debug for Data {
 			.field("auth", &&self.auth)
 			.field("config", &&self.config)
 			.field("translations", &&self.translations)
-			.finish()
+			.finish_non_exhaustive()
 	}
 }
 
