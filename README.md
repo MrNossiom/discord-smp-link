@@ -8,18 +8,18 @@ Build the production docker container:
 
 > `docker build . -t ghcr.io/mrnossiom/discord-smp-link:latest`
 > and lunch it with
-> `docker compose -f docker-compose.production.yml up -d` or `just up production`
+> `docker compose -f docker-compose.production.yaml up -d` or `just up production`
 
 ## Development
 
-To run the local MySQL database, you can use the `docker-compose.local.yml` file:
+To run the local MySQL database, you can use the `docker-compose.local.yaml` file:
 
-> `docker compose -f docker-compose.local.yml up -d`
+> `docker compose -f docker-compose.local.yaml up -d`
 > or
 > `just up local`
 
-
 To test authentification across the internet, I recommend using [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation) to tunnel the authentification endpoint and server to the sub-domain of your choice, like `dev-smp-link.wiro.codes`.
+
 > `Cloudflare` handles HTTPS for you, giving you direct HTTP requests.
 
 ```sh

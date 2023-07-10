@@ -16,5 +16,5 @@ resource "digitalocean_droplet" "client" {
   name      = "discord-smp-link"
   region    = "fra1"
   size      = "s-1vcpu-512mb-10gb"
-  user_data = file("client_setup.yml")
+  user_data = file("client_setup.yaml")
 }

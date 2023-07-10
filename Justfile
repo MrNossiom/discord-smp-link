@@ -10,10 +10,10 @@ tunnel NAME:
 
 # Starts the docker compose file with the provided scope
 up SCOPE:
-	docker compose --file docker-compose.{{SCOPE}}.yml up -d
+	docker compose --file docker-compose.{{SCOPE}}.yaml up -d
 # Stops the docker compose file with the provided scope
 down SCOPE:
-	docker compose --file docker-compose.{{SCOPE}}.yml down
+	docker compose --file docker-compose.{{SCOPE}}.yaml down
 # Builds the docker image with the provided tag
 build TAG:
 	docker build . -t ghcr.io/mrnossiom/discord-smp-link:{{TAG}}
