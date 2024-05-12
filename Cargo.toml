@@ -2,7 +2,7 @@
 name = "discord_smp_link"
 version = "0.1.0"
 description = "A link between a discord guild and a google account"
-repository = "https://github.com/MrNossiom/discord-smp-link"
+repository = "https://github.com/mrnossiom/discord-smp-link"
 keywords = ["discord", "google", "oauth2"]
 categories = ["authentication"]
 license = "MIT"
