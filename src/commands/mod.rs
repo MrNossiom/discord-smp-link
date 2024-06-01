@@ -26,7 +26,7 @@ pub(crate) mod helpers;
 pub(crate) fn pre_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
 		tracing::info!(
-			user_id = ctx.author().id.0,
+			user_id = ctx.author().id.get(),
 			username = &ctx.author().name,
 			command_id = ctx.command().identifying_name,
 			"Command invocation",
@@ -53,7 +53,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 				Ok(())
 			}
 
-			FrameworkError::CommandCheckFailed { ctx, error } => {
+			FrameworkError::CommandCheckFailed { ctx, error, .. } => {
 				// TODO: handle no error
 				if let Some(err) = error {
 					handle_interaction_error(ctx, err)
@@ -67,6 +67,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			FrameworkError::MissingBotPermissions {
 				ctx,
 				missing_permissions,
+				..
 			} => ctx
 				.shout(ctx.translate(
 					"error-bot-missing-permissions",
@@ -79,6 +80,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 			FrameworkError::MissingUserPermissions {
 				ctx,
 				missing_permissions,
+				..
 			} => {
 				let text = missing_permissions.map_or_else(
 					|| ctx.translate("error-user-missing-unknown-permissions", None),
@@ -96,19 +98,19 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 					.context("Failed to send missing user permissions message")
 			}
 
-			FrameworkError::NotAnOwner { ctx } => ctx
+			FrameworkError::NotAnOwner { ctx, .. } => ctx
 				.shout(ctx.translate("error-not-an-owner", None))
 				.await
 				.map(|_| ())
 				.context("Failed to send not an owner message"),
 
-			FrameworkError::GuildOnly { ctx } => ctx
+			FrameworkError::GuildOnly { ctx, .. } => ctx
 				.shout(ctx.translate("error-guild-only", None))
 				.await
 				.map(|_| ())
 				.context("Failed to send guild only message"),
 
-			FrameworkError::DmOnly { ctx } => ctx
+			FrameworkError::DmOnly { ctx, .. } => ctx
 				.shout(ctx.translate("error-dm-only", None))
 				.await
 				.map(|_| ())
@@ -131,7 +133,7 @@ pub(crate) fn command_on_error(error: FrameworkError) -> BoxFuture<()> {
 pub(crate) fn post_command(ctx: Context) -> BoxFuture<()> {
 	Box::pin(async move {
 		tracing::debug!(
-			user_id = ctx.author().id.0,
+			user_id = ctx.author().id.get(),
 			username = &ctx.author().name,
 			command_id = ctx.command().identifying_name,
 			"Command invocation successful",
@@ -147,7 +149,7 @@ async fn handle_interaction_error(
 	let error_identifier = Uuid::new_v4().hyphenated().to_string();
 
 	tracing::error!(
-		user_id = ctx.author().id.0,
+		user_id = ctx.author().id.get(),
 		username = ctx.author().name,
 		error_id = error_identifier,
 		error = ?error,

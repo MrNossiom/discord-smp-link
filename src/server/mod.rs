@@ -4,7 +4,7 @@
 //! Servers configs and request handlers to serve `OAuth2` callbacks and the web pages.
 //! Rocket server luncher to answer `OAuth2` Google redirects and serve the basic web pages.
 
-pub(self) mod handler;
+mod handler;
 
 use crate::states::ArcData;
 use handler::{
@@ -74,11 +74,11 @@ impl<'r> FromRequest<'r> for AcceptLanguage {
 	async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
 		if let Some(lang) = request.headers().get_one(ACCEPT_LANGUAGE.as_str())
 			&& let Some(lang) = lang.split(',').next()
-			&& let Ok(lang) = lang.parse::<LanguageIdentifier>() {
-
+			&& let Ok(lang) = lang.parse::<LanguageIdentifier>()
+		{
 			Outcome::Success(Self(lang))
 		} else {
-			Outcome::Failure((rocket::http::Status::BadRequest, ()))
+			Outcome::Error((rocket::http::Status::BadRequest, ()))
 		}
 	}
 }

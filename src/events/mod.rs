@@ -11,10 +11,7 @@ use crate::{
 	states::{ArcData, FrameworkContext, InteractionResult, MessageComponentContext},
 };
 use anyhow::Context;
-use poise::{
-	serenity_prelude::{self, Interaction},
-	Event,
-};
+use poise::serenity_prelude::{self, ComponentInteractionDataKind, FullEvent, Interaction};
 use std::sync::atomic::AtomicBool;
 
 mod groups;
@@ -25,12 +22,12 @@ mod logout;
 #[allow(clippy::too_many_lines)]
 pub(crate) async fn event_handler(
 	ctx: &serenity_prelude::Context,
-	event: &Event<'_>,
+	event: &FullEvent,
 	framework: FrameworkContext<'_>,
 	data: &ArcData,
 ) -> InteractionResult {
 	match event {
-		Event::Ready { data_about_bot } => {
+		FullEvent::Ready { data_about_bot } => {
 			_register(
 				&ctx.http,
 				&data.config.discord_development_guild,
@@ -44,12 +41,12 @@ pub(crate) async fn event_handler(
 			Ok(())
 		}
 
-		Event::GuildMemberAddition { new_member } => {
+		FullEvent::GuildMemberAddition { new_member } => {
 			let mut connection = data.database.get().await?;
 
 			if let Ok(user) = members::table
-				.filter(members::discord_id.eq(new_member.user.id.0))
-				.filter(members::guild_id.eq(new_member.guild_id.0))
+				.filter(members::discord_id.eq(new_member.user.id.get()))
+				.filter(members::guild_id.eq(new_member.guild_id.get()))
 				.first::<Member>(&mut connection)
 				.await
 			{
@@ -60,9 +57,9 @@ pub(crate) async fn event_handler(
 				);
 			} else {
 				let new_user = NewMember {
-					guild_id: new_member.guild_id.0,
+					guild_id: new_member.guild_id.get(),
 					username: new_member.user.name.as_str(),
-					discord_id: new_member.user.id.0,
+					discord_id: new_member.user.id.get(),
 				};
 
 				tracing::info!(
@@ -80,13 +77,13 @@ pub(crate) async fn event_handler(
 			Ok(())
 		}
 
-		Event::GuildMemberRemoval { guild_id, user, .. } => {
-			tracing::info!(guild_id = guild_id.0, "Deleting member `{}`", user.name);
+		FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
+			tracing::info!(guild_id = guild_id.get(), "Deleting member `{}`", user.name);
 
 			diesel::delete(
 				members::table
-					.filter(members::guild_id.eq(guild_id.0))
-					.filter(members::discord_id.eq(user.id.0)),
+					.filter(members::guild_id.eq(guild_id.get()))
+					.filter(members::discord_id.eq(user.id.get())),
 			)
 			.execute(&mut data.database.get().await?)
 			.await?;
@@ -94,11 +91,11 @@ pub(crate) async fn event_handler(
 			Ok(())
 		}
 
-		Event::GuildCreate { guild, .. } => {
+		FullEvent::GuildCreate { guild, .. } => {
 			let mut connection = data.database.get().await?;
 
 			if let Ok(guild) = guilds::table
-				.filter(guilds::id.eq(guild.id.0))
+				.filter(guilds::id.eq(guild.id.get()))
 				.first::<Guild>(&mut connection)
 				.await
 			{
@@ -109,9 +106,9 @@ pub(crate) async fn event_handler(
 				);
 			} else {
 				let new_guild = NewGuild {
-					id: guild.id.0,
+					id: guild.id.get(),
 					name: guild.name.as_str(),
-					owner_id: guild.owner_id.0,
+					owner_id: guild.owner_id.get(),
 					verification_email_domain: None,
 					login_message_id: None,
 					groups_message_id: None,
@@ -119,7 +116,7 @@ pub(crate) async fn event_handler(
 				};
 
 				tracing::info!(
-					guild_id = guild.id.0,
+					guild_id = guild.id.get(),
 					"Adding guild `{}` to database",
 					guild.name
 				);
@@ -133,18 +130,18 @@ pub(crate) async fn event_handler(
 			Ok(())
 		}
 
-		Event::GuildDelete { incomplete, .. } => {
+		FullEvent::GuildDelete { incomplete, .. } => {
 			tracing::warn!("Deleting guild ({})", incomplete.id);
 
-			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.0)))
+			diesel::delete(guilds::table.filter(guilds::id.eq(incomplete.id.get())))
 				.execute(&mut data.database.get().await?)
 				.await?;
 
 			Ok(())
 		}
 
-		Event::InteractionCreate {
-			interaction: Interaction::MessageComponent(interaction),
+		FullEvent::InteractionCreate {
+			interaction: Interaction::Component(interaction),
 		} => {
 			let ctx = MessageComponentContext {
 				interaction,
@@ -155,7 +152,7 @@ pub(crate) async fn event_handler(
 			};
 
 			tracing::info!(
-				user_id = ctx.interaction.user.id.0,
+				user_id = ctx.interaction.user.id.get(),
 				custom_id = ctx.interaction.data.custom_id,
 				"`{}` interacted with a component",
 				ctx.interaction.user.name,
@@ -166,7 +163,13 @@ pub(crate) async fn event_handler(
 				events::LOGOUT_BUTTON_INTERACTION => logout::logout(ctx).await,
 
 				events::GROUPS_SELECT_MENU_INTERACTION => {
-					groups::groups(ctx, &interaction.data.values).await
+					let ComponentInteractionDataKind::StringSelect { values } =
+						&interaction.data.kind
+					else {
+						unreachable!()
+					};
+
+					groups::groups(ctx, values).await
 				}
 
 				_ => Ok(()),

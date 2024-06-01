@@ -20,13 +20,13 @@ use poise::{command, serenity_prelude as serenity};
 	rename = "force",
 	subcommands("debug_force_logout")
 )]
-pub(super) async fn debug_force(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(super) async fn debug_force(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Force logout a member
 #[command(slash_command, owners_only, hide_in_help, rename = "logout")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(super) async fn debug_force_logout(
 	ctx: ApplicationContext<'_>,
 	user: serenity::Member,
@@ -35,8 +35,8 @@ pub(super) async fn debug_force_logout(
 
 	if let Ok(member_id) = verified_members::table
 		.inner_join(members::table)
-		.filter(members::discord_id.eq(user.user.id.0))
-		.filter(members::guild_id.eq(user.guild_id.0))
+		.filter(members::discord_id.eq(user.user.id.get()))
+		.filter(members::guild_id.eq(user.guild_id.get()))
 		.select(verified_members::member_id)
 		.first::<i32>(&mut connection)
 		.await

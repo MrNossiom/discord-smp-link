@@ -14,7 +14,7 @@ use crate::{
 use fluent::fluent_args;
 use poise::{
 	command,
-	serenity_prelude::{self as serenity, Permissions, Role, RoleId},
+	serenity_prelude::{self as serenity, EditRole, Permissions, Role, RoleId},
 };
 
 // TODO: possibility to modify a class, show specific informations on a role
@@ -26,13 +26,13 @@ use poise::{
 	default_member_permissions = "MANAGE_ROLES",
 	required_bot_permissions = "MANAGE_ROLES"
 )]
-pub(crate) async fn classes(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn classes(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Configure a new class role
 #[command(slash_command, guild_only, rename = "add")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn classes_add(
 	ctx: ApplicationContext<'_>,
 	name: String,
@@ -75,11 +75,13 @@ pub(crate) async fn classes_add(
 		Some(role) => role,
 		None => {
 			guild_id
-				.create_role(&ctx.serenity_context, |role| {
-					role.name(&name)
+				.create_role(
+					&ctx.serenity_context,
+					EditRole::new()
+						.name(&name)
 						.permissions(Permissions::empty())
-						.mentionable(true)
-				})
+						.mentionable(true),
+				)
 				.await?
 		}
 	};
@@ -87,8 +89,8 @@ pub(crate) async fn classes_add(
 	let new_class = NewClass {
 		name: &name,
 		level_id,
-		guild_id: guild_id.0,
-		role_id: role.id.0,
+		guild_id: guild_id.get(),
+		role_id: role.id.get(),
 	};
 
 	new_class.insert().execute(&mut connection).await?;
@@ -105,13 +107,13 @@ pub(crate) async fn classes_add(
 // TODO: allow using a result instead of unwrapping everything
 /// Autocompletes parameter for `classes` available in `Guild`.
 #[allow(clippy::unwrap_used)]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 async fn autocomplete_classes<'a>(
 	ctx: ApplicationContext<'_>,
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
 	// TODO: cache this per guild, db query intensive, use <https://docs.rs/cached/latest/cached/macros/index.html>
-	let classes: Vec<_> = Class::all_from_guild(ctx.interaction.guild_id().unwrap())
+	let classes: Vec<_> = Class::all_from_guild(ctx.interaction.guild_id.unwrap())
 		.select(schema::classes::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
@@ -146,10 +148,10 @@ pub(crate) async fn classes_remove(
 	};
 
 	match guild_id
-		.delete_role(&ctx.serenity_context, RoleId(role_id))
+		.delete_role(&ctx.serenity_context, RoleId::new(role_id))
 		.await
 	{
-		Ok(_) |
+		Ok(()) |
 		// Ignore the error if the role is already deleted
 		Err(serenity::Error::Http(_)) => {}
 		Err(error) => return Err(error.into()),
@@ -164,7 +166,7 @@ pub(crate) async fn classes_remove(
 
 /// List all the available class roles
 #[command(slash_command, guild_only, rename = "list")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn classes_list(
 	ctx: ApplicationContext<'_>,
 	#[autocomplete = "autocomplete_classes"] filter: Option<String>,

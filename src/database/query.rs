@@ -26,7 +26,7 @@ impl Class {
 	pub(crate) fn all_from_guild(
 		guild_id: GuildId,
 	) -> Filter<classes::table, Eq<classes::guild_id, u64>> {
-		classes::table.filter(classes::guild_id.eq(guild_id.0))
+		classes::table.filter(classes::guild_id.eq(guild_id.get()))
 	}
 
 	/// Select classes from their [`GuildId`]
@@ -58,7 +58,7 @@ impl Guild {
 	/// Retrieves a guild from its ID
 	#[inline]
 	pub(crate) fn with_id(guild_id: GuildId) -> Find<guilds::table, u64> {
-		guilds::table.find(guild_id.0)
+		guilds::table.find(guild_id.get())
 	}
 }
 
@@ -70,8 +70,8 @@ impl Member {
 		guild_id: GuildId,
 	) -> Filter<Filter<members::table, Eq<members::discord_id, u64>>, Eq<members::guild_id, u64>> {
 		members::table
-			.filter(members::discord_id.eq(user_id.0))
-			.filter(members::guild_id.eq(guild_id.0))
+			.filter(members::discord_id.eq(user_id.get()))
+			.filter(members::guild_id.eq(guild_id.get()))
 	}
 }
 
@@ -105,7 +105,7 @@ impl Group {
 	pub(crate) fn all_from_guild(
 		guild_id: GuildId,
 	) -> Filter<groups::table, Eq<groups::guild_id, u64>> {
-		groups::table.filter(groups::guild_id.eq(guild_id.0))
+		groups::table.filter(groups::guild_id.eq(guild_id.get()))
 	}
 
 	/// Select group from his `id`
@@ -131,7 +131,7 @@ impl Level {
 	pub(crate) fn all_from_guild(
 		guild_id: GuildId,
 	) -> Filter<levels::table, Eq<levels::guild_id, u64>> {
-		levels::table.filter(levels::guild_id.eq(guild_id.0))
+		levels::table.filter(levels::guild_id.eq(guild_id.get()))
 	}
 
 	/// Select level from his `id`
@@ -163,8 +163,8 @@ impl VerifiedMember {
 	> {
 		verified_members::table
 			.inner_join(members::table)
-			.filter(members::discord_id.eq(user_id.0))
-			.filter(members::guild_id.eq(guild_id.0))
+			.filter(members::discord_id.eq(user_id.get()))
+			.filter(members::guild_id.eq(guild_id.get()))
 	}
 
 	/// Filter from the foreign key of a [`Member`]

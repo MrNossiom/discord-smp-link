@@ -4,10 +4,7 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use poise::{
-	command,
-	serenity_prelude::{Command, CreateApplicationCommands},
-};
+use poise::{command, serenity_prelude::Command};
 
 /// Register or unregister all slash commands either globally or in a specific guild
 #[command(
@@ -17,7 +14,7 @@ use poise::{
 	guild_only,
 	rename = "register"
 )]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(super) async fn debug_register(
 	ctx: ApplicationContext<'_>,
 	register: Option<bool>,
@@ -28,7 +25,7 @@ pub(super) async fn debug_register(
 	let register = register.unwrap_or(true);
 	let global = global.unwrap_or(false);
 
-	let mut commands_builder = CreateApplicationCommands::default();
+	let mut commands_collector = Vec::new();
 
 	for command in &ctx.framework.options.commands {
 		if command.hide_in_help && !is_development_guild {
@@ -36,36 +33,32 @@ pub(super) async fn debug_register(
 		}
 
 		if let Some(slash_command) = command.create_as_slash_command() {
-			commands_builder.add_application_command(slash_command);
+			commands_collector.push(slash_command);
 		}
 
 		if let Some(context_menu_command) = command.create_as_context_menu_command() {
-			commands_builder.add_application_command(context_menu_command);
+			commands_collector.push(context_menu_command);
 		}
 	}
 
 	if global {
-		Command::set_global_application_commands(&ctx.serenity_context, |b| {
-			if register {
-				*b = commands_builder;
-			}
-			b
-		})
+		Command::set_global_commands(
+			&ctx.serenity_context,
+			if register { commands_collector } else { vec![] },
+		)
 		.await?;
 	} else {
-		let Some(guild_id) = ctx.interaction.guild_id() else {
+		let Some(guild_id) = ctx.interaction.guild_id else {
 			ctx.shout(ctx.translate("error-guild-only", None)).await?;
 
 			return Ok(());
 		};
 
 		guild_id
-			.set_application_commands(&ctx.serenity_context, |b| {
-				if register {
-					*b = commands_builder;
-				}
-				b
-			})
+			.set_commands(
+				&ctx.serenity_context,
+				if register { commands_collector } else { vec![] },
+			)
 			.await?;
 	}
 

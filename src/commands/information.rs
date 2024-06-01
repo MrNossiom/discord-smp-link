@@ -6,11 +6,15 @@ use crate::{
 	translation::Translate,
 };
 use fluent::fluent_args;
-use poise::{command, serenity_prelude::User};
+use poise::{
+	command,
+	serenity_prelude::{CreateEmbed, CreateEmbedFooter, User},
+	CreateReply,
+};
 
 /// Show informations about a registered member
 #[command(slash_command, context_menu_command = "Informations", guild_only)]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
@@ -29,18 +33,18 @@ pub(crate) async fn information(ctx: ApplicationContext<'_>, user: User) -> Inte
 		return Ok(());
 	};
 
-	ctx.send(|builder| {
-		builder.ephemeral(true).embed(|embed| {
-			embed
+	ctx.send(
+		CreateReply::default().ephemeral(true).embed(
+			CreateEmbed::new()
 				.title(format!(
 					"{} {}",
 					verified_member.first_name, verified_member.last_name
 				))
 				.field("Mail", verified_member.mail, false)
 				.color(0x0000_FF00)
-				.footer(|footer| footer.text("Discord SMP Link © 2023"))
-		})
-	})
+				.footer(CreateEmbedFooter::new("Discord SMP Link © 2023")),
+		),
+	)
 	.await?;
 
 	Ok(())

@@ -6,11 +6,14 @@ use crate::{
 	states::{ApplicationContext, ApplicationContextPolyfill, InteractionResult},
 	translation::Translate,
 };
-use poise::{command, serenity_prelude::component::ButtonStyle};
+use poise::{
+	command,
+	serenity_prelude::{ButtonStyle, CreateActionRow, CreateButton, CreateMessage},
+};
 
 /// Sets the login and logout message.
 #[command(slash_command, guild_only, rename = "login_message")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn setup_login_message(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx.guild_only_id();
@@ -33,32 +36,28 @@ pub(crate) async fn setup_login_message(ctx: ApplicationContext<'_>) -> Interact
 
 	// TODO: use guild locale or interaction locale as fallback
 
+	let action_row = CreateActionRow::Buttons(vec![
+		CreateButton::new(LOGIN_BUTTON_INTERACTION)
+			.label(ctx.translate("event-setup-login-button", None))
+			.style(ButtonStyle::Success),
+		CreateButton::new(LOGOUT_BUTTON_INTERACTION)
+			.label(ctx.translate("event-setup-logout-button", None))
+			.style(ButtonStyle::Danger),
+	]);
+
+	let message = CreateMessage::new()
+		.content(ctx.translate("setup_login_message-message", None))
+		.components(vec![action_row]);
+
 	let reply = ctx
 		.interaction
-		.channel_id()
-		.send_message(&ctx.serenity_context, |message| {
-			message
-				.content(ctx.translate("setup_login_message-message", None))
-				.components(|com| {
-					com.create_action_row(|row| {
-						row.create_button(|butt| {
-							butt.label(ctx.translate("event-setup-login-button", None))
-								.style(ButtonStyle::Success)
-								.custom_id(LOGIN_BUTTON_INTERACTION)
-						})
-						.create_button(|butt| {
-							butt.label(ctx.translate("event-setup-logout-button", None))
-								.style(ButtonStyle::Danger)
-								.custom_id(LOGOUT_BUTTON_INTERACTION)
-						})
-					})
-				})
-		})
+		.channel_id
+		.send_message(&ctx.serenity_context, message)
 		.await?;
 
 	// Update the `setup_message_id`
-	diesel::update(schema::guilds::table.find(guild_id.0))
-		.set(schema::guilds::login_message_id.eq(reply.id.0))
+	diesel::update(schema::guilds::table.find(guild_id.get()))
+		.set(schema::guilds::login_message_id.eq(reply.id.get()))
 		.execute(&mut connection)
 		.await?;
 

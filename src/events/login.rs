@@ -17,9 +17,13 @@ use crate::{
 use anyhow::{anyhow, Context};
 use diesel::dsl;
 use fluent::fluent_args;
-use poise::serenity_prelude::{
-	self as serenity, component::ButtonStyle, CollectComponentInteraction, CreateSelectMenu,
-	CreateSelectMenuOption, GuildId, RoleId,
+use poise::{
+	serenity_prelude::{
+		self as serenity, ComponentInteractionCollector, ComponentInteractionDataKind,
+		CreateActionRow, CreateButton, CreateSelectMenu, CreateSelectMenuKind,
+		CreateSelectMenuOption, GuildId, RoleId,
+	},
+	CreateReply,
 };
 use std::time::Duration;
 
@@ -30,7 +34,7 @@ use std::time::Duration;
 #[tracing::instrument(skip_all, fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
-	let mut member = ctx.guild_only_member();
+	let member = ctx.guild_only_member();
 
 	if dsl::select(dsl::exists(VerifiedMember::with_ids(
 		member.user.id,
@@ -76,22 +80,17 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 		)
 		.await;
 
+	let action_row = CreateActionRow::Buttons(vec![
+		CreateButton::new_link(oauth2_url).label(ctx.translate("continue", None))
+	]);
+
 	let initial_response = ctx
-		.send(|reply| {
-			reply
+		.send(
+			CreateReply::default()
 				.ephemeral(true)
 				.content(ctx.translate("use-google-account-to-login", None))
-				.components(|components| {
-					components.create_action_row(|action_row| {
-						action_row.create_button(|button| {
-							button
-								.label(ctx.translate("continue", None))
-								.style(ButtonStyle::Link)
-								.url(oauth2_url)
-						})
-					})
-				})
-		})
+				.components(vec![action_row]),
+		)
 		.await?;
 
 	let token_response = match token_response.await {
@@ -152,7 +151,7 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	apply_changes(
 		&ctx,
 		&mut connection,
-		&mut member,
+		&member,
 		user_data,
 		verified_member_id,
 		verified_role,
@@ -161,10 +160,11 @@ pub(crate) async fn login(ctx: MessageComponentContext<'_>) -> InteractionResult
 	.await?;
 
 	initial_response
-		.edit(|b| {
-			b.content(ctx.translate("authentication-successful", None))
-				.components(|c| c.set_action_rows(Vec::new()))
-		})
+		.edit(
+			CreateReply::default()
+				.content(ctx.translate("authentication-successful", None))
+				.components(vec![]),
+		)
 		.await?;
 
 	Ok(())
@@ -205,7 +205,7 @@ async fn check_login_components(
 				.await?;
 
 		let inner_role = match inner_role_id {
-			Some(role_id) => RoleId(role_id),
+			Some(role_id) => RoleId::new(role_id),
 			None => {
 				return Err(CheckLoginComponentsError::NoVerifiedRole);
 			}
@@ -239,36 +239,39 @@ async fn ask_user_guild_and_levels<'a>(
 ) -> anyhow::Result<Result<(i32, i32), String>> {
 	let levels = levels
 		.iter_mut()
-		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id))
+		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id.to_string()))
 		.collect::<Vec<_>>();
 
-	let mut levels_select_menu = CreateSelectMenu::default();
+	let levels_select_menu = CreateSelectMenu::new(
+		constants::events::AUTHENTICATION_SELECT_MENU_LEVEL_INTERACTION,
+		CreateSelectMenuKind::String { options: levels },
+	)
+	.placeholder(ctx.translate("event-login-select-level", None));
 
-	levels_select_menu
-		.custom_id(constants::events::AUTHENTICATION_SELECT_MENU_LEVEL_INTERACTION)
-		.placeholder(ctx.translate("event-login-select-level", None))
-		.options(|op| op.set_options(levels));
+	let action_row = CreateActionRow::SelectMenu(levels_select_menu);
 
 	initial_response
-		.edit(|b| {
-			b.ephemeral(true)
-				.components(|c| c.create_action_row(|ar| ar.add_select_menu(levels_select_menu)))
+		.edit(
+			CreateReply::default()
+				.ephemeral(true)
+				.components(vec![action_row])
 				// Empty the previous content
-				.content("")
-		})
+				.content(""),
+		)
 		.await?;
 
-	let level_id = if let Some(interaction) = CollectComponentInteraction::new(ctx)
+	let level_id = if let Some(interaction) = ComponentInteractionCollector::new(ctx)
 		.message_id(initial_response.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
 		interaction.defer(&ctx).await?;
 
-		interaction
-			.data
-			.values
-			.get(0)
+		let ComponentInteractionDataKind::StringSelect { values } = interaction.data.kind else {
+			unreachable!()
+		};
+
+		<[String]>::first(&values)
 			.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
 			.parse::<i32>()?
 	} else {
@@ -285,36 +288,39 @@ async fn ask_user_guild_and_levels<'a>(
 
 	let classes = classes
 		.iter_mut()
-		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id))
+		.map(|cl| CreateSelectMenuOption::new(&cl.name, cl.id.to_string()))
 		.collect::<Vec<_>>();
 
-	let mut classes_select_menu = CreateSelectMenu::default();
+	let classes_select_menu = CreateSelectMenu::new(
+		constants::events::AUTHENTICATION_SELECT_MENU_CLASS_INTERACTION,
+		CreateSelectMenuKind::String { options: classes },
+	)
+	.placeholder(ctx.translate("event-login-select-class", None));
 
-	classes_select_menu
-		.custom_id(constants::events::AUTHENTICATION_SELECT_MENU_CLASS_INTERACTION)
-		.placeholder(ctx.translate("event-login-select-class", None))
-		.options(|op| op.set_options(classes));
+	let action_row = CreateActionRow::SelectMenu(classes_select_menu);
 
 	initial_response
-		.edit(|b| {
-			b.ephemeral(true)
-				.components(|c| c.create_action_row(|ar| ar.add_select_menu(classes_select_menu)))
+		.edit(
+			CreateReply::default()
+				.ephemeral(true)
+				.components(vec![action_row])
 				// Empty the previous content
-				.content("")
-		})
+				.content(""),
+		)
 		.await?;
 
-	let class_id = if let Some(interaction) = CollectComponentInteraction::new(ctx)
+	let class_id = if let Some(interaction) = ComponentInteractionCollector::new(ctx)
 		.message_id(initial_response.message().await?.id)
 		.timeout(Duration::from_secs(60))
 		.await
 	{
 		interaction.defer(&ctx).await?;
 
-		interaction
-			.data
-			.values
-			.get(0)
+		let ComponentInteractionDataKind::StringSelect { values } = interaction.data.kind else {
+			unreachable!()
+		};
+
+		<[String]>::first(&values)
 			.ok_or_else(|| anyhow!("Something went wrong while parsing class id"))?
 			.parse::<i32>()?
 	} else {
@@ -328,7 +334,7 @@ async fn ask_user_guild_and_levels<'a>(
 async fn apply_changes(
 	ctx: &MessageComponentContext<'_>,
 	mut connection: &mut DatabasePooledConnection,
-	member: &mut serenity::Member,
+	member: &serenity::Member,
 	user_data: GoogleUserMetadata,
 	verified_member_id: i32,
 	verified_role: RoleId,
@@ -341,7 +347,7 @@ async fn apply_changes(
 			.first::<u64>(&mut connection)
 			.await?;
 
-		RoleId(id)
+		RoleId::new(id)
 	};
 	let class_role = {
 		let id = Class::with_id(class_id)
@@ -349,12 +355,12 @@ async fn apply_changes(
 			.first::<u64>(&mut connection)
 			.await?;
 
-		RoleId(id)
+		RoleId::new(id)
 	};
 
 	// Update Discord roles for new verified member
 	match member.add_role(&ctx, verified_role).await {
-		Ok(_) => {}
+		Ok(()) => {}
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
 			diesel::update(Guild::with_id(member.guild_id))
 				.set(schema::guilds::verified_role_id.eq::<Option<u64>>(None))
@@ -366,7 +372,7 @@ async fn apply_changes(
 		Err(error) => return Err(error.into()),
 	}
 	match member.add_role(&ctx, level_role).await {
-		Ok(_) => {}
+		Ok(()) => {}
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
 			diesel::delete(Level::with_id(level_id))
 				.execute(&mut connection)
@@ -377,7 +383,7 @@ async fn apply_changes(
 		Err(error) => return Err(error.into()),
 	}
 	match member.add_role(&ctx, class_role).await {
-		Ok(_) => {}
+		Ok(()) => {}
 		Err(serenity::Error::Model(serenity::ModelError::RoleNotFound)) => {
 			diesel::delete(Class::with_id(class_id))
 				.execute(&mut connection)

@@ -30,13 +30,13 @@ use login_message::setup_login_message;
 	),
 	default_member_permissions = "ADMINISTRATOR"
 )]
-pub(crate) async fn setup(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn setup(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Setup the role to apply to verified members.
 #[command(slash_command, guild_only, rename = "role")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> InteractionResult {
 	let guild_id = ctx.guild_only_id();
 
@@ -49,7 +49,7 @@ pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> Inter
 
 	// Update the verified role
 	diesel::update(Guild::with_id(guild_id))
-		.set(schema::guilds::verified_role_id.eq(role.id.0))
+		.set(schema::guilds::verified_role_id.eq(role.id.get()))
 		.execute(&mut ctx.data.database.get().await?)
 		.await?;
 
@@ -60,7 +60,7 @@ pub(crate) async fn setup_role(ctx: ApplicationContext<'_>, role: Role) -> Inter
 
 /// Setup the role to apply to verified members.
 #[command(slash_command, guild_only, rename = "pattern")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn setup_pattern(
 	ctx: ApplicationContext<'_>,
 	pattern: String,

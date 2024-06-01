@@ -21,13 +21,13 @@ use poise::{command, serenity_prelude as serenity};
 	rename = "refresh",
 	subcommands("debug_refresh_member", "debug_refresh_members")
 )]
-pub(super) async fn debug_refresh(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(super) async fn debug_refresh(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Loads a guild member in the database
 #[command(slash_command, owners_only, hide_in_help, rename = "member")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(super) async fn debug_refresh_member(
 	ctx: ApplicationContext<'_>,
 	member: serenity::Member,
@@ -45,9 +45,9 @@ pub(super) async fn debug_refresh_member(
 		.await?;
 	} else {
 		let new_member = NewMember {
-			guild_id: member.guild_id.0,
+			guild_id: member.guild_id.get(),
 			username: member.user.name.as_str(),
-			discord_id: member.user.id.0,
+			discord_id: member.user.id.get(),
 		};
 
 		new_member.insert().execute(&mut connection).await?;
@@ -71,7 +71,7 @@ pub(super) async fn debug_refresh_member(
 	guild_only,
 	rename = "members"
 )]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> InteractionResult {
 	let mut connection = ctx.data.database.get().await?;
 	let guild_id = ctx.guild_only_id();
@@ -95,9 +95,9 @@ pub(super) async fn debug_refresh_members(ctx: ApplicationContext<'_>) -> Intera
 			}
 
 			let new_member = NewMember {
-				guild_id: member.guild_id.0,
+				guild_id: member.guild_id.get(),
 				username: member.user.name.as_str(),
-				discord_id: member.user.id.0,
+				discord_id: member.user.id.get(),
 			};
 
 			match new_member.insert().execute(&mut connection).await {

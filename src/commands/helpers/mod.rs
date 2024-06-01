@@ -3,7 +3,7 @@
 use crate::states::{ApplicationContext, Command, InteractionResult};
 use poise::{
 	command,
-	serenity_prelude::{self as serenity, CreateApplicationCommands, GuildId, Http},
+	serenity_prelude::{self as serenity, GuildId, Http},
 };
 
 mod force;
@@ -23,7 +23,7 @@ use register::debug_register;
 	hide_in_help,
 	subcommands("debug_force", "debug_refresh", "debug_register")
 )]
-pub(crate) async fn debug(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn debug(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
@@ -33,24 +33,19 @@ pub(crate) async fn _register<'a>(
 	guild_id: &GuildId,
 	commands: &Vec<Command>,
 ) -> Result<(), serenity::Error> {
-	let mut commands_builder = CreateApplicationCommands::default();
+	let mut commands_collector = Vec::new();
 
 	for command in commands {
 		if let Some(slash_command) = command.create_as_slash_command() {
-			commands_builder.add_application_command(slash_command);
+			commands_collector.push(slash_command);
 		}
 
 		if let Some(context_menu_command) = command.create_as_context_menu_command() {
-			commands_builder.add_application_command(context_menu_command);
+			commands_collector.push(context_menu_command);
 		}
 	}
 
-	guild_id
-		.set_application_commands(http, |b| {
-			*b = commands_builder;
-			b
-		})
-		.await?;
+	guild_id.set_commands(http, commands_collector).await?;
 
 	Ok(())
 }

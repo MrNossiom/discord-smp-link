@@ -89,7 +89,7 @@ impl Config {
 
 		Ok(Self {
 			discord_token: Secret::new(required_env_var("DISCORD_TOKEN")?),
-			discord_development_guild: GuildId(discord_development_guild),
+			discord_development_guild: GuildId::new(discord_development_guild),
 			database_url: Secret::new(required_env_var("DATABASE_URL")?),
 			google_client: (
 				ClientId::new(required_env_var("GOOGLE_CLIENT_ID")?),
@@ -152,12 +152,9 @@ impl Data {
 
 /// Trait for sending ephemeral messages
 #[async_trait]
-pub(crate) trait ApplicationContextPolyfill<'b>: Send + Sync {
+pub(crate) trait ApplicationContextPolyfill<'a>: Send + Sync {
 	/// Send a message to the user
-	async fn send<'att>(
-		self,
-		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
-	) -> Result<ReplyHandle<'b>, serenity::Error>;
+	async fn send(self, reply: CreateReply) -> Result<ReplyHandle<'a>, serenity::Error>;
 
 	/// Send an ephemeral message to the user
 	async fn shout(
@@ -173,12 +170,9 @@ pub(crate) trait ApplicationContextPolyfill<'b>: Send + Sync {
 }
 
 #[async_trait]
-impl<'b> ApplicationContextPolyfill<'b> for ApplicationContext<'b> {
+impl<'a> ApplicationContextPolyfill<'a> for ApplicationContext<'a> {
 	#[inline]
-	async fn send<'att>(
-		self,
-		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
-	) -> Result<ReplyHandle<'b>, serenity::Error> {
+	async fn send(self, builder: CreateReply) -> Result<ReplyHandle<'a>, serenity::Error> {
 		send_application_reply(self, builder).await
 	}
 
@@ -187,16 +181,14 @@ impl<'b> ApplicationContextPolyfill<'b> for ApplicationContext<'b> {
 		&self,
 		content: impl Into<String> + Send,
 	) -> Result<ReplyHandle<'_>, serenity::Error> {
-		self.send(|builder| builder.content(content).ephemeral(true))
+		self.send(CreateReply::default().content(content).ephemeral(true))
 			.await
 	}
 
 	#[inline]
 	fn guild_only_id(&self) -> GuildId {
 		if self.command.guild_only {
-			self.interaction
-				.guild_id()
-				.expect("guild_only interactions")
+			self.interaction.guild_id.expect("guild_only interactions")
 		} else {
 			panic!("Should be used only in guild_only interactions")
 		}
@@ -220,7 +212,7 @@ impl ContextPolyfill for Context<'_> {
 		&self,
 		content: impl Into<String> + Send,
 	) -> Result<ReplyHandle<'_>, serenity::Error> {
-		self.send(|builder| builder.content(content).ephemeral(true))
+		self.send(CreateReply::default().content(content).ephemeral(true))
 			.await
 	}
 }
@@ -248,8 +240,6 @@ pub(crate) type Framework = poise::Framework<ArcData, InteractionError>;
 pub(crate) type FrameworkContext<'a> = poise::FrameworkContext<'a, ArcData, InteractionError>;
 /// A [`poise::FrameworkError`] type alias with our common types
 pub(crate) type FrameworkError<'a> = poise::FrameworkError<'a, ArcData, InteractionError>;
-/// A [`poise::FrameworkBuilder`] type alias with our common types
-pub(crate) type FrameworkBuilder = poise::FrameworkBuilder<ArcData, InteractionError>;
 
 /// An error in an interaction or an event
 #[derive(Debug, thiserror::Error)]
@@ -259,7 +249,7 @@ pub(crate) enum Error {
 	Serenity(#[from] serenity::Error),
 	/// A database error
 	#[error(transparent)]
-	PoolError(#[from] PoolError),
+	Pool(#[from] PoolError),
 	/// A diesel error
 	#[error(transparent)]
 	Diesel(#[from] diesel::result::Error),

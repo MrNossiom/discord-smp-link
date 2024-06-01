@@ -13,7 +13,7 @@ use crate::{
 use fluent::fluent_args;
 use poise::{
 	command,
-	serenity_prelude::{self as serenity, Permissions, Role, RoleId},
+	serenity_prelude::{self as serenity, EditRole, Permissions, Role, RoleId},
 };
 
 /// TODO: possibility to modify a level
@@ -25,13 +25,13 @@ use poise::{
 	default_member_permissions = "MANAGE_ROLES",
 	required_bot_permissions = "MANAGE_ROLES"
 )]
-pub(crate) async fn levels(_ctx: ApplicationContext<'_>) -> InteractionResult {
+pub(crate) async fn levels(_: ApplicationContext<'_>) -> InteractionResult {
 	Ok(())
 }
 
 /// Configure a new level tag role
 #[command(slash_command, guild_only, rename = "add")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn levels_add(
 	ctx: ApplicationContext<'_>,
 	name: String,
@@ -43,18 +43,20 @@ pub(crate) async fn levels_add(
 		Some(role) => role,
 		None => {
 			guild_id
-				.create_role(&ctx.serenity_context, |role| {
-					role.name(&name)
+				.create_role(
+					&ctx.serenity_context,
+					EditRole::new()
+						.name(&name)
 						.permissions(Permissions::empty())
-						.mentionable(true)
-				})
+						.mentionable(true),
+				)
 				.await?
 		}
 	};
 
 	let new_level = NewLevel {
-		guild_id: guild_id.0,
-		role_id: role.id.0,
+		guild_id: guild_id.get(),
+		role_id: role.id.get(),
 		name: &name,
 	};
 
@@ -72,13 +74,13 @@ pub(crate) async fn levels_add(
 // TODO: allow using a result instead of unwrapping everything
 /// Autocompletes parameter for `levels` available in `Guild`.
 #[allow(clippy::unwrap_used)]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(super) async fn autocomplete_levels<'a>(
 	ctx: ApplicationContext<'_>,
 	partial: &'a str,
 ) -> impl Iterator<Item = String> + 'a {
 	// TODO: cache this per guild, db query intensive, use <https://docs.rs/cached/latest/cached/macros/index.html>
-	let levels: Vec<_> = Level::all_from_guild(ctx.interaction.guild_id().unwrap())
+	let levels: Vec<_> = Level::all_from_guild(ctx.interaction.guild_id.unwrap())
 		.select(schema::levels::name)
 		.get_results::<String>(&mut ctx.data.database.get().await.unwrap())
 		.await
@@ -112,10 +114,10 @@ pub(crate) async fn levels_remove(
 	};
 
 	match guild_id
-		.delete_role(&ctx.serenity_context, RoleId(role_id))
+		.delete_role(&ctx.serenity_context, RoleId::new(role_id))
 		.await
 	{
-		Ok(_) |
+		Ok(()) |
 		// Ignore the error if the role is already deleted
 		Err(serenity::Error::Http(_)) => {}
 		Err(error) => return Err(error.into()),
@@ -130,7 +132,7 @@ pub(crate) async fn levels_remove(
 
 /// List all available level tag roles
 #[command(slash_command, guild_only, rename = "list")]
-#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user().id))]
+#[tracing::instrument(skip(ctx), fields(caller_id = %ctx.interaction.user.id))]
 pub(crate) async fn levels_list(
 	ctx: ApplicationContext<'_>,
 	#[autocomplete = "autocomplete_levels"] filter: Option<String>,

@@ -270,7 +270,7 @@ impl Translate for ApplicationContext<'_> {
 		key: &'bundle str,
 		args: Option<&'bundle FluentArgs>,
 	) -> anyhow::Result<Cow<'bundle, str>> {
-		let locale: LanguageIdentifier = self.interaction.locale().parse()?;
+		let locale: LanguageIdentifier = self.interaction.locale.parse()?;
 
 		self.data.translations.translate_checked(&locale, key, args)
 	}

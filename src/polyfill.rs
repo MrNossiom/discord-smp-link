@@ -3,7 +3,10 @@
 //! Polyfill for the [`MessageComponentInteraction`](poise::serenity_prelude::MessageComponentInteraction) type
 
 use poise::{
-	serenity_prelude::{self as serenity, Member, MessageComponentInteraction},
+	serenity_prelude::{
+		self as serenity, ComponentInteraction, CreateInteractionResponseFollowup,
+		CreateInteractionResponseMessage, EditInteractionResponse, Member,
+	},
 	CreateReply,
 };
 use std::{
@@ -15,7 +18,7 @@ use std::{
 #[derive(Copy, Clone)]
 pub(crate) struct MessageComponentContext<'a, U: Send + Sync, E> {
 	/// The underlying interaction
-	pub(crate) interaction: &'a MessageComponentInteraction,
+	pub(crate) interaction: &'a ComponentInteraction,
 	/// The custom user data
 	pub(crate) data: &'a U,
 	/// The underlying serenity context
@@ -62,33 +65,32 @@ impl<U: Send + Sync, E> serenity::CacheHttp for MessageComponentContext<'_, U, E
 
 impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 	/// Send a message to the user
-	pub(crate) async fn send<'a>(
-		&'a self,
-		builder: impl for<'b> FnOnce(&'b mut CreateReply<'a>) -> &'b mut CreateReply<'a> + Send,
-	) -> Result<MessageComponentReplyHandle<'a>, serenity::Error> {
-		let mut reply = CreateReply::default();
-		builder(&mut reply);
-
+	pub(crate) async fn send(
+		&self,
+		reply: CreateReply,
+	) -> Result<MessageComponentReplyHandle<'_>, serenity::Error> {
 		let has_sent_initial_response = self.has_sent_initial_response.load(Ordering::SeqCst);
 
 		let followup = if has_sent_initial_response {
 			Some(Box::new(
 				self.interaction
-					.create_followup_message(self.discord, |f| {
-						reply.to_slash_followup_response(f);
-						f
-					})
+					.create_followup(
+						self.discord,
+						reply.to_slash_followup_response(
+							CreateInteractionResponseFollowup::default(),
+						),
+					)
 					.await?,
 			))
 		} else {
 			self.interaction
-				.create_interaction_response(self.discord, |r| {
-					r.kind(serenity::InteractionResponseType::ChannelMessageWithSource)
-						.interaction_response_data(|f| {
-							reply.to_slash_initial_response(f);
-							f
-						})
-				})
+				.create_response(
+					self.discord,
+					serenity::CreateInteractionResponse::Message(
+						reply
+							.to_slash_initial_response(CreateInteractionResponseMessage::default()),
+					),
+				)
 				.await?;
 			self.has_sent_initial_response
 				.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -111,8 +113,12 @@ impl<U: Send + Sync, E> MessageComponentContext<'_, U, E> {
 		&self,
 		content: impl Into<String> + Send,
 	) -> Result<MessageComponentReplyHandle<'_>, serenity::Error> {
-		self.send(|builder| builder.content(content.into()).ephemeral(true))
-			.await
+		self.send(
+			CreateReply::default()
+				.content(content.into())
+				.ephemeral(true),
+		)
+		.await
 	}
 
 	/// Get the member who triggered the interaction
@@ -140,7 +146,7 @@ pub(crate) struct MessageComponentReplyHandle<'a> {
 	http: &'a serenity::Http,
 	/// Interaction which contains the necessary data to request the interaction response
 	/// message object
-	interaction: &'a serenity::MessageComponentInteraction,
+	interaction: &'a serenity::ComponentInteraction,
 	/// If this is a followup response, the Message object (which Discord only returns for
 	/// followup responses, not initial)
 	followup: Option<Box<serenity::Message>>,
@@ -153,7 +159,7 @@ impl MessageComponentReplyHandle<'_> {
 	///
 	/// Only needs to do an HTTP request in the application command response case
 	pub(crate) async fn into_message(self) -> Result<serenity::Message, serenity::Error> {
-		self.interaction.get_interaction_response(self.http).await
+		self.interaction.get_response(self.http).await
 	}
 
 	/// Retrieve the message object of the sent reply.
@@ -162,32 +168,25 @@ impl MessageComponentReplyHandle<'_> {
 	///
 	/// To get an owned [`serenity::Message`], use [`Self::into_message()`]
 	pub(crate) async fn message(&self) -> Result<Cow<'_, serenity::Message>, serenity::Error> {
-		Ok(Cow::Owned(
-			self.interaction.get_interaction_response(self.http).await?,
-		))
+		Ok(Cow::Owned(self.interaction.get_response(self.http).await?))
 	}
 
 	/// Edits the message that this [`Self`] points to
-	pub(crate) async fn edit<'att>(
-		&self,
-		builder: impl for<'a> FnOnce(&'a mut CreateReply<'att>) -> &'a mut CreateReply<'att> + Send,
-	) -> Result<(), serenity::Error> {
-		let mut reply = poise::CreateReply::default();
-		builder(&mut reply);
-
+	pub(crate) async fn edit<'att>(&self, reply: CreateReply) -> Result<(), serenity::Error> {
 		if let Some(followup) = &self.followup {
 			self.interaction
-				.edit_followup_message(self.http, followup.id, |b| {
-					reply.to_slash_followup_response(b);
-					b
-				})
+				.edit_followup(
+					self.http,
+					followup.id,
+					reply.to_slash_followup_response(CreateInteractionResponseFollowup::default()),
+				)
 				.await?;
 		} else {
 			self.interaction
-				.edit_original_interaction_response(self.http, |b| {
-					reply.to_slash_initial_response_edit(b);
-					b
-				})
+				.edit_response(
+					self.http,
+					reply.to_slash_initial_response_edit(EditInteractionResponse::default()),
+				)
 				.await?;
 		}
 
