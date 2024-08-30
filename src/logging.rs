@@ -14,7 +14,7 @@ pub(crate) fn setup_logging(data: &ArcData) -> anyhow::Result<()> {
 		.with(if data.config.production {
 			Layer::default().json().with_filter(filter).boxed()
 		} else {
-			Layer::default().pretty().with_filter(filter).boxed()
+			Layer::default().with_filter(filter).boxed()
 		})
 		.with(console_subscriber::spawn())
 		.try_init()?;

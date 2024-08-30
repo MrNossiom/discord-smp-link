@@ -59,7 +59,7 @@ pub(crate) struct GoogleAuthentification {
 	// TODO: change string to `CsrfToken` if oauth2-rs implement Eq + Hash on it
 	/// A queue to wait for the user to finish the flow
 	pub(crate) pending: Arc<RwLock<HashMap<String, PendingAuthRequest>>>,
-	/// A Reqwest HTTPS client to query Google OAuth2 API
+	/// A Reqwest HTTPS client to query Google `OAuth2` API
 	pub(crate) http: Client,
 }
 
@@ -183,7 +183,7 @@ impl GoogleAuthentification {
 pub(crate) struct AuthProcess {
 	/// Abort the future if we passed the delay
 	wait_until: Instant,
-	/// The OAuth2 queue to handle
+	/// The `OAuth2` queue to handle
 	#[pin]
 	rx: oneshot::Receiver<BasicTokenResponse>,
 	/// The code to recognize the request

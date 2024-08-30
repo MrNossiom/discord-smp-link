@@ -1,9 +1,6 @@
 _default:
 	@just --list --unsorted --list-heading '' --list-prefix '—— '
 
-# Run your current project
-run:
-	RUST_LOG='info,_=warn,rocket=warn,discord_smp_link=debug' cargo run
 # Start a developement tunnel to the local server
 tunnel NAME:
 	cloudflared tunnel run --url localhost:3000 {{NAME}}

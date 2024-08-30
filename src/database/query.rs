@@ -49,7 +49,7 @@ impl<'a> NewClass<'a> {
 	#[inline]
 	pub(crate) fn insert(
 		&'a self,
-	) -> InsertStatement<classes::table, <&'a NewClass<'a> as Insertable<classes::table>>::Values> {
+	) -> InsertStatement<classes::table, <&'a Self as Insertable<classes::table>>::Values> {
 		insert_into(classes::table).values(self)
 	}
 }
@@ -80,8 +80,7 @@ impl<'a> NewMember<'a> {
 	#[inline]
 	pub(crate) fn insert(
 		&'a self,
-	) -> InsertStatement<members::table, <&'a NewMember<'a> as Insertable<members::table>>::Values>
-	{
+	) -> InsertStatement<members::table, <&'a Self as Insertable<members::table>>::Values> {
 		insert_into(members::table).values(self)
 	}
 }
@@ -93,7 +92,7 @@ impl<'a> NewVerifiedMember<'a> {
 		&'a self,
 	) -> InsertStatement<
 		verified_members::table,
-		<&'a NewVerifiedMember<'a> as Insertable<verified_members::table>>::Values,
+		<&'a Self as Insertable<verified_members::table>>::Values,
 	> {
 		insert_into(verified_members::table).values(self)
 	}
@@ -120,7 +119,7 @@ impl<'a> NewGroup<'a> {
 	#[inline]
 	pub(crate) fn insert(
 		&'a self,
-	) -> InsertStatement<groups::table, <&'a NewGroup<'a> as Insertable<groups::table>>::Values> {
+	) -> InsertStatement<groups::table, <&'a Self as Insertable<groups::table>>::Values> {
 		insert_into(groups::table).values(self)
 	}
 }
@@ -146,7 +145,7 @@ impl<'a> NewLevel<'a> {
 	#[inline]
 	pub(crate) fn insert(
 		&'a self,
-	) -> InsertStatement<levels::table, <&'a NewLevel<'a> as Insertable<levels::table>>::Values> {
+	) -> InsertStatement<levels::table, <&'a Self as Insertable<levels::table>>::Values> {
 		insert_into(levels::table).values(self)
 	}
 }

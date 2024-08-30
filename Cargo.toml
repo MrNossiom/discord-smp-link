@@ -8,48 +8,51 @@ categories = ["authentication"]
 license = "MIT"
 edition = "2021"
 
+[features]
+cache = ["poise/cache"]
+
 [dependencies]
-anyhow = { version = "1.0.71", features = ["backtrace"] }
-console-subscriber = "0.1.9"
-diesel-async = { version = "0.3.1", features = ["mysql", "deadpool"] }
-diesel_migrations = { version = "2.1.0", features = ["mysql"] }
-dotenvy = "0.15.7"
-fluent = "0.16.0"
-fluent-syntax = "0.11.0"
-futures = "0.3.28"
-hyper = { version = "0.14.27", features = ["full"] }
-hyper-rustls = { version = "0.24.0", features = ["rustls-native-certs"] }
-intl-memoizer = "0.5.1"
-oauth2 = "4.4.1"
-poise = { git = "https://github.com/serenity-rs/poise", branch = "current" }
-rocket = { version = "0.5.0-rc.3", features = ["tls"] }
-rocket_dyn_templates = { version = "0.1.0-rc.3", features = ["tera"] }
-rustls = "0.21.2"
-rustls-pemfile = "1.0.3"
-thiserror = "1.0.40"
-secrecy = "0.8.0"
-serde = "1.0.165"
-serde_json = "1.0.99"
-tokio = { version = "1.29.1", features = ["full", "tracing"] }
-tokio-rustls = "0.24.1"
-tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.17", features = [
+anyhow = { version = "1", features = ["backtrace"] }
+console-subscriber = "0.4"
+diesel-async = { version = "0.5", features = ["mysql", "deadpool"] }
+diesel_migrations = { version = "2", features = ["mysql"] }
+dotenvy = "0.15"
+fluent = "0.16"
+fluent-syntax = "0.11"
+futures = "0.3"
+hyper = { version = "0.14", features = ["full"] }
+hyper-rustls = { version = "0.24", features = ["rustls-native-certs"] }
+intl-memoizer = "0.5"
+oauth2 = "4"
+poise = "0.6"
+rocket = { version = "0.5", features = ["tls"] }
+rocket_dyn_templates = { version = "0.2", features = ["tera"] }
+rustls = "0.21"
+rustls-pemfile = "1"
+thiserror = "1"
+secrecy = "0.8"
+serde = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["full", "tracing"] }
+tokio-rustls = "0.24"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
 	"registry",
 	"env-filter",
 	"json",
 ] }
-unic-langid = { version = "0.9.1", features = ["macros"] }
-uuid = { version = "1.4.0", features = ["v4"] }
-url = "2.4.0"
-pin-project = "1.1.2"
+unic-langid = { version = "0.9", features = ["macros"] }
+uuid = { version = "1", features = ["v4"] }
+url = "2"
+pin-project = "1"
 
 [dependencies.diesel]
-version = "2.1.0"
+version = "2"
 default-features = false
 features = ["mysql"]
 
 [dependencies.reqwest]
-version = "0.11.18"
+version = "0.11"
 default-features = false
 features = ["rustls-tls-native-roots"]
 

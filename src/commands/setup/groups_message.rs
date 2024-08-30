@@ -39,11 +39,11 @@ pub(crate) async fn setup_groups_message(ctx: ApplicationContext<'_>) -> Interac
 		.iter_mut()
 		.map(|group| {
 			let mut op = CreateSelectMenuOption::new(&group.name, group.id.to_string());
-			if let Some(emoji) = &group.emoji
-				&& let Ok(emoji) = emoji.parse::<ReactionType>()
-			{
-				// TODO: check if the emoji is valid, even tough it should be checked before
-				op = op.emoji(emoji);
+			if let Some(emoji) = &group.emoji {
+				if let Ok(emoji) = emoji.parse::<ReactionType>() {
+					// TODO: check if the emoji is valid, even tough it should be checked before
+					op = op.emoji(emoji);
+				}
 			}
 			op
 		})

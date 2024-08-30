@@ -72,14 +72,15 @@ impl<'r> FromRequest<'r> for AcceptLanguage {
 	type Error = ();
 
 	async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
-		if let Some(lang) = request.headers().get_one(ACCEPT_LANGUAGE.as_str())
-			&& let Some(lang) = lang.split(',').next()
-			&& let Ok(lang) = lang.parse::<LanguageIdentifier>()
-		{
-			Outcome::Success(Self(lang))
-		} else {
-			Outcome::Error((rocket::http::Status::BadRequest, ()))
+		if let Some(lang) = request.headers().get_one(ACCEPT_LANGUAGE.as_str()) {
+			if let Some(lang) = lang.split(',').next() {
+				if let Ok(lang) = lang.parse::<LanguageIdentifier>() {
+					return Outcome::Success(Self(lang));
+				}
+			}
 		}
+
+		Outcome::Error((rocket::http::Status::BadRequest, ()))
 	}
 }
 

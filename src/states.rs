@@ -154,6 +154,7 @@ impl Data {
 #[async_trait]
 pub(crate) trait ApplicationContextPolyfill<'a>: Send + Sync {
 	/// Send a message to the user
+	#[allow(dead_code)]
 	async fn send(self, reply: CreateReply) -> Result<ReplyHandle<'a>, serenity::Error>;
 
 	/// Send an ephemeral message to the user

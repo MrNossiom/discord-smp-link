@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -64,7 +64,7 @@
             RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
             LD_LIBRARY_PATH = makeLibraryPath buildInputs;
 
-            RUST_LOG = "";
+            RUST_LOG = "discord_smp_link=debug,_=warn,rocket=warn,info";
           };
         });
     };

@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 //! Discord SMP Bot
 
 mod auth;

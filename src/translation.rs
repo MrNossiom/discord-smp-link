@@ -67,7 +67,7 @@ impl Translations {
 			.map(|file| read_fluent_file(&file.path()))
 			.collect::<Result<_, _>>()?;
 
-		if bundles.get(&fallback).is_none() {
+		if !bundles.contains_key(&fallback) {
 			return Err(anyhow!("fallback locale bundle not found"));
 		}
 
